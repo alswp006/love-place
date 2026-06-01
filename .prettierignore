@@ -5,4 +5,10 @@ test-results
 node_modules
 pnpm-lock.yaml
 package-lock.json
-*.md
+# 키트 문서·설계서는 포맷 대상에서 제외(범위 밖). 일반 문서(README 등)는 포맷한다.
+.ai-factory/
+.claude/
+여행관리앱_설계서.md
+여행관리앱_설계서.v1.md
+CLAUDE.md
+PROMPT.md

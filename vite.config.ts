@@ -12,12 +12,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       // 정적 셸만 캐시. Supabase 데이터 쓰기는 §4.3 오프라인 큐가 담당(Workbox가 mutation 큐를 대신하지 않음 — web-stack.md §1).
+      // globPatterns가 public/의 아이콘·매니페스트를 이미 잡으므로 includeAssets는 불필요(중복 프리캐시 방지).
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
-        navigateFallbackDenylist: [/^\/functions\//],
       },
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
-      manifest: false, // public/manifest.webmanifest를 직접 관리(아래 link 태그로 연결)
+      manifest: false, // public/manifest.webmanifest를 직접 관리(index.html link 태그로 연결)
       devOptions: { enabled: false },
     }),
   ],

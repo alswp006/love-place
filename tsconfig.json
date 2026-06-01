@@ -25,5 +25,5 @@
 
     "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src", "vite-env.d.ts", "vite.config.ts", "playwright.config.ts"]
+  "include": ["src", "e2e", "vite-env.d.ts", "vite.config.ts", "playwright.config.ts"]
 }

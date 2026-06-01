@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0"
-    />
-    <meta name="theme-color" content="#b5654a" />
+    <!-- maximum-scale/user-scalable 금지: 핀치 줌을 막으면 접근성(WCAG 1.4.4) 위반(§8) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- theme-color는 라이트/다크 분기(주소창·상태바 색을 콘텐츠와 일치) -->
+    <meta name="theme-color" content="#b5654a" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1614" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
 
     <!-- iOS 홈 화면 추가(PWA, 설계서 §2 웹 트레이드오프) -->

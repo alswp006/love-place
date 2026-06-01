@@ -35,7 +35,8 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: Visual smoke (Playwright)
+      # Playwright webServer는 위 build의 dist를 preview로 서빙(재빌드 없음).
+      - name: Functional + visual smoke (Playwright)
         run: npm run e2e
 
       - name: Upload Playwright report
