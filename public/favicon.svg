@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="love place">
+  <rect width="512" height="512" rx="112" fill="#b5654a"/>
+  <path d="M256 392s-128-86-128-180a76 76 0 0 1 128-55 76 76 0 0 1 128 55c0 94-128 180-128 180Z"
+        fill="#faf6f2"/>
+  <circle cx="256" cy="196" r="34" fill="#b5654a"/>
+</svg>

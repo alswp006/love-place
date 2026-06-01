@@ -1,0 +1,118 @@
+/*
+ * 디자인 토큰 (설계서 §8 / ux-and-accessibility.md §4-5)
+ * - 따뜻한 어스톤 + 사진 중심(ourmap/.impeccable.md 방향 차용).
+ * - 색은 전부 CSS 변수 → 다크 모드(prefers-color-scheme) 대응.
+ * - 트랙/상태는 색만으로 구분하지 않는다(색 + 패턴/라벨, 색각 이상 대응).
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* 브랜드(따뜻한 테라코타) */
+  --c-brand: #b5654a;
+  --c-brand-weak: #d8a18d;
+
+  /* 캘린더 3트랙(설계서 §5.1) — 색+라벨 이중화 전제 */
+  --c-track-mine: #3b6db5; /* 나(블루) */
+  --c-track-partner: #c25d86; /* 상대(핑크) */
+  --c-track-shared: #7a5bb0; /* 함께(퍼플) */
+
+  /* 표면/텍스트 (라이트) */
+  --c-bg: #faf6f2;
+  --c-surface: #ffffff;
+  --c-surface-2: #f1e9e2;
+  --c-text: #2c2420;
+  --c-text-weak: #6f635b;
+  --c-border: #e3d8cf;
+  --c-danger: #c0392b;
+  --c-success: #3f7a52;
+
+  /* 타이포 — 상대단위(Dynamic Type 존중, 고정 px 금지) */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
+  --fs-title: 1.5rem;
+  --fs-body: 1rem;
+  --fs-caption: 0.8125rem;
+
+  /* 간격/모서리 */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-6: 1.5rem;
+  --radius: 14px;
+  --radius-sm: 8px;
+
+  /* safe-area(노치/홈 인디케이터, §8) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* 모션 토큰(§5 Reduce Motion에서 0으로 덮어씀) */
+  --motion-fast: 140ms;
+  --motion-base: 240ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-bg: #1a1614;
+    --c-surface: #241e1b;
+    --c-surface-2: #2f2723;
+    --c-text: #f2ebe5;
+    --c-text-weak: #b3a79f;
+    --c-border: #3a302b;
+    /* 트랙 색은 다크에서 대비 유지(WCAG AA 본문 4.5:1 지향) */
+    --c-track-mine: #6ea0e0;
+    --c-track-partner: #e58bb0;
+    --c-track-shared: #a98fe0;
+    --c-brand: #d98a6f;
+  }
+}
+
+/* Reduce Motion — 장식 모션 제거(§5) */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--c-text);
+  background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 키보드 포커스 항상 가시(:focus-visible) */
+:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+a {
+  color: inherit;
+}

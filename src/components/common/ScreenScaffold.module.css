@@ -1,0 +1,31 @@
+.screen {
+  padding: var(--sp-6) var(--sp-4) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-height: 100%;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.title {
+  /* 라지 타이틀(iOS 감성). rem으로 Dynamic Type 존중 */
+  font-size: var(--fs-title);
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--c-text-weak);
+  font-size: var(--fs-caption);
+}
+
+.body {
+  flex: 1;
+}

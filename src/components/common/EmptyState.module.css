@@ -1,0 +1,33 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--sp-2);
+  padding: var(--sp-6) var(--sp-4);
+  min-height: 50vh;
+  color: var(--c-text-weak);
+}
+
+.emoji {
+  font-size: 2.5rem;
+  margin-bottom: var(--sp-2);
+}
+
+.title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--c-text);
+  margin: 0;
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--fs-caption);
+  max-width: 28ch;
+}
+
+.action {
+  margin-top: var(--sp-3);
+}

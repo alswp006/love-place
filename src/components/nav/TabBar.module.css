@@ -1,0 +1,38 @@
+.tabbar {
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  padding-bottom: var(--safe-bottom);
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  /* 터치 타깃 ≥44px(HIG) */
+  min-height: 52px;
+  padding: var(--sp-2) 0 calc(var(--sp-2) + 2px);
+  text-decoration: none;
+  color: var(--c-text-weak);
+  transition: color var(--motion-fast) var(--ease);
+}
+
+.tab.active {
+  color: var(--c-brand);
+  font-weight: 600;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+}
+
+.label {
+  font-size: var(--fs-caption);
+  line-height: 1;
+}

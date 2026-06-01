@@ -1,0 +1,14 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  /* iOS 100vh 버그 회피 */
+  min-height: 100dvh;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: var(--safe-top);
+  -webkit-overflow-scrolling: touch;
+}
