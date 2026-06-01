@@ -6,15 +6,19 @@
   "description": "둘이 쓰는 여행 관리 웹앱 (React + Vite + TS PWA + Supabase)",
   "scripts": {
     "dev": "vite",
+    "dev:host": "vite --host",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "preview:host": "vite preview --host --port 4173 --strictPort",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
     "format": "prettier --write .",
     "e2e": "playwright test",
-    "e2e:install": "playwright install --with-deps chromium"
+    "e2e:install": "playwright install --with-deps chromium",
+    "iphone:lan": "node scripts/iphone-lan.mjs",
+    "iphone:tunnel": "node scripts/iphone-tunnel.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -37,6 +41,7 @@
     "eslint-plugin-react-refresh": "^0.4.18",
     "globals": "^15.14.0",
     "jsdom": "^26.0.0",
+    "qrcode-terminal": "^0.12.0",
     "prettier": "^3.4.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.23.0",
