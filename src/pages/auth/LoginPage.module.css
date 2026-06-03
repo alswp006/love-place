@@ -1,0 +1,132 @@
+.wrap {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6) var(--sp-4);
+  padding-top: calc(var(--safe-top) + var(--sp-6));
+  padding-bottom: calc(var(--safe-bottom) + var(--sp-6));
+}
+
+.card {
+  width: 100%;
+  max-width: 22rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  text-align: center;
+}
+
+.logo {
+  font-size: 3rem;
+}
+
+.title {
+  font-size: var(--fs-title);
+  font-weight: 700;
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0 0 var(--sp-4);
+  color: var(--c-text-weak);
+  font-size: var(--fs-caption);
+}
+
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  text-align: left;
+}
+
+.label {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--c-text-weak);
+}
+
+.input {
+  width: 100%;
+  padding: var(--sp-3);
+  font-size: var(--fs-body);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+
+.submit {
+  margin-top: var(--sp-2);
+  min-height: 48px;
+  padding: var(--sp-3);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: #fff;
+  background: var(--c-brand);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity var(--motion-fast) var(--ease);
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.hint {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  text-align: center;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-danger);
+}
+
+.notice {
+  width: 100%;
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+  color: var(--c-text-weak);
+  font-size: var(--fs-caption);
+}
+
+.sent {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  border-radius: var(--radius);
+  background: var(--c-surface-2);
+}
+
+.sentTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.sentHint {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  line-height: 1.6;
+}
+
+.linkBtn {
+  margin-top: var(--sp-2);
+  background: none;
+  border: none;
+  color: var(--c-brand);
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  text-decoration: underline;
+}

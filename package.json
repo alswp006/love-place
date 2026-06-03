@@ -8,6 +8,7 @@
     "dev": "vite",
     "dev:host": "vite --host",
     "build": "tsc --noEmit && vite build",
+    "check:secrets": "node scripts/check-bundle-secrets.mjs",
     "preview": "vite preview",
     "preview:host": "vite preview --host --port 4173 --strictPort",
     "typecheck": "tsc --noEmit",
@@ -21,6 +22,8 @@
     "iphone:tunnel": "node scripts/iphone-tunnel.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.107.0",
+    "@tanstack/react-query": "^5.101.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.0"
@@ -41,8 +44,8 @@
     "eslint-plugin-react-refresh": "^0.4.18",
     "globals": "^15.14.0",
     "jsdom": "^26.0.0",
-    "qrcode-terminal": "^0.12.0",
     "prettier": "^3.4.2",
+    "qrcode-terminal": "^0.12.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.23.0",
     "vite": "^6.1.0",
