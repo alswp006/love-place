@@ -16,6 +16,14 @@ vi.mock('@/state/auth', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+// RequireAuth가 useCouple로 ACTIVE 게이트를 보므로, 탭 렌더 테스트에선 연결된 커플로 모킹.
+vi.mock('@/hooks/useCouple', () => ({
+  useCouple: () => ({
+    data: { coupleId: 'c1', status: 'ACTIVE', userA: 'u1', userB: 'u2', connectedAt: null, partner: null },
+    isLoading: false,
+  }),
+}))
+
 // 라우트는 모킹 후 import해야 가드가 모킹된 useAuth를 본다.
 const { routes } = await import('@/app/router')
 const { TABS } = await import('@/app/tabs')

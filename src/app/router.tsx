@@ -19,6 +19,8 @@ const PAGES: Record<string, React.LazyExoticComponent<() => React.JSX.Element>> 
 // 인증 페이지(공개) — 가드 밖.
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const AuthCallbackPage = lazy(() => import('@/pages/auth/AuthCallbackPage'))
+// 커플 연결(온보딩) — 가드 안, 단 탭바 없는 풀스크린(AppLayout 밖).
+const ConnectPage = lazy(() => import('@/pages/ConnectPage'))
 
 function lazyRoute(node: ReactNode) {
   return <Suspense fallback={<RouteFallback />}>{node}</Suspense>
@@ -44,12 +46,14 @@ export const routes: RouteObject[] = [
   { path: '/auth', element: lazyRoute(<LoginPage />), errorElement: <RouteError /> },
   { path: '/auth/callback', element: lazyRoute(<AuthCallbackPage />), errorElement: <RouteError /> },
 
-  // 앱 셸 = 로그인 필요. RequireAuth가 비로그인을 /auth로 보낸다.
+  // 앱 셸 = 로그인 + 커플 연결 필요. RequireAuth가 비로그인→/auth, 미연결→/onboarding.
   {
     path: '/',
     element: <RequireAuth />,
     errorElement: <RouteError />,
     children: [
+      // 온보딩(커플 연결) — 탭바 없는 풀스크린. AppLayout과 형제.
+      { path: 'onboarding', element: lazyRoute(<ConnectPage />), errorElement: <RouteError /> },
       {
         element: <AppLayout />,
         children: [

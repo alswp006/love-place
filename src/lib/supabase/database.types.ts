@@ -143,6 +143,9 @@ export type Database = {
     }
     Functions: {
       current_couple_id: { Args: Record<string, never>; Returns: string }
+      create_invite: { Args: Record<string, never>; Returns: Json }
+      accept_invite: { Args: { p_code: string }; Returns: Json }
+      disconnect_couple: { Args: { p_couple_id: string }; Returns: Json }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
