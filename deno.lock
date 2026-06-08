@@ -1,0 +1,45 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@supabase/supabase-js@2": "2.107.0"
+  },
+  "jsr": {
+    "@supabase/supabase-js@2.107.0": {
+      "integrity": "e28d6ef6e79200417b4838a0051066c44170a1de7cccc8b00a671947b72ba0e3"
+    }
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@eslint/js@^9.19.0",
+        "npm:@playwright/test@^1.50.0",
+        "npm:@supabase/supabase-js@^2.107.0",
+        "npm:@tanstack/react-query@^5.101.0",
+        "npm:@testing-library/jest-dom@^6.6.3",
+        "npm:@testing-library/react@^16.2.0",
+        "npm:@testing-library/user-event@^14.6.1",
+        "npm:@types/navermaps@^3.9.2",
+        "npm:@types/node@^22.13.0",
+        "npm:@types/react-dom@^18.3.5",
+        "npm:@types/react@^18.3.18",
+        "npm:@vitejs/plugin-react@^4.3.4",
+        "npm:@vitest/coverage-v8@^3.0.5",
+        "npm:eslint-plugin-react-hooks@^5.1.0",
+        "npm:eslint-plugin-react-refresh@~0.4.18",
+        "npm:eslint@^9.19.0",
+        "npm:globals@^15.14.0",
+        "npm:jsdom@26",
+        "npm:prettier@^3.4.2",
+        "npm:qrcode-terminal@0.12",
+        "npm:react-dom@^18.3.1",
+        "npm:react-router-dom@^6.30.0",
+        "npm:react@^18.3.1",
+        "npm:typescript-eslint@^8.23.0",
+        "npm:typescript@^5.7.3",
+        "npm:vite-plugin-pwa@~0.21.1",
+        "npm:vite@^6.1.0",
+        "npm:vitest@^3.0.5"
+      ]
+    }
+  }
+}
