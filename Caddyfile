@@ -1,0 +1,37 @@
+# love_place 정적 PWA — Railway 배포용 Caddy 설정
+# 근거: Railway 공식 SPA 라우팅 가이드(https://docs.railway.com/guides/spa-routing-configuration)
+# 이 앱은 createBrowserRouter(HTML5 history) 사용 → 새로고침/딥링크 시
+# 서버가 모든 경로에 index.html을 돌려줘야 React Router가 라우팅을 이어받는다.
+
+{
+	admin off
+	persist_config off
+	# Railway가 TLS(https)를 종단 처리하므로 컨테이너 안에서는 https 끔.
+	auto_https off
+	log {
+		format json
+	}
+	servers {
+		# Railway 프록시의 X-Forwarded-* 헤더를 신뢰.
+		trusted_proxies static private_ranges 100.0.0.0/8
+	}
+}
+
+# Railway가 주입하는 $PORT를 듣는다(없으면 로컬 테스트용 3000).
+:{$PORT:3000} {
+	log {
+		format json
+	}
+
+	# 빌드 산출물 위치. Vite는 dist/.
+	root * dist
+
+	encode gzip zstd
+
+	# 1) 실제 파일이 있으면 그 파일을 서빙(JS/CSS/이미지/sw.js/manifest).
+	#    file_server가 try_files보다 먼저 와야 자산이 정상 서빙됨.
+	file_server
+
+	# 2) 매칭되는 파일이 없으면 index.html로 폴백 → SPA 클라이언트 라우팅.
+	try_files {path} /index.html
+}
