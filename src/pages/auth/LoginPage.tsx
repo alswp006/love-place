@@ -2,12 +2,15 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/state/auth'
 import { useSignInWithOtp } from '@/hooks/useSignInWithOtp'
+import { useSignInWithGoogle } from '@/hooks/useSignInWithGoogle'
+import { GoogleIcon } from '@/components/auth/GoogleIcon'
 import styles from './LoginPage.module.css'
 
-// 매직링크 로그인 화면(§10.3). 비번 없음 — 이메일로 온 링크를 누르면 로그인.
+// 로그인 화면(§10.3). 구글(권장, 메일 한도 없음) + 이메일 매직링크.
 export default function LoginPage() {
   const { initializing, session, configured } = useAuth()
   const { status, error, sendMagicLink, reset } = useSignInWithOtp()
+  const google = useSignInWithGoogle()
   const [email, setEmail] = useState('')
 
   // 이미 로그인돼 있으면 앱으로.
@@ -44,32 +47,52 @@ export default function LoginPage() {
             </button>
           </div>
         ) : (
-          <form className={styles.form} onSubmit={onSubmit}>
-            <label className={styles.label} htmlFor="email">
-              이메일
-            </label>
-            <input
-              id="email"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              required
-              className={styles.input}
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-describedby={error ? 'login-error' : undefined}
-            />
-            {error ? (
-              <p id="login-error" className={styles.error} role="alert">
-                {error}
+          <>
+            {/* 구글 로그인(권장) — 메일 발송 없어 즉시 로그인 */}
+            <button
+              type="button"
+              className={styles.googleBtn}
+              onClick={() => void google.signIn()}
+              disabled={google.loading}
+            >
+              <GoogleIcon />
+              <span>{google.loading ? '구글로 이동 중…' : '구글로 계속하기'}</span>
+            </button>
+            {google.error ? (
+              <p className={styles.error} role="alert">
+                {google.error}
               </p>
             ) : null}
-            <button type="submit" className={styles.submit} disabled={status === 'sending'}>
-              {status === 'sending' ? '보내는 중…' : '로그인 링크 받기'}
-            </button>
-            <p className={styles.hint}>비밀번호 없이, 메일로 온 링크로 로그인해요.</p>
-          </form>
+
+            <div className={styles.divider}>
+              <span>또는 이메일로</span>
+            </div>
+
+            {/* 이메일 매직링크(보조) */}
+            <form className={styles.form} onSubmit={onSubmit}>
+              <input
+                id="email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                required
+                className={styles.input}
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                aria-label="이메일"
+                aria-describedby={error ? 'login-error' : undefined}
+              />
+              {error ? (
+                <p id="login-error" className={styles.error} role="alert">
+                  {error}
+                </p>
+              ) : null}
+              <button type="submit" className={styles.submit} disabled={status === 'sending'}>
+                {status === 'sending' ? '보내는 중…' : '로그인 링크 받기'}
+              </button>
+            </form>
+          </>
         )}
       </div>
     </main>

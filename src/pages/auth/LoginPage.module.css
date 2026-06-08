@@ -34,6 +34,52 @@
   font-size: var(--fs-caption);
 }
 
+/* 구글 로그인 버튼(권장) */
+.googleBtn {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease);
+}
+
+.googleBtn:active {
+  background: var(--c-surface-2);
+}
+
+.googleBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0;
+  color: var(--c-text-weak);
+  font-size: var(--fs-caption);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--c-border);
+}
+
 .form {
   width: 100%;
   display: flex;
