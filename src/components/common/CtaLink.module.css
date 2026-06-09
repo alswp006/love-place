@@ -1,0 +1,21 @@
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* HIG 터치 타깃 */
+  padding: var(--sp-2) var(--sp-6);
+  border-radius: var(--radius);
+  background: var(--c-cta-bg);
+  color: var(--c-cta-fg);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform var(--motion-fast) var(--ease),
+    opacity var(--motion-fast) var(--ease);
+}
+
+.cta:active {
+  transform: scale(0.97);
+  opacity: 0.92;
+}

@@ -1,0 +1,55 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+}
+
+.lineWide,
+.lineNarrow {
+  height: 0.9rem;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--c-surface-2) 25%,
+    var(--c-border) 37%,
+    var(--c-surface-2) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+.lineWide {
+  width: 70%;
+}
+
+.lineNarrow {
+  width: 45%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+/* Reduce Motion — 시머(장식 모션) 정지(§5) */
+@media (prefers-reduced-motion: reduce) {
+  .lineWide,
+  .lineNarrow {
+    animation: none;
+  }
+}

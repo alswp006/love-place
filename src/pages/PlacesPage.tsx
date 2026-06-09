@@ -1,5 +1,6 @@
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
+import { Skeleton } from '@/components/common/Skeleton'
 import { PlaceSearch } from '@/components/places/PlaceSearch'
 import { useCouple } from '@/hooks/useCouple'
 import { usePlaces } from '@/hooks/usePlaces'
@@ -35,7 +36,7 @@ export default function PlacesPage() {
 
         <section className={styles.listSection} aria-label="가고싶은 장소 목록">
           {placesLoading ? (
-            <p className={styles.loading}>불러오는 중…</p>
+            <Skeleton count={4} label="가고싶은 장소 불러오는 중" />
           ) : !places || places.length === 0 ? (
             <EmptyState
               emoji="📍"

@@ -63,6 +63,13 @@ describe('5탭 라우팅 (설계서 §3 IA)', () => {
     },
   )
 
+  it('추천 탭 빈 상태는 "장소 모으기"로 가는 행동 유도 링크를 준다(§5.6 콜드스타트 — 죽은 탭 금지)', async () => {
+    renderAt('/discover')
+    await screen.findByTestId('page-discover')
+    const cta = screen.getByRole('link', { name: '가고싶은 곳 추가하기' })
+    expect(cta).toHaveAttribute('href', '/places')
+  })
+
   it('하단 탭바에 5개 탭이 라벨과 함께 노출된다(색만 의존 금지)', async () => {
     renderAt('/')
     await screen.findByTestId('page-map')

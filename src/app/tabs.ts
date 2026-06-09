@@ -15,8 +15,8 @@ export type TabDef = {
   title: string
   subtitle: string
   Icon: IconComponent
-  /** 빈 상태 카피 */
-  empty: { emoji: string; title: string; hint: string }
+  /** 빈 상태 카피 + (선택) 행동 유도 CTA — 죽은 탭 금지(§7/§5.6) */
+  empty: { emoji: string; title: string; hint: string; action?: { label: string; to: string } }
 }
 
 export const TABS: TabDef[] = [
@@ -32,6 +32,7 @@ export const TABS: TabDef[] = [
       emoji: '🗺️',
       title: '아직 지도에 표시할 장소가 없어요',
       hint: '장소 탭에서 첫 가고싶은 곳을 추가하면 여기 별표로 떠요.',
+      action: { label: '장소 모으러 가기', to: '/places' },
     },
   },
   {
@@ -45,6 +46,7 @@ export const TABS: TabDef[] = [
       emoji: '📅',
       title: '첫 일정을 만들어볼까요?',
       hint: '나·상대·함께 세 가지 색으로 일정을 겹쳐 봐요.',
+      action: { label: '장소부터 모아보기', to: '/places' },
     },
   },
   {
@@ -71,6 +73,7 @@ export const TABS: TabDef[] = [
       emoji: '✨',
       title: '같은 지역 가고싶은 곳이 모이면 추천이 시작돼요',
       hint: '한 지역에 3~5곳이 쌓이면 AI가 일자별 코스를 제안해요.',
+      action: { label: '가고싶은 곳 추가하기', to: '/places' },
     },
   },
   {
