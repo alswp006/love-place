@@ -41,9 +41,10 @@ export function useKakaoSearch() {
 
     setState((s) => ({ ...s, status: 'loading', error: null }))
     try {
+      // 검색 제공자: 네이버 지역검색(naver-search). 카카오로 롤백하려면 'kakao-search'로.
       const { data, error } = await supabase.functions.invoke<KakaoSearchRes | ProxyErrorRes>(
-        'kakao-search',
-        { body: { query: trimmed, size: 15 } },
+        'naver-search',
+        { body: { query: trimmed } },
       )
       // 늦게 도착한 옛 응답은 버린다(최신 순번만 반영)
       if (mySeq !== seqRef.current) return
