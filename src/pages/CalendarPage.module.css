@@ -48,7 +48,7 @@
   padding: 4px 12px;
   font-size: var(--fs-caption);
   cursor: pointer;
-  min-height: 36px;
+  min-height: 44px;
 }
 
 .chipOn {

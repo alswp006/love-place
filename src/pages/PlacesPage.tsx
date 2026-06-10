@@ -3,6 +3,8 @@ import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
+import { Toast } from '@/components/common/Toast'
+import { useToast } from '@/hooks/useToast'
 import { PlaceSearch } from '@/components/places/PlaceSearch'
 import { Heart } from '@/components/nav/icons'
 import { useAuth } from '@/state/auth'
@@ -31,6 +33,7 @@ export default function PlacesPage() {
   const { data: wishes } = useWishes(coupleId, myId)
   const { data: visits } = useVisits(coupleId)
   const markVisited = useMarkVisited(coupleId, myId)
+  const toast = useToast()
   const conflict = useConflict()
   const { setPriority, isPending: priorityPending } = useSetWishPriority(coupleId, myId, conflict.flag)
   const { deletePlace, isPending: deletePending } = useDeletePlace(coupleId, myId, conflict.flag)
@@ -71,6 +74,7 @@ export default function PlacesPage() {
       <div className={styles.container}>
         <PlaceSearch coupleId={coupleId} />
         {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
+        <Toast msg={toast.msg} />
 
         <div className={styles.filterRow} role="group" aria-label="장소 필터">
           {(
@@ -136,7 +140,12 @@ export default function PlacesPage() {
                           <button
                             type="button"
                             className={styles.visitBtn}
-                            onClick={() => markVisited.mutate({ placeId: p.id })}
+                            onClick={() =>
+                              markVisited.mutate(
+                                { placeId: p.id },
+                                { onSuccess: () => toast.show('가봤어요로 기록했어요 ✅') },
+                              )
+                            }
                             disabled={markVisited.isPending}
                           >
                             다녀왔어요
@@ -150,7 +159,12 @@ export default function PlacesPage() {
                       <button
                         type="button"
                         className={styles.deleteBtn}
-                        onClick={() => deletePlace({ id: p.id, expectedVersion: p.version })}
+                        onClick={() =>
+                          deletePlace(
+                            { id: p.id, expectedVersion: p.version },
+                            { onSuccess: () => toast.show('휴지통으로 옮겼어요 — 아래 휴지통에서 복구할 수 있어요') },
+                          )
+                        }
                         disabled={deletePending}
                         aria-label={`${p.name} 휴지통으로 보내기`}
                       >
