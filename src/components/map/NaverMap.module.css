@@ -18,6 +18,17 @@
   cursor: pointer;
 }
 
+/* 둘 다 찜 — 모양(♥)+색(퍼플=함께 트랙)으로 이중 구분(§8) */
+.pinBoth {
+  color: var(--c-track-shared);
+  font-size: 20px;
+}
+
+/* 가봤음 — 채운 별(★)+색(그린)으로 가고싶음(빈 별)과 이중 구분(§8) */
+.pinVisited {
+  color: var(--c-success);
+}
+
 .fallback {
   display: flex;
   flex-direction: column;

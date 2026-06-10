@@ -1,0 +1,57 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.sectionTitle {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  margin: 0 0 var(--sp-2);
+}
+
+.card {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.count {
+  font-size: var(--fs-caption);
+  color: var(--c-brand);
+  font-weight: 600;
+}
+
+.names {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  margin: var(--sp-1) 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.soon {
+  font-size: var(--fs-caption);
+  color: var(--c-brand);
+  margin: var(--sp-2) 0 0;
+}
+
+.building,
+.retro,
+.seed {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px dashed var(--c-border);
+  border-radius: var(--radius-sm);
+  margin: 0 0 var(--sp-2);
+}

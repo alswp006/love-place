@@ -17,14 +17,14 @@
 - **오프라인 표시** (설계서 §4.3): 쓰기 큐 대기 중 `data-testid="offline-queue-badge"` (대기 건수 표시). 재연결 시 자동 동기화.
 - **soft-delete**: 삭제는 `deleted_at`만 채움. 휴지통 `data-testid="trash-tray"`에서 복구 가능.
 - **접근성** (설계서 §8): 상태는 **색 + 패턴/라벨 이중화** `[비협상]`. VoiceOver 라벨, Dynamic Type, Reduce Motion(`prefers-reduced-motion` 시 모션 제거), 다크모드 기본.
-- **API 키**: 클라이언트에 절대 노출 금지 — 카카오/Claude/길찾기 호출 전부 Edge Function 프록시 경유 `[비협상]` (설계서 §2.1, §10.1).
+- **API 키**: 클라이언트에 절대 노출 금지 — 네이버/Claude/길찾기 호출 전부 Edge Function 프록시 경유 `[비협상]` (설계서 §2.1, §10.1).
 
 ---
 
 ## 1. 지도 (Map) — 설계서 §5.5
 
 ### 1.1 마커 표시
-- **행위**: 커플의 모든 `places`를 카카오맵 JS SDK에 마커로 표시. 가고싶음(=해당 place에 `wishes` 존재) / 가봤음(=`visits` 존재)을 도출값으로 구분.
+- **행위**: 커플의 모든 `places`를 네이버 지도 JS SDK(v3)에 마커로 표시. 가고싶음(=해당 place에 `wishes` 존재) / 가봤음(=`visits` 존재)을 도출값으로 구분. (지도 표시=네이버, 장소 검색=네이버 지역검색으로 정본 확정 — D5.)
 - **표현**: 컨테이너 `data-testid="map-canvas"`. 마커 `data-testid="map-marker-{placeId}"`.
   - 가고싶음 = **빈 별** + `aria-label="가고싶음: {name}"`.
   - 가봤음 = **채운 별 + 체크 아이콘** + `aria-label="가봤음: {name}"`.
@@ -32,7 +32,7 @@
 - **AC**: wish만 있는 장소 → 빈 별. visit≥1 → 채운 별+체크. 둘 다 있어도 visit 우선(가봤고 또 가고싶음 표현은 상세에서). 0건이면 `empty-state-map` ("첫 가고싶은 장소를 추가해보세요").
 
 ### 1.2 클러스터링 / 출처 / 필터
-- **행위**: 줌아웃 시 SDK 내장 클러스터링. 마커 탭 → 미니 카드(이름·사진 1장·상태) → 상세 진입. 상단 필터 "가고싶은/가본/전체" 토글. 추가자 아바타 점 출처 표시.
+- **행위**: 줌아웃 시 클러스터링(네이버 지도 MarkerClustering 샘플 포함 — SDK 번들 아님). 마커 탭 → 미니 카드(이름·사진 1장·상태) → 상세 진입. 상단 필터 "가고싶은/가본/전체" 토글. 추가자 아바타 점 출처 표시.
 - **표현**: 클러스터 `data-testid="map-cluster"` (포함 개수 텍스트 표기). 미니카드 `data-testid="map-minicard-{placeId}"`. 필터 `data-testid="map-filter-{want|visited|all}"`, 활성 시 `aria-pressed="true"`. 출처 점 `data-testid="map-marker-origin-{placeId}"`.
 - **AC**: 필터=가본 → wish전용 마커 숨김. 클러스터 탭 → 줌인/확장. 미니카드의 "상세" → 장소 상세.
 
@@ -61,9 +61,9 @@
 
 ## 3. 장소 (Places) — 설계서 §5.2, §5.3, §5.4
 
-### 3.1 위시 장소 추가 — 카카오 자동완성 `[탭 ≤3]`
-- **행위**: 검색 한 줄 입력 → **디바운스 250ms** → Edge 프록시 → 카카오 로컬 키워드 검색 → 드롭다운 후보. 탭 → `places`(공유) + `wishes`(내 의도, priority 하트) 저장. 메모·태그·하트 가볍게 얹음. 주소 파싱으로 `region_code`/`region_label` 자동 채움.
-- **표현**: 검색 입력 `data-testid="place-search-input"`. 드롭다운 `data-testid="place-search-results"`, 후보 `place-search-result-{kakaoPlaceId}`. 저장 후 하트 애니메이션(Reduce Motion 시 생략). 하트 우선순위 `data-testid="wish-priority-{placeId}"`.
+### 3.1 위시 장소 추가 — 네이버 지역검색 자동완성 `[탭 ≤3]`
+- **행위**: 검색 한 줄 입력 → **디바운스 250ms** → Edge 프록시 → 네이버 지역검색 → 드롭다운 후보. (D5: 장소 검색·자동완성 정본 = 네이버 지역검색. 함수명 `kakao-search`는 배포 경로 호환 위해 유지.) 탭 → `places`(공유) + `wishes`(내 의도, priority 하트) 저장. 메모·태그·하트 가볍게 얹음. 주소 파싱으로 `region_code`/`region_label` 자동 채움.
+- **표현**: 검색 입력 `data-testid="place-search-input"`. 드롭다운 `data-testid="place-search-results"`, 후보 `place-search-result-{kakaoPlaceId}` (testid 토큰 유지 — 값=네이버 장소ID, 식별자 유지). 저장 후 하트 애니메이션(Reduce Motion 시 생략). 하트 우선순위 `data-testid="wish-priority-{placeId}"`.
 - **AC**: 저장 ≤3탭(검색입력은 1탭으로 카운트) `[비협상 목표]` (설계서 §8). 자동완성 체감 ≤400ms (설계서 §9 DoD). 저장 시 `Place`+내 `Wish` 동시 생성.
 
 ### 3.2 자동완성 엣지케이스 `[비협상]` (설계서 §5.2 표)
@@ -71,7 +71,7 @@
 |---|---|---|
 | 검색 결과 **0건** | "직접 입력" 폴백(이름·주소·핀 찍기) | `data-testid="place-manual-fallback"` (드롭다운 비었을 때 노출) |
 | **오프라인/타임아웃** | 인라인 에러 + 재시도, **입력값 보존** | `data-testid="place-search-error"` + 재시도 `place-search-retry`. 입력 텍스트 유지 |
-| **중복 저장** (같은 `kakao_place_id`, per couple UNIQUE) | 기존 카드로 **점프**, 내 `Wish`만 추가 | `data-testid="place-duplicate-jump"` → 기존 `place-card-{placeId}` 스크롤/하이라이트 |
+| **중복 저장** (같은 `kakao_place_id`, per couple UNIQUE) | 기존 카드로 **점프**, 내 `Wish`만 추가 (값=네이버 장소ID, 식별자 유지 — D5) | `data-testid="place-duplicate-jump"` → 기존 `place-card-{placeId}` 스크롤/하이라이트 |
 | **stale 응답** (디바운스 race) | 요청에 **취소 토큰**, 늦게 온 옛 응답 무시 | 표시된 결과는 항상 최신 입력 대응. (테스트: 빠른 연속 입력 시 옛 응답 미반영) |
 
 ### 3.3 위시 목록 + 가본 곳 전환 `[탭 ≤5]`

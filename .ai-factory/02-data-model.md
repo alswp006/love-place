@@ -66,7 +66,7 @@
 - `created_by/updated_by/deleted_at`는 self-참조 모순을 피하려 profiles에선 생략(가입=auth, soft-delete는 auth 측 처리).
 
 ### 1.4 `places`
-공유 장소(§5.2). 카카오 검색 결과 정규화.
+공유 장소(§5.2). 네이버 지역검색 결과 정규화(D5).
 
 | 컬럼 | 타입 | 제약 |
 |---|---|---|
@@ -78,8 +78,8 @@
 | region_label | text | NULL (표시 캐시, 예: "속초") |
 | lat | double precision | NULL |
 | lng | double precision | NULL |
-| category | text | NULL (카카오 카테고리) |
-| kakao_place_id | text | NULL (UNIQUE per couple — 중복 점프 §5.2) |
+| category | text | NULL (네이버 카테고리) |
+| kakao_place_id | text | NULL (UNIQUE per couple — 중복 점프 §5.2). 값=네이버 장소ID — 네이버는 고유 ID가 없어 `norm(name)\|norm(address)` 합성키 저장(normalize.ts), 컬럼명은 스키마 호환 위해 유지. 별도 `naver_place_id` 불필요 |
 | tags | text[] | NOT NULL DEFAULT '{}' |
 | memo | text | NULL |
 | added_by | uuid | NOT NULL FK→profiles(id) |
@@ -247,6 +247,8 @@ CREATE INDEX idx_itineraries_couple ON itineraries(couple_id) WHERE deleted_at I
 CREATE INDEX idx_reactions_couple   ON reactions(couple_id)   WHERE deleted_at IS NULL;
 
 -- kakao_place_id UNIQUE per couple (중복 점프 §5.2)
+-- 값=네이버 장소ID — 네이버는 고유 ID가 없어 norm(name)|norm(address) 합성키 저장(normalize.ts).
+-- 컬럼명·인덱스명(uq_places_couple_kakao)은 스키마 호환 위해 유지. 별도 naver_place_id 불필요. 중복 방지는 합성키로 동작.
 CREATE UNIQUE INDEX uq_places_couple_kakao
   ON places(couple_id, kakao_place_id)
   WHERE kakao_place_id IS NOT NULL AND deleted_at IS NULL;
@@ -386,8 +388,8 @@ CREATE TABLE places (
   region_label   text,
   lat            double precision,
   lng            double precision,
-  category       text,
-  kakao_place_id text,
+  category       text,                              -- 네이버 카테고리
+  kakao_place_id text,                              -- 값=네이버 장소ID(norm(name)|norm(address) 합성키, normalize.ts); 컬럼명 스키마 호환 위해 유지(별도 naver_place_id 불필요)
   tags           text[] NOT NULL DEFAULT '{}',
   memo           text,
   added_by       uuid NOT NULL REFERENCES profiles(id),

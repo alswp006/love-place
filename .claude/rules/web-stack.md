@@ -130,9 +130,11 @@ useEffect(() => {
 
 ---
 
-## 5. 카카오맵 JS SDK 로딩 (설계서 §5.5)
+## 5. 지도 SDK 로딩 (설계서 §5.5 / D5: 네이버 정본)
 
-- **표시(지도/마커/클러스터)는 카카오맵 JS SDK(웹)**. `VITE_KAKAO_JS_KEY`(**도메인 제한된 JS 앱키만** 클라이언트 허용 — 카카오 콘솔에서 사용 도메인 화이트리스트 등록).
+> 정본: 지도 표시·장소 검색 모두 네이버. 카카오 코드는 롤백용 보존, 미사용. 아래 카카오 예시는 동적 로더 패턴 참고용.
+
+- **표시(지도/마커/클러스터)는 네이버 지도 JS SDK v3**(`lib/naver/loadNaverMaps.ts`, `ncpKeyId` 동적 로더). `VITE_NAVER_MAP_CLIENT_ID`(NCP Web Dynamic Map, 도메인 등록). 클러스터링은 네이버 MarkerClustering 샘플 포함.
 - 스크립트는 `index.html` 정적 태그가 아니라 **동적 로더**로(키가 빌드 시 들어가고, 1회만 로드, `autoload=false`):
 ```ts
 // lib/kakao.ts

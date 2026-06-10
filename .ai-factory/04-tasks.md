@@ -84,9 +84,9 @@ public/      (PWA manifest·아이콘·service worker)
 
 설계서 §5.2, §5.5, §4.3. DoD(단계 1): **장소 저장 ≤3탭 & 자동완성 체감 ≤400ms & 약전파 데이터 유실 0**. 횡단 테스트(동기화/충돌/오프라인)는 **여기서부터** 필수.
 
-## P1a — 카카오 키워드 검색 프록시 + 자동완성 훅
+## P1a — 네이버 지역검색 프록시 + 자동완성 훅
 
-- **범위:** Edge Function이 카카오 로컬 키워드 검색(`/v2/local/search/keyword`) 프록시(키 서버 보관). 클라이언트 자동완성 훅: **디바운스 250ms**, **취소 토큰으로 stale 응답 무시**(race 방지, §5.2), 결과 0건→직접입력 폴백, 오프라인/타임아웃→인라인 에러+재시도+입력 보존.
+- **범위:** Edge Function이 네이버 지역검색 프록시(키 서버 보관; 함수명 `kakao-search` 유지 — D5, 배포 경로 호환). 클라이언트 자동완성 훅: **디바운스 250ms**, **취소 토큰으로 stale 응답 무시**(race 방지, §5.2), 결과 0건→직접입력 폴백, 오프라인/타임아웃→인라인 에러+재시도+입력 보존.
 - **산출:** `supabase/functions/kakao-search/index.ts`(P0f 미들웨어 사용), `src/hooks/useKakaoSearch.ts`, `src/lib/kakao/types.ts`, `src/components/places/SearchAutocomplete.tsx`.
 - **의존성:** P0f.
 - **DoD:** 자동완성 응답 **체감 ≤400ms**(짧은 TTL 캐시 포함) / stale 응답 폐기 / 0건·오프라인 폴백.

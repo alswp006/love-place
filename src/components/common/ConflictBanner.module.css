@@ -1,0 +1,33 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--c-danger) 12%, var(--c-surface));
+  border: 1px solid var(--c-danger);
+  color: var(--c-text);
+  font-size: var(--fs-caption);
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.dismiss {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--c-text-weak);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: var(--sp-1);
+  min-width: 44px;
+  min-height: 44px;
+}

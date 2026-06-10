@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { useAuth } from '@/state/auth'
 import { useSignOut } from '@/hooks/useSignOut'
 import { useCouple } from '@/hooks/useCouple'
 import { useDisconnectCouple } from '@/hooks/useCoupleInvite'
+import { fetchCoupleExport, downloadJson } from '@/lib/export/dumpSchema'
+import { dayKey } from '@/lib/calendar/eventDays'
 import { tabByPath } from '@/app/tabs'
 import styles from './UsPage.module.css'
 
@@ -15,6 +17,35 @@ export default function UsPage() {
   const { data: couple } = useCouple()
   const disconnect = useDisconnectCouple()
   const [confirming, setConfirming] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
+  const cancelRef = useRef<HTMLButtonElement>(null)
+
+  // 연결해제 확인 다이얼로그(파괴적): 열리면 취소에 초기 포커스 + ESC로 닫기(§8).
+  useEffect(() => {
+    if (!confirming) return
+    cancelRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setConfirming(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [confirming])
+
+  // 내보내기 v0(§10.4 회수권) — 내 커플 데이터 전체를 JSON으로 다운로드.
+  const onExport = async () => {
+    if (!couple?.coupleId) return
+    setExporting(true)
+    setExportError(null)
+    try {
+      const data = await fetchCoupleExport(couple.coupleId)
+      downloadJson(`love_place_${dayKey(new Date().toISOString())}.json`, data)
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : '내보내기에 실패했어요.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const partner = couple?.partner
   const connectedDate = couple?.connectedAt
@@ -59,16 +90,36 @@ export default function UsPage() {
           </button>
         </section>
 
+        {/* 내보내기(§10.4 회수권) — 둘 다 동등하게 내 커플 데이터 전체를 가져갈 수 있다 */}
+        {couple?.coupleId ? (
+          <section className={styles.card} aria-label="데이터 내보내기">
+            <div className={styles.row}>
+              <span className={styles.label}>내보내기</span>
+              <span className={styles.value}>우리 데이터 전체(JSON)</span>
+            </div>
+            <button className={styles.ghostBtn} type="button" onClick={() => void onExport()} disabled={exporting}>
+              {exporting ? '내보내는 중…' : '내 데이터 내보내기'}
+            </button>
+            {exportError ? (
+              <p className={styles.exportError} role="alert">
+                {exportError}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
         {/* 연결 해제 */}
         {couple?.status === 'ACTIVE' ? (
           <section className={styles.card} aria-label="연결 관리">
             {confirming ? (
-              <div className={styles.confirm} role="dialog" aria-label="연결 해제 확인">
+              <div className={styles.confirm} role="dialog" aria-modal="true" aria-label="연결 해제 확인">
                 <p className={styles.confirmText}>
-                  연결을 해제하면 새 공유 기록 추가가 중단돼요. 기존 기록은 남습니다. 정말 해제할까요?
+                  연결을 해제하면 새 공유 기록 추가가 중단돼요. 기존 기록은 남습니다.
+                  <br />
+                  해제 전 위 <strong>내보내기</strong>로 데이터를 받아두는 걸 권장해요. 정말 해제할까요?
                 </p>
                 <div className={styles.confirmActions}>
-                  <button className={styles.ghostBtn} onClick={() => setConfirming(false)}>
+                  <button ref={cancelRef} type="button" className={styles.ghostBtn} onClick={() => setConfirming(false)}>
                     취소
                   </button>
                   <button

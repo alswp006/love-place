@@ -13,7 +13,14 @@ export function PlaceSearch({ coupleId }: { coupleId: string | null }) {
   const onPick = (hit: KakaoPlaceHit) => {
     save.mutate(hit, {
       onSuccess: (r) => {
-        setToast(r.jumped ? `이미 담은 곳이에요 — 찜에 추가했어요` : `'${hit.name}' 저장!`)
+        // r === null = 오프라인 큐 적재(재연결 시 동기화).
+        setToast(
+          r === null
+            ? '오프라인이라 큐에 담았어요 — 연결되면 저장돼요'
+            : r.jumped
+              ? `이미 담은 곳이에요 — 찜에 추가했어요`
+              : `'${hit.name}' 저장!`,
+        )
         clear()
         setTimeout(() => setToast(null), 2000)
       },

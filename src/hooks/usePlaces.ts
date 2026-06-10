@@ -11,6 +11,7 @@ export type PlaceRow = {
   category: string | null
   kakao_place_id: string | null
   added_by: string
+  version: number
 }
 
 // 우리 커플의 장소 목록(§5.2 위시 목록·§5.5 지도 마커 공용). RLS가 커플 격리.
@@ -22,7 +23,7 @@ export function usePlaces(coupleId: string | null) {
       if (!coupleId) return []
       const { data, error } = await supabase
         .from('places')
-        .select('id, name, address, region_label, lat, lng, category, kakao_place_id, added_by')
+        .select('id, name, address, region_label, lat, lng, category, kakao_place_id, added_by, version')
         .eq('couple_id', coupleId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })

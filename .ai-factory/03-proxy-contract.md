@@ -44,9 +44,9 @@ type ProxyError = {
 
 ---
 
-## (a) `kakao-search` — 카카오 로컬 키워드 검색 프록시
+## (a) `kakao-search` — 네이버 지역검색 프록시 — D5; 함수명은 배포 경로 호환 유지
 
-근거 §5.2, §6. 클라이언트가 자동완성 입력을 디바운스 후 호출. 카카오 로컬 REST `/v2/local/search/keyword`를 키 `Authorization: KakaoAK <REST_KEY>`로 호출.
+근거 §5.2, §6. 클라이언트가 자동완성 입력을 디바운스 후 호출. **네이버 지역검색 API**를 인증 헤더 `X-Naver-Client-Id: <CLIENT_ID>` / `X-Naver-Client-Secret: <CLIENT_SECRET>`로 호출한다. (D5: 장소 검색 정본=네이버. 함수명 `kakao-search`·타입 이름은 배포 경로·클라이언트 결합 호환을 위해 그대로 유지하고 의미만 네이버로 해석.)
 
 ### 요청
 ```ts
@@ -62,15 +62,15 @@ type KakaoSearchReq = {
 
 ### 응답
 ```ts
-type KakaoPlaceHit = {
-  kakaoPlaceId: string;   // 카카오 place id (documents[].id) — UNIQUE per couple 키
-  name: string;           // place_name
-  address: string;        // road_address_name || address_name
-  lat: number;            // y (number 변환)
-  lng: number;            // x
-  category: string;       // category_group_name || category_name
-  placeUrl: string;       // place_url
-  phone?: string;
+type KakaoPlaceHit = {     // 타입 이름 유지(클라 결합) — 의미는 네이버 지역검색 결과
+  kakaoPlaceId: string;   // 네이버는 고유 ID 없음 → norm(stripTags(title))|norm(roadAddress||address) 합성키 — UNIQUE per couple 키 (normalize.ts)
+  name: string;           // title(<b> 태그 제거 후)
+  address: string;        // roadAddress || address(지번)
+  lat: number;            // mapy / 1e7 (위도, WGS84)
+  lng: number;            // mapx / 1e7 (경도, WGS84)
+  category: string;       // category
+  placeUrl: string;       // link
+  phone?: string;         // telephone
 };
 type KakaoSearchRes = {
   ok: true;
@@ -79,14 +79,14 @@ type KakaoSearchRes = {
   cached: boolean;
 };
 ```
-- **영업시간 필드 없음** — 카카오 키워드 검색은 영업시간을 반환하지 않는다(§5.6 환각 차단의 근원). 절대 추가하지 않는다.
+- **영업시간 필드 없음** — 네이버 지역검색은 영업시간을 반환하지 않는다(§5.6 환각 차단의 근원). 절대 추가하지 않는다.
 - 결과 0건도 `ok:true, hits:[]` — 클라이언트가 "직접 입력" 폴백 처리(§5.2 엣지케이스).
 
 ### 디바운스·캐시·한도
 - **디바운스 250ms는 클라이언트 책임**(§5.2). stale 응답은 클라이언트 취소 토큰으로 무시(서버 무관).
 - **캐시 TTL: 60초**(짧은 TTL, §2.1-4 "자동완성은 짧은 TTL"). `cache_key = sha256(query|x반올림3|y반올림3|page|size)`.
 - 레이트리밋: **분당 30 / 일 600** (couple 단위). 자동완성 특성상 분당 한도가 핵심.
-- 월 상한: 카카오 일 한도 내라 별도 비용 상한 없음(`call_count`만 집계, §9.2).
+- 월 상한: 네이버 지역검색 일 한도 내라 별도 비용 상한 없음(`call_count`만 집계, §9.2).
 
 ---
 

@@ -113,6 +113,22 @@ body {
   border-radius: 4px;
 }
 
+/* 본문 바로가기(§8) — 평소 화면 밖, 포커스 시 노출 */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--c-brand);
+  color: #fff;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: 0 0 var(--radius-sm) 0;
+  text-decoration: none;
+}
+.skip-link:focus {
+  left: 0;
+}
+
 a {
   color: inherit;
 }

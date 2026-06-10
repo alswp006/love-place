@@ -1,0 +1,48 @@
+.card {
+  display: block;
+  text-decoration: none;
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.head {
+  font-weight: 600;
+  font-size: var(--fs-caption);
+  color: var(--c-brand);
+  margin-bottom: var(--sp-2);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-size: var(--fs-caption);
+}
+
+.time {
+  color: var(--c-text-weak);
+  margin-right: var(--sp-1);
+}
+
+.more {
+  color: var(--c-text-weak);
+}
+
+.none {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  margin: 0;
+}
+
+.next {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}

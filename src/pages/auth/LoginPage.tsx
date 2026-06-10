@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/state/auth'
 import { useSignInWithOtp } from '@/hooks/useSignInWithOtp'
 import { useSignInWithGoogle } from '@/hooks/useSignInWithGoogle'
+import { useSignInWithPassword } from '@/hooks/useSignInWithPassword'
 import { GoogleIcon } from '@/components/auth/GoogleIcon'
 import styles from './LoginPage.module.css'
 
@@ -11,7 +12,9 @@ export default function LoginPage() {
   const { initializing, session, configured } = useAuth()
   const { status, error, sendMagicLink, reset } = useSignInWithOtp()
   const google = useSignInWithGoogle()
+  const pw = useSignInWithPassword()
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   // 이미 로그인돼 있으면 앱으로.
   if (!initializing && session) return <Navigate to="/" replace />
@@ -19,6 +22,11 @@ export default function LoginPage() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     void sendMagicLink(email)
+  }
+
+  const onPwSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    void pw.signIn(email, password)
   }
 
   return (
@@ -92,6 +100,43 @@ export default function LoginPage() {
                 {status === 'sending' ? '보내는 중…' : '로그인 링크 받기'}
               </button>
             </form>
+
+            {/* 개발용 비밀번호 로그인 — 운영 빌드엔 노출 안 함(자동 검증·테스트 안전망). 위 이메일 칸을 그대로 사용. */}
+            {import.meta.env.DEV ? (
+              <form
+                className={styles.form}
+                onSubmit={onPwSubmit}
+                aria-label="개발용 비밀번호 로그인"
+                data-testid="dev-password-login"
+              >
+                <div className={styles.divider}>
+                  <span>개발용 · 비밀번호</span>
+                </div>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  className={styles.input}
+                  placeholder="비밀번호 (테스트 계정)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  aria-label="비밀번호"
+                  data-testid="dev-password-input"
+                />
+                {pw.error ? (
+                  <p className={styles.error} role="alert">
+                    {pw.error}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  className={styles.submit}
+                  disabled={pw.status === 'signing'}
+                  data-testid="dev-password-submit"
+                >
+                  {pw.status === 'signing' ? '로그인 중…' : '비밀번호로 로그인 (개발용)'}
+                </button>
+              </form>
+            ) : null}
           </>
         )}
       </div>
