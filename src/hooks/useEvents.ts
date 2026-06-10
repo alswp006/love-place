@@ -15,6 +15,8 @@ export type EventRow = {
   owner_id: string
   place_id: string | null
   memo: string | null
+  recurrence_rule: string | null
+  reminders: { userId: string; offsetMinutes: number }[]
   version: number
 }
 
@@ -29,7 +31,7 @@ export function useEvents(coupleId: string | null) {
       const { data, error } = await supabase
         .from('events')
         .select(
-          'id, title, start, end, is_all_day, time_zone, visibility, participants, owner_id, place_id, memo, version',
+          'id, title, start, end, is_all_day, time_zone, visibility, participants, owner_id, place_id, memo, recurrence_rule, reminders, version',
         )
         .eq('couple_id', coupleId)
         .is('deleted_at', null)

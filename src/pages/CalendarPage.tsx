@@ -12,6 +12,7 @@ import { useEventMutations, type NewEvent, type EventPatch } from '@/hooks/useEv
 import { useConflict } from '@/lib/sync/useConflict'
 import { deriveTrack, TRACK_META, ALL_TRACKS, type Track } from '@/lib/calendar/track'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
+import { expandEvents, type Occurrence } from '@/lib/calendar/rrule'
 import { tabByPath } from '@/app/tabs'
 import styles from './CalendarPage.module.css'
 
@@ -43,8 +44,17 @@ export default function CalendarPage() {
     () => (events ?? []).filter((e) => filter.has(deriveTrack(e, myId))),
     [events, filter, myId],
   )
-  const grouped = useMemo(() => groupByDay(visibleEvents), [visibleEvents])
   const cells = useMemo(() => monthMatrix(view.year, view.month0), [view])
+  // 반복 일정을 보이는 달 윈도우로 회차 전개(비반복은 그대로). 편집은 시리즈 기준(_seriesStart).
+  const expanded = useMemo(() => {
+    const first = cells[0]?.key
+    const last = cells[cells.length - 1]?.key
+    if (!first || !last) return []
+    const winStart = new Date(`${first}T00:00:00+09:00`).toISOString()
+    const winEnd = new Date(`${last}T23:59:59+09:00`).toISOString()
+    return expandEvents(visibleEvents, winStart, winEnd)
+  }, [visibleEvents, cells])
+  const grouped = useMemo(() => groupByDay(expanded), [expanded])
   const dayEvents = grouped[selected] ?? []
 
   if (!coupleLoading && couple?.status !== 'ACTIVE') {
@@ -118,7 +128,7 @@ export default function CalendarPage() {
           events={dayEvents}
           myId={myId}
           profiles={profiles ?? {}}
-          onEdit={(ev) => setSheet({ open: true, editing: ev })}
+          onEdit={(ev) => setSheet({ open: true, editing: { ...ev, start: ev._seriesStart, end: ev._seriesEnd } })}
         />
 
         <button
@@ -135,6 +145,7 @@ export default function CalendarPage() {
         <EventSheet
           initial={sheet.editing}
           defaultDate={selected}
+          myId={myId}
           busy={busy}
           onClose={closeSheet}
           onCreate={onCreate}
@@ -236,10 +247,10 @@ function DayAgenda({
   onEdit,
 }: {
   dateKey: string
-  events: EventRow[]
+  events: Occurrence<EventRow>[]
   myId: string | null
   profiles: ProfileMap
-  onEdit: (ev: EventRow) => void
+  onEdit: (ev: Occurrence<EventRow>) => void
 }) {
   return (
     <section className={styles.agenda} aria-label={`${dateKey} 일정`}>
@@ -257,6 +268,10 @@ function DayAgenda({
                   <span className={styles.eventBar} style={{ background: meta.cssVar }} aria-hidden />
                   <span className={styles.eventTime}>{ev.is_all_day ? '종일' : formatTime(ev.start)}</span>
                   <span className={styles.eventTitle}>{ev.title}</span>
+                  {ev.recurrence_rule ? <span aria-label="반복 일정">🔁</span> : null}
+                  {myId && ev.reminders?.some((r) => r.userId === myId) ? (
+                    <span aria-label="리마인더 설정됨">🔔</span>
+                  ) : null}
                   <SourceAvatar userId={ev.owner_id} profiles={profiles} myId={myId} context=" 일정" />
                   <span className={styles.eventTrack} style={{ color: meta.cssVar }}>
                     {meta.symbol} {meta.label}

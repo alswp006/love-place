@@ -6,6 +6,8 @@ import { versionedUpdate, softDelete, ConflictError } from '@/lib/sync/versioned
 // 삭제는 soft-delete(휴지통, 물리삭제 아님). owner_id=본인(events_insert RLS WITH CHECK).
 // 참고: 오프라인 큐 연동(D2)은 후속 — 현재 이벤트 쓰기는 온라인 경로.
 
+export type Reminder = { userId: string; offsetMinutes: number }
+
 export type NewEvent = {
   title: string
   start: string // ISO
@@ -15,6 +17,8 @@ export type NewEvent = {
   visibility: 'SHARED' | 'PERSONAL'
   placeId?: string | null
   memo?: string | null
+  recurrenceRule?: string | null
+  reminders?: Reminder[]
 }
 
 export type EventPatch = Partial<{
@@ -25,6 +29,8 @@ export type EventPatch = Partial<{
   visibility: 'SHARED' | 'PERSONAL'
   place_id: string | null
   memo: string | null
+  recurrence_rule: string | null
+  reminders: Reminder[]
 }>
 
 export function useEventMutations(coupleId: string | null, myId: string | null, onConflict: () => void) {
@@ -46,6 +52,8 @@ export function useEventMutations(coupleId: string | null, myId: string | null, 
         owner_id: myId,
         place_id: e.placeId ?? null,
         memo: e.memo ?? null,
+        recurrence_rule: e.recurrenceRule ?? null,
+        reminders: e.reminders ?? [],
         created_by: myId,
         updated_by: myId,
       })

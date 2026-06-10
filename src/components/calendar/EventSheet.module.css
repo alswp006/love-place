@@ -53,7 +53,8 @@
   color: var(--c-text-weak);
 }
 
-.field input {
+.field input,
+.field select {
   font-size: var(--fs-body);
   color: var(--c-text);
   border: 1px solid var(--c-border);

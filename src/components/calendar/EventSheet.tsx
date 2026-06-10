@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent as Reac
 import type { EventRow } from '@/hooks/useEvents'
 import type { NewEvent, EventPatch } from '@/hooks/useEventMutations'
 import { dayKey, formatTime, DISPLAY_TZ } from '@/lib/calendar/eventDays'
+import { parseRule, buildRule, type Freq } from '@/lib/calendar/rrule'
 import styles from './EventSheet.module.css'
 
 // 한국(Asia/Seoul, DST 없음) 고정 오프셋으로 벽시계 시각 → ISO. 이벤트별 tz는 후속 정교화.
@@ -12,6 +13,7 @@ function toIso(date: string, time: string): string {
 type Props = {
   initial: EventRow | null // 있으면 수정 모드
   defaultDate: string // 생성 시 기본 날짜(선택된 날)
+  myId: string | null // 사용자별 리마인더 소유자
   busy: boolean
   onClose: () => void
   onCreate: (e: NewEvent) => void
@@ -19,7 +21,7 @@ type Props = {
   onDelete: (id: string, expectedVersion: number) => void
 }
 
-export function EventSheet({ initial, defaultDate, busy, onClose, onCreate, onUpdate, onDelete }: Props) {
+export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate, onUpdate, onDelete }: Props) {
   const editing = initial != null
   const [title, setTitle] = useState(initial?.title ?? '')
   const [date, setDate] = useState(initial ? dayKey(initial.start) : defaultDate)
@@ -28,6 +30,12 @@ export function EventSheet({ initial, defaultDate, busy, onClose, onCreate, onUp
   const [endTime, setEndTime] = useState(initial && !initial.is_all_day ? formatTime(initial.end) : '11:00')
   const [visibility, setVisibility] = useState<'SHARED' | 'PERSONAL'>(initial?.visibility ?? 'SHARED')
   const [memo, setMemo] = useState(initial?.memo ?? '')
+  const initRule = parseRule(initial?.recurrence_rule)
+  const [recurrence, setRecurrence] = useState<Freq | 'none'>(initRule?.freq ?? 'none')
+  const [recurCount, setRecurCount] = useState(initRule?.count ?? 10)
+  const [myReminder, setMyReminder] = useState(
+    initial?.reminders?.find((r) => r.userId === myId)?.offsetMinutes ?? 0,
+  )
   const titleRef = useRef<HTMLInputElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
 
@@ -68,6 +76,11 @@ export function EventSheet({ initial, defaultDate, busy, onClose, onCreate, onUp
     const start = allDay ? toIso(date, '00:00') : toIso(date, startTime)
     const end = allDay ? toIso(date, '23:59') : toIso(date, endTime)
     const cleanMemo = memo.trim() || null
+    const recurrenceRule =
+      recurrence === 'none' ? null : buildRule(recurrence, 1, recurCount > 0 ? recurCount : undefined, initRule?.exdates)
+    // 사용자별 리마인더: 상대 것은 보존, 내 것만 갱신(§4.2 사용자별).
+    const others = (initial?.reminders ?? []).filter((r) => r.userId !== myId)
+    const reminders = myReminder > 0 && myId ? [...others, { userId: myId, offsetMinutes: myReminder }] : others
     if (editing && initial) {
       onUpdate(initial.id, initial.version, {
         title: t,
@@ -76,9 +89,21 @@ export function EventSheet({ initial, defaultDate, busy, onClose, onCreate, onUp
         is_all_day: allDay,
         visibility,
         memo: cleanMemo,
+        recurrence_rule: recurrenceRule,
+        reminders,
       })
     } else {
-      onCreate({ title: t, start, end, isAllDay: allDay, timeZone: DISPLAY_TZ, visibility, memo: cleanMemo })
+      onCreate({
+        title: t,
+        start,
+        end,
+        isAllDay: allDay,
+        timeZone: DISPLAY_TZ,
+        visibility,
+        memo: cleanMemo,
+        recurrenceRule,
+        reminders,
+      })
     }
   }
 
@@ -147,6 +172,43 @@ export function EventSheet({ initial, defaultDate, busy, onClose, onCreate, onUp
               <span>▲ 나만</span>
             </label>
           </fieldset>
+
+          <label className={styles.field}>
+            <span>반복</span>
+            <select
+              value={recurrence}
+              onChange={(e) => setRecurrence(e.target.value as Freq | 'none')}
+              aria-label="반복"
+            >
+              <option value="none">안 함</option>
+              <option value="DAILY">매일</option>
+              <option value="WEEKLY">매주</option>
+              <option value="MONTHLY">매월</option>
+            </select>
+          </label>
+          {recurrence !== 'none' ? (
+            <label className={styles.field}>
+              <span>반복 횟수 (0=계속)</span>
+              <input
+                type="number"
+                min={0}
+                max={365}
+                value={recurCount}
+                onChange={(e) => setRecurCount(Number(e.target.value) || 0)}
+                aria-label="반복 횟수"
+              />
+            </label>
+          ) : null}
+
+          <label className={styles.field}>
+            <span>내 리마인더</span>
+            <select value={myReminder} onChange={(e) => setMyReminder(Number(e.target.value))} aria-label="내 리마인더">
+              <option value={0}>없음</option>
+              <option value={10}>10분 전</option>
+              <option value={60}>1시간 전</option>
+              <option value={1440}>1일 전</option>
+            </select>
+          </label>
 
           <textarea
             className={styles.memo}
