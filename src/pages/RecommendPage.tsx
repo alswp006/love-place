@@ -1,10 +1,16 @@
 import { useMemo } from 'react'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
+import { Toast } from '@/components/common/Toast'
+import { useToast } from '@/hooks/useToast'
+import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { usePlaces } from '@/hooks/usePlaces'
 import { useVisits } from '@/hooks/useVisits'
+import { useEventMutations } from '@/hooks/useEventMutations'
 import { regionClusters, RECO_THRESHOLD, type RegionCluster } from '@/lib/recommend/regionClusters'
+import { buildCoursePlan } from '@/lib/route/coursePlan'
+import { dayKey, DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import { tabByPath } from '@/app/tabs'
 import styles from './RecommendPage.module.css'
 
@@ -15,13 +21,17 @@ const SEED = [
   { regionLabel: '전주', hint: '한옥마을 · 먹거리' },
 ]
 
-// ✨ 추천 — 같은 지역 가고싶은 곳이 모이면 코스 후보(§5.6). 다층 빈 상태(임계치→모으는중→회고→시드).
+// ✨ 추천 — 같은 지역 가고싶은 곳이 모이면 코스 후보(§5.6). "함께 캘린더에 추가"는 결정론 동선으로(AI 없이도 동작).
 export default function RecommendPage() {
   const tab = tabByPath('/discover')
+  const { user } = useAuth()
+  const myId = user?.id ?? null
   const { data: couple, isLoading: coupleLoading } = useCouple()
   const coupleId = couple?.coupleId ?? null
   const { data: places } = usePlaces(coupleId)
   const { data: visits } = useVisits(coupleId)
+  const toast = useToast()
+  const { create } = useEventMutations(coupleId, myId, () => {}) // 생성은 충돌 없음
 
   const visitedIds = useMemo(() => new Set((visits ?? []).map((v) => v.place_id)), [visits])
   const wantClusters = useMemo(
@@ -36,10 +46,42 @@ export default function RecommendPage() {
     () => Object.fromEntries((places ?? []).map((p) => [p.id, p.name])) as Record<string, string>,
     [places],
   )
+  const placeById = useMemo(() => new Map((places ?? []).map((p) => [p.id, p])), [places])
 
   const ready = wantClusters.filter((c) => c.ready)
   const building = wantClusters.filter((c) => !c.ready)
   const hasAnyPlace = (places ?? []).length > 0
+
+  // 클러스터 → 내일 SHARED 일정으로(거리순 동선 + 도착시각 재계산). 좌표 있는 곳 ≤6.
+  const onAddCourse = async (cluster: RegionCluster) => {
+    if (!coupleId || !myId) return
+    const coursePlaces = cluster.placeIds
+      .map((id) => placeById.get(id))
+      .filter((p): p is NonNullable<typeof p> => Boolean(p) && typeof p?.lat === 'number' && typeof p?.lng === 'number')
+      .slice(0, 6)
+      .map((p) => ({ id: p.id, name: p.name, lat: p.lat as number, lng: p.lng as number }))
+    if (coursePlaces.length < 2) {
+      toast.show('좌표가 있는 장소가 2곳 이상 필요해요')
+      return
+    }
+    const tomorrowKey = dayKey(new Date(Date.now() + 86_400_000).toISOString())
+    const plan = buildCoursePlan(coursePlaces, tomorrowKey)
+    try {
+      for (const stop of plan) {
+        await create.mutateAsync({
+          title: stop.title,
+          start: stop.start,
+          end: stop.end,
+          isAllDay: false,
+          timeZone: DISPLAY_TZ,
+          visibility: 'SHARED',
+        })
+      }
+      toast.show(`내일 '${cluster.regionLabel}' 코스를 함께 캘린더에 추가했어요! 일정 탭에서 시간을 조정하세요`)
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : '추가에 실패했어요')
+    }
+  }
 
   if (!coupleLoading && couple?.status !== 'ACTIVE') {
     return (
@@ -56,11 +98,18 @@ export default function RecommendPage() {
   return (
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
       <div className={styles.container}>
+        <Toast msg={toast.msg} />
         {ready.length > 0 ? (
           <section aria-label="코스 추천">
             <h2 className={styles.sectionTitle}>코스 짜기 좋은 지역</h2>
             {ready.map((c) => (
-              <ReadyCard key={c.regionCode ?? 'label:' + c.regionLabel} cluster={c} nameById={nameById} />
+              <ReadyCard
+                key={c.regionCode ?? 'label:' + c.regionLabel}
+                cluster={c}
+                nameById={nameById}
+                busy={create.isPending}
+                onAddCourse={onAddCourse}
+              />
             ))}
           </section>
         ) : null}
@@ -107,7 +156,17 @@ export default function RecommendPage() {
   )
 }
 
-function ReadyCard({ cluster, nameById }: { cluster: RegionCluster; nameById: Record<string, string> }) {
+function ReadyCard({
+  cluster,
+  nameById,
+  busy,
+  onAddCourse,
+}: {
+  cluster: RegionCluster
+  nameById: Record<string, string>
+  busy: boolean
+  onAddCourse: (c: RegionCluster) => void
+}) {
   const names = cluster.placeIds
     .map((id) => nameById[id])
     .filter((n): n is string => Boolean(n))
@@ -119,7 +178,10 @@ function ReadyCard({ cluster, nameById }: { cluster: RegionCluster; nameById: Re
         <span className={styles.count}>{cluster.count}곳</span>
       </div>
       <p className={styles.names}>{names.join(' · ')}</p>
-      <p className={styles.soon}>✨ 곧 AI가 일자별 코스를 짜드려요</p>
+      <button type="button" className={styles.courseBtn} onClick={() => onAddCourse(cluster)} disabled={busy}>
+        🗓️ 함께 일정 만들기
+      </button>
+      <p className={styles.soon}>거리순 자동 동선으로 내일 일정에 추가돼요 (AI 코스는 배포 후)</p>
     </div>
   )
 }

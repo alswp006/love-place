@@ -39,10 +39,28 @@
   white-space: nowrap;
 }
 
+.courseBtn {
+  margin-top: var(--sp-2);
+  border: 1px solid var(--c-brand);
+  background: var(--c-brand);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.courseBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .soon {
   font-size: var(--fs-caption);
-  color: var(--c-brand);
-  margin: var(--sp-2) 0 0;
+  color: var(--c-text-weak);
+  margin: var(--sp-1) 0 0;
 }
 
 .building,
