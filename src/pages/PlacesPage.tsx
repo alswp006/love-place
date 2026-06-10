@@ -6,6 +6,7 @@ import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { Toast } from '@/components/common/Toast'
 import { useToast } from '@/hooks/useToast'
 import { PlaceSearch } from '@/components/places/PlaceSearch'
+import { TripsSection } from '@/components/places/TripsSection'
 import { Heart } from '@/components/nav/icons'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
@@ -177,6 +178,8 @@ export default function PlacesPage() {
             </ul>
           )}
         </section>
+
+        <TripsSection coupleId={coupleId} myId={myId} visits={visits ?? []} />
 
         <TrashSection
           open={trashOpen}
