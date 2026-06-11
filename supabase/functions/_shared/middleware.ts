@@ -57,11 +57,15 @@ export async function authenticate(
   }
   const userId = userData.user.id
 
+  // ACTIVE만이 아니라 'DISCONNECTED 아님'(=PENDING 포함)을 허용 — RLS current_couple_id()와 동일 기준.
+  // 연결 전(PENDING) 혼자라도 검색 등 프록시를 쓸 수 있게(가드/RLS/프록시 3계층 일치).
   const { data: couple } = await admin
     .from('couples')
     .select('id')
     .or(`user_a.eq.${userId},user_b.eq.${userId}`)
-    .eq('status', 'ACTIVE')
+    .neq('status', 'DISCONNECTED')
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (!couple) {

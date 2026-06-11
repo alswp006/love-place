@@ -84,8 +84,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!authz?.startsWith('Bearer ')) return err('UNAUTHENTICATED', '로그인이 필요해요.', origin)
   const { data: u } = await sb.auth.getUser(authz.slice(7))
   if (!u.user) return err('UNAUTHENTICATED', '세션이 만료됐어요. 다시 로그인해 주세요.', origin)
+  // PENDING(연결 전)도 허용 — RLS current_couple_id()와 동일(status<>'DISCONNECTED'). 혼자도 검색 가능.
   const { data: couple } = await sb.from('couples').select('id')
-    .or(`user_a.eq.${u.user.id},user_b.eq.${u.user.id}`).eq('status', 'ACTIVE').maybeSingle()
+    .or(`user_a.eq.${u.user.id},user_b.eq.${u.user.id}`)
+    .neq('status', 'DISCONNECTED').order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (!couple) return err('NOT_COUPLE_MEMBER', '먼저 상대와 연결해 주세요.', origin)
   const coupleId = couple.id as string
 

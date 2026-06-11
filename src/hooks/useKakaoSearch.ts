@@ -14,6 +14,21 @@ const DEBOUNCE_MS = 250
 // - 디바운스 250ms(타이핑 멈춘 뒤 호출)
 // - 취소 토큰(AbortController)으로 stale 응답 무시(race 방지)
 // - 0건/오프라인/에러 폴백은 호출처(UI)가 status로 처리
+// FunctionsHttpError.context(Response)에서 프록시의 구조화 메시지를 꺼낸다(없으면 일반 메시지).
+// 403=NOT_COUPLE_MEMBER("먼저 상대와 연결해 주세요") 등 진짜 원인을 그대로 노출.
+async function readProxyMessage(error: unknown): Promise<string> {
+  const ctx = (error as { context?: unknown }).context
+  if (ctx instanceof Response) {
+    try {
+      const body = (await ctx.clone().json()) as { message?: string } | null
+      if (body && typeof body.message === 'string' && body.message.trim()) return body.message
+    } catch {
+      /* 본문 없음/파싱 실패 → 일반 메시지 */
+    }
+  }
+  return '검색 중 문제가 생겼어요. 다시 시도해 주세요.'
+}
+
 export function useKakaoSearch() {
   const [query, setQuery] = useState('')
   const [state, setState] = useState<State>({ status: 'idle', hits: [], error: null })
@@ -46,7 +61,10 @@ export function useKakaoSearch() {
       if (mySeq !== seqRef.current) return
 
       if (error) {
-        setState({ status: 'error', hits: [], error: '검색 중 문제가 생겼어요. 다시 시도해 주세요.' })
+        // 진짜 원인을 보여준다(403=미연결 "먼저 상대와 연결해 주세요", 401=세션만료, 429=한도 등).
+        const msg = await readProxyMessage(error)
+        if (mySeq !== seqRef.current) return
+        setState({ status: 'error', hits: [], error: msg })
         return
       }
       if (!data || data.ok === false) {
