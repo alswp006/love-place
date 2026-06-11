@@ -57,20 +57,37 @@ export async function authenticate(
   }
   const userId = userData.user.id
 
-  const { data: couple } = await admin
+  // 호출자의 ACTIVE 커플을 service_role로 조회(RLS 우회).
+  // 주의: .maybeSingle()은 행이 2개 이상이면 '에러'를 던지는데, 그 에러를 삼키면
+  // 정상 멤버도 NOT_COUPLE_MEMBER(403)로 오판된다("연결됐는데 검색 403" 원인).
+  // → 목록으로 받아 방어적으로 ACTIVE를 고르고, 에러/0건은 로그로 원인을 남긴다.
+  const { data: rows, error: coupleErr } = await admin
     .from('couples')
-    .select('id')
+    .select('id, status')
     .or(`user_a.eq.${userId},user_b.eq.${userId}`)
-    .eq('status', 'ACTIVE')
-    .maybeSingle()
+    .order('connected_at', { ascending: false, nullsFirst: false })
 
-  if (!couple) {
+  if (coupleErr) {
+    console.error('[authenticate] couple lookup failed', userId, coupleErr.message)
+    return {
+      error: errorResponse(
+        'NOT_COUPLE_MEMBER',
+        '연결 정보를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.',
+        origin,
+      ),
+    }
+  }
+
+  const active = (rows ?? []).find((r) => r.status === 'ACTIVE')
+  if (!active) {
+    // 진단: 어떤 커플 행이 있는지(상태 포함) 로그로 남긴다. 0건=미연결, PENDING=연결 미완료.
+    console.error('[authenticate] no ACTIVE couple', userId, 'rows:', JSON.stringify(rows ?? []))
     return {
       error: errorResponse('NOT_COUPLE_MEMBER', '먼저 상대와 연결해 주세요.', origin),
     }
   }
 
-  return { ctx: { userId, coupleId: couple.id, admin } }
+  return { ctx: { userId, coupleId: active.id, admin } }
 }
 
 // 슬라이딩(분/일) 레이트리밋 — couple 단위(§0.4). proxy_usage_log에 기록 후 카운트.
