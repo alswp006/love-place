@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
+import { CtaLink } from '@/components/common/CtaLink'
 import { Toast } from '@/components/common/Toast'
 import { useToast } from '@/hooks/useToast'
 import { useAuth } from '@/state/auth'
@@ -134,6 +135,7 @@ export default function RecommendPage() {
               title="같은 지역 가고싶은 곳이 모이면 추천이 시작돼요"
               hint={`한 지역에 ${RECO_THRESHOLD}곳이 쌓이면 코스를 제안해요.`}
             />
+            <CtaLink to="/places">가고싶은 곳 추가하기</CtaLink>
             <h2 className={styles.sectionTitle}>이런 여행은 어때요?</h2>
             {SEED.map((s) => (
               <p key={s.regionLabel} className={styles.seed}>

@@ -57,18 +57,33 @@ export async function authenticate(
   }
   const userId = userData.user.id
 
-  // ACTIVE만이 아니라 'DISCONNECTED 아님'(=PENDING 포함)을 허용 — RLS current_couple_id()와 동일 기준.
-  // 연결 전(PENDING) 혼자라도 검색 등 프록시를 쓸 수 있게(가드/RLS/프록시 3계층 일치).
-  const { data: couple } = await admin
+  // 커플 확정: service_role로 조회(RLS 우회). RLS current_couple_id()와 동일 기준으로
+  // 'DISCONNECTED 아님'(=ACTIVE+PENDING)을 허용 — 연결 전(PENDING) 혼자라도 검색 등 프록시 사용 가능.
+  // .maybeSingle()은 행이 2개 이상이면 '에러'를 던져 정상 멤버도 403으로 오판되므로(=병합 전 두 수정의 합),
+  // 목록으로 받아 방어적으로 고른다(ACTIVE 우선). 에러/0건은 로그로 원인을 남긴다("연결됐는데 검색 403" 진단).
+  const { data: rows, error: coupleErr } = await admin
     .from('couples')
-    .select('id')
+    .select('id, status')
     .or(`user_a.eq.${userId},user_b.eq.${userId}`)
     .neq('status', 'DISCONNECTED')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    .order('connected_at', { ascending: false, nullsFirst: false })
 
+  if (coupleErr) {
+    console.error('[authenticate] couple lookup failed', userId, coupleErr.message)
+    return {
+      error: errorResponse(
+        'NOT_COUPLE_MEMBER',
+        '연결 정보를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.',
+        origin,
+      ),
+    }
+  }
+
+  // ACTIVE 우선, 없으면 PENDING(연결 전 혼자도 허용). DISCONNECTED는 위 쿼리에서 제외됨.
+  const couple = (rows ?? []).find((r) => r.status === 'ACTIVE') ?? (rows ?? [])[0]
   if (!couple) {
+    // 진단: 0건 = 이 계정은 (DISCONNECTED 외) 어떤 커플에도 없음 = 미연결.
+    console.error('[authenticate] no couple', userId, 'rows:', JSON.stringify(rows ?? []))
     return {
       error: errorResponse('NOT_COUPLE_MEMBER', '먼저 상대와 연결해 주세요.', origin),
     }

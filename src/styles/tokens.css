@@ -11,6 +11,9 @@
   /* 브랜드(따뜻한 테라코타) */
   --c-brand: #b5654a;
   --c-brand-weak: #d8a18d;
+  /* CTA(행동 유도 버튼) — 흰 글자와 대비 AA≥4.5 보장 */
+  --c-cta-bg: #9c4f37;
+  --c-cta-fg: #ffffff;
 
   /* 캘린더 3트랙(설계서 §5.1) — 색+라벨 이중화 전제 */
   --c-track-mine: #3b6db5; /* 나(블루) */
@@ -66,6 +69,9 @@
     --c-track-partner: #e58bb0;
     --c-track-shared: #a98fe0;
     --c-brand: #d98a6f;
+    /* 다크: 밝은 테라코타 배경 + 어두운 글자(대비 AA) */
+    --c-cta-bg: #d98a6f;
+    --c-cta-fg: #241e1b;
   }
 }
 

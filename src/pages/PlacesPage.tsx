@@ -5,6 +5,7 @@ import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { Toast } from '@/components/common/Toast'
 import { useToast } from '@/hooks/useToast'
+import { Skeleton } from '@/components/common/Skeleton'
 import { PlaceSearch } from '@/components/places/PlaceSearch'
 import { TripsSection } from '@/components/places/TripsSection'
 import { Heart } from '@/components/nav/icons'
@@ -99,7 +100,7 @@ export default function PlacesPage() {
 
         <section className={styles.listSection} aria-label="장소 목록">
           {placesLoading ? (
-            <p className={styles.loading}>불러오는 중…</p>
+            <Skeleton count={4} label="가고싶은 장소 불러오는 중" />
           ) : visible.length === 0 ? (
             <EmptyState
               emoji="📍"
