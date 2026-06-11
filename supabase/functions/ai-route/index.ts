@@ -20,7 +20,7 @@ import {
 const FN = 'ai-route'
 const PER_MIN = 3
 const PER_DAY = 20
-const MONTHLY_CAP = 100 // 월 호출 상한(비용 폭탄 차단 — security §1). env로 조정 가능.
+const MONTHLY_CAP = Number(Deno.env.get('MONTHLY_CAP_AI_ROUTE') ?? '100') || 100 // 월 호출 상한(비용 폭탄 차단 — security §1).
 const CACHE_TTL = 60 * 60 * 24 * 14 // AI 결과는 장기 캐시(같은 장소·제약이면 재사용)
 const MODEL = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-4-6'
 
@@ -99,6 +99,35 @@ function validateRoute(input: unknown, allowed: Set<string>): { ok: true; plan: 
   return { ok: true, plan: input }
 }
 
+// ── 도착시각 결정론 재계산(§5.6 [비협상]): AI가 준 arrive는 신뢰하지 않고 앱이 덮어쓴다.
+// stayMin만 채택(15~240 클램프) + 고정 이동 30분(route-eta 연동 전)으로 arrive 재산출. 영업시간 면책 항상 부착.
+function recomputePlan(plan: unknown): unknown {
+  const p = (plan ?? {}) as {
+    days?: Array<{ stops?: Array<Record<string, unknown>> }>
+    disclaimer?: string
+  }
+  for (const d of p.days ?? []) {
+    const stops = d.stops ?? []
+    let t = 600 // 10:00 시작(분)
+    for (let i = 0; i < stops.length; i++) {
+      const s = stops[i]!
+      const stay = typeof s.stayMin === 'number' && s.stayMin > 0 ? Math.min(s.stayMin, 240) : 90
+      if (i > 0) {
+        const prev = stops[i - 1]!
+        const prevStay =
+          typeof prev.stayMin === 'number' && prev.stayMin > 0 ? Math.min(prev.stayMin as number, 240) : 90
+        t += prevStay + 30
+      }
+      const h = Math.floor(t / 60) % 24
+      const mm = t % 60
+      s.stayMin = stay
+      s.arrive = `${h < 10 ? '0' : ''}${h}:${mm < 10 ? '0' : ''}${mm}` // AI 산술 무시, 앱이 재계산
+    }
+  }
+  p.disclaimer = '영업시간 미반영 — 방문 전 확인하세요.'
+  return p
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   const origin = req.headers.get('Origin')
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(origin) })
@@ -167,7 +196,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
             try {
               const parsed = JSON.parse(match[0])
               const v = validateRoute(parsed, allowed) // 화이트리스트 검증
-              if (v.ok) plan = v.plan
+              if (v.ok) plan = recomputePlan(v.plan) // 도착시각은 앱이 재계산(AI 산술 불신)
             } catch {
               /* 파싱 실패 → 폴백 */
             }

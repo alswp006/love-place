@@ -32,6 +32,31 @@ function stripJpegMetadata(input: Uint8Array): Uint8Array {
   return new Uint8Array(out)
 }
 
+// JPEG 여부 — JPEG가 아니면 stripJpegMetadata가 무손실 통과(=GPS 잔존)하므로 발행 거부에 사용.
+function isJpeg(b: Uint8Array): boolean {
+  return b.length >= 2 && b[0] === 0xff && b[1] === 0xd8
+}
+
+// 스트립 후 EXIF(APP1 "Exif") 잔존 검증 — 가공본에 남으면 발행 중단(집·동선 유출 방지).
+function hasExif(input: Uint8Array): boolean {
+  if (!isJpeg(input)) return false
+  let i = 2
+  while (i + 7 < input.length) {
+    if (input[i] !== 0xff) return false
+    const marker = input[i + 1]!
+    if (marker === 0xda || marker === 0xd9) return false // SOS/EOI
+    const len = (input[i + 2]! << 8) | input[i + 3]!
+    if (
+      marker === 0xe1 &&
+      input[i + 4] === 0x45 && input[i + 5] === 0x78 && input[i + 6] === 0x69 && input[i + 7] === 0x66
+    ) {
+      return true // "Exif"
+    }
+    i += 2 + len
+  }
+  return false
+}
+
 type PublishBody = {
   consent?: boolean
   photoPaths?: string[] // 비공개 버킷 내 원본 경로
@@ -75,8 +100,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (dl.error || !dl.data) return errorResponse('UPSTREAM_ERROR', '사진을 불러오지 못했어요.', origin)
     const original = new Uint8Array(await dl.data.arrayBuffer())
 
+    // ★형식 가드★: JPEG만 발행 허용. PNG(eXIf 청크)·HEIC(아이폰 기본)는 stripJpegMetadata가
+    // 무손실 통과 → GPS가 그대로 공개될 수 있어 거부(§7 / security-privacy §3.3 [비협상]).
+    if (!isJpeg(original)) {
+      return errorResponse(
+        'BAD_REQUEST',
+        'JPEG 사진만 발행할 수 있어요. (PNG·HEIC는 위치정보 제거가 보장되지 않아요)',
+        origin,
+      )
+    }
+
     // 2) ★EXIF/GPS 스트립★ (TODO: 리사이즈 — 이미지 라이브러리 추가 시)
     const cleaned = stripJpegMetadata(original)
+
+    // 스트립 검증: 가공본에 EXIF가 남았으면 발행 중단(절대 공개 금지).
+    if (hasExif(cleaned)) {
+      return errorResponse('UPSTREAM_ERROR', '사진의 위치정보 제거를 확인하지 못해 발행을 중단했어요.', origin)
+    }
 
     // 3) 공개 경로에 가공본 재업로드(원본 경로와 분리)
     const publicPath = `${ctx.coupleId}/published/${path.split('/').pop()}`

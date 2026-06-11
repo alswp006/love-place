@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 import { versionedUpdate, softDelete, ConflictError } from '@/lib/sync/versionedUpdate'
+import { DISPLAY_TZ } from '@/lib/calendar/eventDays'
+import type { CourseStop } from '@/lib/route/coursePlan'
 
 // 이벤트 생성/수정/삭제. 수정·삭제는 낙관적 락(version 조건부, §4.3) — 충돌이면 onConflict.
 // 삭제는 soft-delete(휴지통, 물리삭제 아님). owner_id=본인(events_insert RLS WITH CHECK).
@@ -86,5 +88,44 @@ export function useEventMutations(coupleId: string | null, myId: string | null, 
     onSettled: invalidate,
   })
 
-  return { create, update, remove }
+  // 추천 코스 → 일정 일괄 추가(§5.6 루프 닫기). itinerary(출처) 1건 생성 후 events를 단일 INSERT로
+  // 한꺼번에(=원자적, 부분 생성 방지). 각 event에 itinerary_id(출처)·place_id(장소 연결) 보존.
+  const addCourse = useMutation<void, Error, { stops: CourseStop[] }>({
+    mutationFn: async ({ stops }) => {
+      if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
+      if (stops.length === 0) throw new Error('코스가 비어 있어요.')
+      const { data: itin, error: itErr } = await supabase
+        .from('itineraries')
+        .insert({
+          couple_id: coupleId,
+          days: stops.map((s) => ({ placeId: s.placeId, start: s.start, end: s.end })),
+          created_by: myId,
+          updated_by: myId,
+        })
+        .select('id')
+        .single()
+      if (itErr || !itin) throw new Error(itErr?.message ?? '코스 저장에 실패했어요.')
+
+      const rows = stops.map((s) => ({
+        couple_id: coupleId,
+        title: s.title,
+        start: s.start,
+        end: s.end,
+        is_all_day: false,
+        time_zone: DISPLAY_TZ,
+        visibility: 'SHARED' as const,
+        participants: 'BOTH' as const,
+        owner_id: myId,
+        place_id: s.placeId,
+        itinerary_id: itin.id,
+        created_by: myId,
+        updated_by: myId,
+      }))
+      const { error: evErr } = await supabase.from('events').insert(rows)
+      if (evErr) throw new Error(evErr.message)
+    },
+    onSuccess: invalidate,
+  })
+
+  return { create, update, remove, addCourse }
 }

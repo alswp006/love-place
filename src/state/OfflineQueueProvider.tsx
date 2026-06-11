@@ -38,15 +38,24 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
     setPending(await queue.pending())
   }, [queue])
 
+  const flushingRef = useRef(false)
   const flush = useCallback(async () => {
-    const res = await queue.flush(executeOutbox)
-    if (res.done > 0 || res.conflicts.length > 0) {
-      void queryClient.invalidateQueries({ queryKey: ['places'] })
-      void queryClient.invalidateQueries({ queryKey: ['wishes'] })
-      void queryClient.invalidateQueries({ queryKey: ['placesTrash'] })
+    // 동시 flush 방지: online 이벤트·enqueue·마운트가 겹쳐 같은 엔트리를 두 번 재생하면
+    // 2회차 versionedUpdate가 0행→가짜 충돌 배너를 띄울 수 있다. 한 번에 하나만.
+    if (flushingRef.current) return
+    flushingRef.current = true
+    try {
+      const res = await queue.flush(executeOutbox)
+      if (res.done > 0 || res.conflicts.length > 0) {
+        void queryClient.invalidateQueries({ queryKey: ['places'] })
+        void queryClient.invalidateQueries({ queryKey: ['wishes'] })
+        void queryClient.invalidateQueries({ queryKey: ['placesTrash'] })
+      }
+      if (res.conflicts.length > 0) setFlushConflicts((c) => c + res.conflicts.length)
+      await refreshPending()
+    } finally {
+      flushingRef.current = false
     }
-    if (res.conflicts.length > 0) setFlushConflicts((c) => c + res.conflicts.length)
-    await refreshPending()
   }, [queue, queryClient, refreshPending])
 
   const enqueue = useCallback(

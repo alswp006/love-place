@@ -18,8 +18,8 @@ export function useKakaoSearch() {
   const [query, setQuery] = useState('')
   const [state, setState] = useState<State>({ status: 'idle', hits: [], error: null })
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  // 가장 마지막 요청만 반영하기 위한 순번(취소 토큰 보강).
+  // 가장 마지막 요청만 반영하기 위한 순번 — supabase.functions.invoke는 AbortSignal을 받지 않으므로
+  // stale 방어는 이 순번 가드로 한다(늦게 온 옛 응답 폐기).
   const seqRef = useRef(0)
 
   const runSearch = useCallback(async (q: string) => {
@@ -33,10 +33,6 @@ export function useKakaoSearch() {
       return
     }
 
-    // 이전 요청 취소
-    abortRef.current?.abort()
-    const ac = new AbortController()
-    abortRef.current = ac
     const mySeq = ++seqRef.current
 
     setState((s) => ({ ...s, status: 'loading', error: null }))
@@ -73,9 +69,6 @@ export function useKakaoSearch() {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
   }, [query, runSearch])
-
-  // 언마운트 시 진행 중 요청 취소
-  useEffect(() => () => abortRef.current?.abort(), [])
 
   const clear = useCallback(() => {
     setQuery('')

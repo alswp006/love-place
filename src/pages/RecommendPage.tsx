@@ -10,7 +10,7 @@ import { useVisits } from '@/hooks/useVisits'
 import { useEventMutations } from '@/hooks/useEventMutations'
 import { regionClusters, RECO_THRESHOLD, type RegionCluster } from '@/lib/recommend/regionClusters'
 import { buildCoursePlan } from '@/lib/route/coursePlan'
-import { dayKey, DISPLAY_TZ } from '@/lib/calendar/eventDays'
+import { dayKey } from '@/lib/calendar/eventDays'
 import { tabByPath } from '@/app/tabs'
 import styles from './RecommendPage.module.css'
 
@@ -31,7 +31,7 @@ export default function RecommendPage() {
   const { data: places } = usePlaces(coupleId)
   const { data: visits } = useVisits(coupleId)
   const toast = useToast()
-  const { create } = useEventMutations(coupleId, myId, () => {}) // 생성은 충돌 없음
+  const { addCourse } = useEventMutations(coupleId, myId, () => {}) // 코스 일괄 추가(생성은 충돌 없음)
 
   const visitedIds = useMemo(() => new Set((visits ?? []).map((v) => v.place_id)), [visits])
   const wantClusters = useMemo(
@@ -67,16 +67,7 @@ export default function RecommendPage() {
     const tomorrowKey = dayKey(new Date(Date.now() + 86_400_000).toISOString())
     const plan = buildCoursePlan(coursePlaces, tomorrowKey)
     try {
-      for (const stop of plan) {
-        await create.mutateAsync({
-          title: stop.title,
-          start: stop.start,
-          end: stop.end,
-          isAllDay: false,
-          timeZone: DISPLAY_TZ,
-          visibility: 'SHARED',
-        })
-      }
+      await addCourse.mutateAsync({ stops: plan }) // 원자적 일괄 추가(부분 생성 방지) + 출처/장소 연결
       toast.show(`내일 '${cluster.regionLabel}' 코스를 함께 캘린더에 추가했어요! 일정 탭에서 시간을 조정하세요`)
     } catch (e) {
       toast.show(e instanceof Error ? e.message : '추가에 실패했어요')
@@ -107,7 +98,7 @@ export default function RecommendPage() {
                 key={c.regionCode ?? 'label:' + c.regionLabel}
                 cluster={c}
                 nameById={nameById}
-                busy={create.isPending}
+                busy={addCourse.isPending}
                 onAddCourse={onAddCourse}
               />
             ))}
