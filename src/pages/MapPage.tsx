@@ -11,10 +11,11 @@ import { useCouple } from '@/hooks/useCouple'
 import { usePlaces } from '@/hooks/usePlaces'
 import { useProfiles } from '@/hooks/useProfiles'
 import { useWishes } from '@/hooks/useWishes'
-import { useVisits } from '@/hooks/useVisits'
-import { useReactions } from '@/hooks/useReactions'
+import { useVisits, useMarkVisited } from '@/hooks/useVisits'
+import { useReactions, useToggleReaction } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
 import { attachAndSortWishes } from '@/lib/places/wishStatus'
+import { openDirections } from '@/lib/places/directionsUrl'
 import { tabByPath } from '@/app/tabs'
 import styles from './MapPage.module.css'
 
@@ -41,6 +42,22 @@ export default function MapPage() {
   const visitedIds = useMemo(() => new Set((visits ?? []).map((v) => v.place_id)), [visits])
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  const toggleReaction = useToggleReaction(coupleId, myId)
+  const markVisited = useMarkVisited(coupleId, myId)
+  const onAction = (action: string, id: string) => {
+    const p = enriched.find((pl) => pl.id === id)
+    if (action === 'directions') {
+      if (p && typeof p.lat === 'number' && typeof p.lng === 'number') {
+        openDirections({ lat: p.lat, lng: p.lng, name: p.name })
+      }
+    } else if (action === 'visit') {
+      // 이미 가봤음이면 중복 방문 insert 금지(spec §3 원탭 1건). 말풍선도 비활성 상태로 렌더되지만 이중 가드.
+      if (!visitedIds.has(id)) markVisited.mutate({ placeId: id })
+    } else if (action === 'react') {
+      toggleReaction.mutate({ placeId: id })
+    }
+  }
+
   return (
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
       <TodayCard coupleId={coupleId} />
@@ -57,6 +74,7 @@ export default function MapPage() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             onClose={() => setSelectedId(null)}
+            onAction={onAction}
           />
         </div>
       ) : (
