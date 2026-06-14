@@ -21,12 +21,29 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
-export function NaverMap({ places, visitedIds }: { places: MarkerPlace[]; visitedIds?: Set<string> }) {
+export function NaverMap({
+  places,
+  visitedIds,
+  selectedId,
+  onSelect,
+  onClose,
+}: {
+  places: MarkerPlace[]
+  visitedIds?: Set<string>
+  selectedId?: string | null
+  onSelect?: (id: string) => void
+  onClose?: () => void
+}) {
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<naver.maps.Map | null>(null)
   const markersRef = useRef<naver.maps.Marker[]>([])
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+
+  // 선택 props는 P-C에서 와이어링 예정 — 이번 커밋은 no-op 골격(미사용 경고 억제).
+  void selectedId
+  void onSelect
+  void onClose
 
   // 지도 1회 초기화
   useEffect(() => {
