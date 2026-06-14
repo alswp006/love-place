@@ -1,0 +1,14 @@
+/* 지도 위 상단 검색 오버레이 — 시트(z-index 45)보다 위, Toast(60) 아래. 시트 스냅과 무관하게 항상 보임. */
+.overlay {
+  position: absolute;
+  top: calc(var(--safe-top) + var(--sp-2));
+  left: var(--sp-3);
+  right: var(--sp-3);
+  max-width: 480px;
+  margin: 0 auto;
+  z-index: 50;
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.16);
+  padding: var(--sp-2);
+}
