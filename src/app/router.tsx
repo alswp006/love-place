@@ -11,7 +11,6 @@ import { TABS } from '@/app/tabs'
 const PAGES: Record<string, React.LazyExoticComponent<() => React.JSX.Element>> = {
   '/': lazy(() => import('@/pages/MapPage')),
   '/calendar': lazy(() => import('@/pages/CalendarPage')),
-  '/places': lazy(() => import('@/pages/PlacesPage')),
   '/discover': lazy(() => import('@/pages/RecommendPage')),
   '/us': lazy(() => import('@/pages/UsPage')),
 }
@@ -58,6 +57,8 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           ...tabRoutes,
+          // /places는 지도(/)로 통합됨 — 북마크/딥링크 보존용 명시적 리다이렉트.
+          { path: 'places', element: <Navigate to="/" replace /> },
           // 미지정(로그인 상태) 경로는 지도(/)로.
           { path: '*', element: <Navigate to="/" replace /> },
         ],

@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { RouterProvider, createMemoryRouter } from 'react-router-dom'
+import {
+  RouterProvider,
+  createMemoryRouter,
+  MemoryRouter,
+  Routes,
+  Route,
+  Navigate,
+  type RouteObject,
+} from 'react-router-dom'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 
 // 탭은 RequireAuth 뒤에 있으므로, 라우팅 렌더 테스트에선 로그인된 세션을 모킹한다.
@@ -77,5 +85,42 @@ describe('4탭 라우팅 (설계서 §3 IA — 장소→지도 통합)', () => {
     for (const { label } of TABS) {
       expect(nav).toHaveTextContent(label)
     }
+  })
+
+  // /places는 지도(/)로 통합됨 — router.tsx의 명시적 { path: 'places', Navigate to / } 리다이렉트를 검증.
+  // createMemoryRouter(데이터 라우터)의 redirect는 jsdom+undici AbortSignal 버그로 비동기 네비게이션이
+  // 중단되므로(auth-guard.test.tsx 참고), MemoryRouter로 동기 redirect를 렌더해 같은 규칙을 못박는다.
+  it('/places는 지도(/)로 리다이렉트된다(딥링크/북마크 보존)', () => {
+    render(
+      <MemoryRouter initialEntries={['/places']} future={{ v7_relativeSplatPath: true }}>
+        <Routes>
+          <Route index element={<div data-testid="page-map">지도</div>} />
+          <Route path="places" element={<Navigate to="/" replace />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(screen.getByTestId('page-map')).toBeInTheDocument()
+  })
+
+  // 위 렌더 테스트가 환경 버그로 실제 routes를 못 구동하므로, router.tsx의 명시적 리다이렉트가
+  // catch-all(splat)보다 먼저 선언돼 있는지 구조로 회귀 가드한다(미래에 splat 위 다른 route가
+  // /places를 가리지 못하게). AppLayout children에서 'places' route를 찾고 splat보다 앞에 있음을 확인.
+  it("router.tsx에 splat보다 앞선 명시적 'places' 리다이렉트가 선언돼 있다(회귀 가드)", () => {
+    function findAppLayoutChildren(rs: RouteObject[]): RouteObject[] | undefined {
+      for (const r of rs) {
+        // AppLayout 노드는 path 없이 element만 가진 layout route(tabRoutes를 children으로 가짐).
+        if (!r.path && r.children?.some((c) => c.path === '*')) return r.children
+        const found = r.children && findAppLayoutChildren(r.children)
+        if (found) return found
+      }
+      return undefined
+    }
+    const children = findAppLayoutChildren(routes)
+    expect(children).toBeDefined()
+    const placesIdx = children!.findIndex((c) => c.path === 'places')
+    const splatIdx = children!.findIndex((c) => c.path === '*')
+    expect(placesIdx).toBeGreaterThanOrEqual(0)
+    expect(splatIdx).toBeGreaterThanOrEqual(0)
+    expect(placesIdx).toBeLessThan(splatIdx)
   })
 })
