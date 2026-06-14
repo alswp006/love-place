@@ -5,6 +5,7 @@ import type { WishStatus } from '@/lib/places/wishStatus'
 import type { ProfileMap } from '@/hooks/useProfiles'
 import type { ReactionMap } from '@/hooks/useReactions'
 import { markerVisual } from '@/lib/places/markerVisual'
+import { escapeHtml } from '@/lib/places/infoWindowHtml'
 import styles from './NaverMap.module.css'
 
 // 네이버 지도 + 장소 마커(§5.5). 네이버 검색 좌표(WGS84)를 그대로 핀으로 찍는다.
@@ -13,15 +14,6 @@ import styles from './NaverMap.module.css'
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 } // 서울 시청(빈 상태 기본 중심)
 
 type MarkerPlace = PlaceRow & { wish?: WishStatus }
-
-// 마커 라벨은 innerHTML로 들어가므로 따옴표·꺾쇠 이스케이프(이름에 " 들어가도 안전).
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
 
 export function NaverMap({
   places,

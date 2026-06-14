@@ -1,0 +1,97 @@
+.bubble {
+  background: var(--c-surface);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  min-width: 200px;
+  max-width: 260px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  position: relative;
+}
+
+.close {
+  position: absolute;
+  top: var(--sp-1);
+  right: var(--sp-1);
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--c-text-weak);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-right: var(--sp-6);
+}
+
+.glyph {
+  font-size: 1.1rem;
+  color: var(--c-brand);
+}
+
+.name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  flex-wrap: wrap;
+}
+
+.status {
+  font-weight: 600;
+  color: var(--c-brand);
+}
+
+/* 카테고리·지역 메타 — 한 줄 말줄임(class="undefined" 회귀 방지: 이 클래스가 반드시 존재해야 함). */
+.meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+.action {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-radius: 999px;
+  padding: var(--sp-2) var(--sp-1);
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+/* 이미 가봤음 — 비활성 상태(누를 수 없음, 중복 방문 방지). 색+텍스트로 상태 표시(§8). */
+.actionDone {
+  color: var(--c-success);
+  font-weight: 600;
+  opacity: 0.7;
+  cursor: default;
+}
