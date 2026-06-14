@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { loadNaverMaps } from '@/lib/naver/loadNaverMaps'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WishStatus } from '@/lib/places/wishStatus'
+import type { ProfileMap } from '@/hooks/useProfiles'
+import type { ReactionMap } from '@/hooks/useReactions'
 import { markerVisual } from '@/lib/places/markerVisual'
 import styles from './NaverMap.module.css'
 
@@ -24,12 +26,18 @@ function escapeHtml(s: string): string {
 export function NaverMap({
   places,
   visitedIds,
+  profiles,
+  myId,
+  reactions,
   selectedId,
   onSelect,
   onClose,
 }: {
   places: MarkerPlace[]
   visitedIds?: Set<string>
+  profiles?: ProfileMap
+  myId?: string | null
+  reactions?: ReactionMap
   selectedId?: string | null
   onSelect?: (id: string) => void
   onClose?: () => void
@@ -40,10 +48,13 @@ export function NaverMap({
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
-  // 선택 props는 P-C에서 와이어링 예정 — 이번 커밋은 no-op 골격(미사용 경고 억제).
+  // 선택/출처/리액션 props는 P-C·P-D에서 와이어링 예정 — 이번 커밋은 no-op 골격(미사용 경고 억제).
   void selectedId
   void onSelect
   void onClose
+  void profiles
+  void myId
+  void reactions
 
   // 지도 1회 초기화
   useEffect(() => {

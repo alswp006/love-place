@@ -1,4 +1,5 @@
 .mapWrap {
+  position: relative;
   height: calc(100dvh - 220px);
   min-height: 60vh;
   display: flex;
