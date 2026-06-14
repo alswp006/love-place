@@ -46,7 +46,7 @@ beforeEach(() => {
   mockAuth.session = { user: { id: 'u1' } }
 })
 
-describe('5탭 라우팅 (설계서 §3 IA)', () => {
+describe('4탭 라우팅 (설계서 §3 IA — 장소→지도 통합)', () => {
   it('루트(/)는 지도 화면을 첫 화면으로 렌더한다', async () => {
     renderAt('/')
     expect(await screen.findByTestId('page-map')).toBeInTheDocument()
@@ -67,10 +67,10 @@ describe('5탭 라우팅 (설계서 §3 IA)', () => {
     renderAt('/discover')
     await screen.findByTestId('page-discover')
     const cta = screen.getByRole('link', { name: '가고싶은 곳 추가하기' })
-    expect(cta).toHaveAttribute('href', '/places')
+    expect(cta).toHaveAttribute('href', '/')
   })
 
-  it('하단 탭바에 5개 탭이 라벨과 함께 노출된다(색만 의존 금지)', async () => {
+  it('하단 탭바에 4개 탭이 라벨과 함께 노출된다(색만 의존 금지)', async () => {
     renderAt('/')
     await screen.findByTestId('page-map')
     const nav = screen.getByRole('navigation', { name: '주요 메뉴' })

@@ -1,4 +1,4 @@
-import { MapPin, CalendarDays, Bookmark, Sparkles, Users, type IconComponent } from '@/components/nav/icons'
+import { MapPin, CalendarDays, Sparkles, Users, type IconComponent } from '@/components/nav/icons'
 
 // 5탭 IA의 단일 출처(설계서 §3). TabBar·router·페이지 셸·테스트가 모두 여기서 도출 —
 // 한 곳만 고치면 라우팅·네비·테스트가 동기화된다(메타 중복으로 인한 무성 회귀 방지).
@@ -31,8 +31,7 @@ export const TABS: TabDef[] = [
     empty: {
       emoji: '🗺️',
       title: '아직 지도에 표시할 장소가 없어요',
-      hint: '장소 탭에서 첫 가고싶은 곳을 추가하면 여기 별표로 떠요.',
-      action: { label: '장소 모으러 가기', to: '/places' },
+      hint: '아래 시트의 검색창에서 첫 가고싶은 곳을 추가하면 여기 별표로 떠요.',
     },
   },
   {
@@ -46,20 +45,7 @@ export const TABS: TabDef[] = [
       emoji: '📅',
       title: '첫 일정을 만들어볼까요?',
       hint: '나·상대·함께 세 가지 색으로 일정을 겹쳐 봐요.',
-      action: { label: '장소부터 모아보기', to: '/places' },
-    },
-  },
-  {
-    path: '/places',
-    label: '장소',
-    testId: 'page-places',
-    title: '장소',
-    subtitle: '가고싶은 곳 · 가본 곳',
-    Icon: Bookmark,
-    empty: {
-      emoji: '📍',
-      title: '첫 가고싶은 장소를 추가해보세요',
-      hint: '검색 한 줄이면 끝 — 이름·주소·좌표가 한 번에 저장돼요.',
+      action: { label: '장소부터 모아보기', to: '/' },
     },
   },
   {
@@ -73,7 +59,7 @@ export const TABS: TabDef[] = [
       emoji: '✨',
       title: '같은 지역 가고싶은 곳이 모이면 추천이 시작돼요',
       hint: '한 지역에 3~5곳이 쌓이면 AI가 일자별 코스를 제안해요.',
-      action: { label: '가고싶은 곳 추가하기', to: '/places' },
+      action: { label: '가고싶은 곳 추가하기', to: '/' },
     },
   },
   {
