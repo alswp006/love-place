@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Skeleton } from '@/components/common/Skeleton'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
@@ -48,6 +49,12 @@ export function PlaceList({
   deletePending: boolean
   onToast: (m: string) => void
 }) {
+  const listRef = useRef<HTMLUListElement>(null)
+  useEffect(() => {
+    if (!selectedId || !listRef.current) return
+    const node = listRef.current.querySelector<HTMLElement>(`[data-place-id="${selectedId}"]`)
+    node?.scrollIntoView({ block: 'nearest' })
+  }, [selectedId])
   return (
     <section className={styles.listSection} aria-label="장소 목록">
       {placesLoading ? (
@@ -63,13 +70,17 @@ export function PlaceList({
           }
         />
       ) : (
-        <ul className={styles.list}>
+        <ul className={styles.list} ref={listRef}>
           {visible.map((p) => {
             const myWish = wishes?.mine[p.id]
             const visited = visitedIds.has(p.id)
             const isSelected = p.id === selectedId
             return (
-              <li key={p.id} className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}>
+              <li
+                key={p.id}
+                data-place-id={p.id}
+                className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}
+              >
                 <button
                   type="button"
                   className={styles.cardMain}

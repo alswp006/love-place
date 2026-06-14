@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { loadNaverMaps } from '@/lib/naver/loadNaverMaps'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WishStatus } from '@/lib/places/wishStatus'
+import { deriveWishStatus } from '@/lib/places/wishStatus'
 import type { ProfileMap } from '@/hooks/useProfiles'
 import type { ReactionMap } from '@/hooks/useReactions'
 import { markerVisual } from '@/lib/places/markerVisual'
 import { markerIconHtml, BASE_ZINDEX, SELECTED_ZINDEX } from '@/lib/places/selectedMarker'
+import { infoWindowHtml } from '@/lib/places/infoWindowHtml'
 import styles from './NaverMap.module.css'
 
 // 네이버 지도 + 장소 마커(§5.5). 네이버 검색 좌표(WGS84)를 그대로 핀으로 찍는다.
@@ -24,6 +26,7 @@ export function NaverMap({
   selectedId,
   onSelect,
   onClose,
+  onAction,
 }: {
   places: MarkerPlace[]
   visitedIds?: Set<string>
@@ -33,20 +36,24 @@ export function NaverMap({
   selectedId?: string | null
   onSelect?: (id: string) => void
   onClose?: () => void
+  onAction?: (action: string, id: string) => void
 }) {
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<naver.maps.Map | null>(null)
   const markersRef = useRef<naver.maps.Marker[]>([])
   const markerMapRef = useRef<Map<string, naver.maps.Marker>>(new Map())
   const listenersRef = useRef<naver.maps.MapEventListener[]>([])
+  const infoRef = useRef<naver.maps.InfoWindow | null>(null)
+  const infoHandlerRef = useRef<((e: MouseEvent) => void) | null>(null)
+  const mapClickRef = useRef<naver.maps.MapEventListener | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
-  // 출처/리액션/닫기 props는 P-C·P-D에서 와이어링 예정 — 이번 커밋은 no-op 골격(미사용 경고 억제).
-  void onClose
-  void profiles
-  void myId
-  void reactions
+  // onClose/onAction은 ref로 읽어 지도/마커 재초기화를 피한다(deps에 넣지 않음).
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  const onActionRef = useRef(onAction)
+  onActionRef.current = onAction
 
   // 지도 1회 초기화
   useEffect(() => {
@@ -61,6 +68,18 @@ export function NaverMap({
           mapDataControl: false,
         })
         setReady(true)
+        // 단일 InfoWindow 1회 생성(말풍선 재사용).
+        infoRef.current = new nv.maps.InfoWindow({
+          content: '',
+          borderWidth: 0,
+          disableAnchor: false,
+          backgroundColor: 'transparent',
+          pixelOffset: new nv.maps.Point(0, -8),
+        })
+        // 지도 빈 곳 클릭 → 선택 해제(닫기).
+        mapClickRef.current = nv.maps.Event.addListener(mapRef.current, 'click', () =>
+          onCloseRef.current?.(),
+        )
       })
       .catch((e: Error) => {
         if (!cancelled) setError(e.message)
@@ -69,6 +88,14 @@ export function NaverMap({
       cancelled = true
       window.naver?.maps.Event.removeListener(listenersRef.current)
       listenersRef.current = []
+      if (mapClickRef.current) window.naver?.maps.Event.removeListener(mapClickRef.current)
+      mapClickRef.current = null
+      if (infoHandlerRef.current && infoRef.current) {
+        infoRef.current.getContentElement()?.removeEventListener('click', infoHandlerRef.current)
+      }
+      infoHandlerRef.current = null
+      infoRef.current?.close()
+      infoRef.current = null
       markersRef.current.forEach((m) => m.setMap(null))
       markersRef.current = []
       markerMapRef.current.clear()
@@ -155,6 +182,68 @@ export function NaverMap({
       if (m) map.panTo(m.getPosition())
     }
   }, [selectedId, places, ready, visitedIds])
+
+  // 단일 InfoWindow — selectedId/방문/리액션 변경 시 콘텐츠 재생성 후 위임 클릭 리스너 재바인딩.
+  useEffect(() => {
+    const nv = window.naver
+    const map = mapRef.current
+    const info = infoRef.current
+    if (!ready || !nv || !map || !info) return
+
+    // 이전 위임 리스너 제거(중복 바인딩 방지).
+    const prevEl = info.getContentElement()
+    if (prevEl && infoHandlerRef.current) prevEl.removeEventListener('click', infoHandlerRef.current)
+    infoHandlerRef.current = null
+
+    if (!selectedId) {
+      info.close()
+      return
+    }
+    const marker = markerMapRef.current.get(selectedId)
+    const place = places.find((p) => p.id === selectedId)
+    if (!marker || !place) {
+      info.close()
+      return
+    }
+
+    const html = infoWindowHtml(
+      { ...place, wish: place.wish ?? deriveWishStatus(undefined, myId ?? null) },
+      profiles ?? {},
+      myId ?? null,
+      {
+        visited: visitedIds?.has(selectedId) ?? false,
+        didIReact: reactions?.[selectedId]?.didIReact ?? false,
+        count: reactions?.[selectedId]?.count ?? 0,
+      },
+    )
+    info.setContent(html)
+    info.open(map, marker)
+
+    const el = info.getContentElement()
+    if (el) {
+      const handler = (e: MouseEvent) => {
+        const btn = (e.target as HTMLElement).closest('[data-action]') as HTMLElement | null
+        if (!btn) return
+        const action = btn.dataset.action
+        const id = btn.dataset.id
+        if (!id) return
+        if (action === 'close') onCloseRef.current?.()
+        else onActionRef.current?.(action ?? '', id)
+      }
+      el.addEventListener('click', handler)
+      infoHandlerRef.current = handler
+    }
+  }, [selectedId, places, ready, visitedIds, reactions, profiles, myId])
+
+  // ESC로 말풍선 닫기(EventSheet 패턴). 선택 중일 때만 바인딩.
+  useEffect(() => {
+    if (!selectedId) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose?.()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedId, onClose])
 
   if (error) {
     return (
