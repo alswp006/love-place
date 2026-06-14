@@ -33,3 +33,8 @@ test('알 수 없는 경로도 (비로그인 시) 로그인으로 수렴한다',
   await page.goto('/nope')
   await expect(page).toHaveURL((url) => url.pathname === '/auth')
 })
+
+test('통합 후 /places는 (비로그인 시) 로그인으로 수렴한다', async ({ page }) => {
+  await page.goto('/places')
+  await expect(page).toHaveURL((url) => url.pathname === '/auth')
+})
