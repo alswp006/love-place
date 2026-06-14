@@ -1,0 +1,101 @@
+/* 시트는 viewport에 고정, transform: translateY로 스냅 위치 제어(드래그는 JS, 정착은 transition).
+   reduce-motion에서 tokens.css가 transition-duration을 0으로 강제 → 즉시 전환(ux §5). */
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--c-surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  z-index: 45;
+  transition: transform var(--motion-base) var(--ease);
+  will-change: transform;
+  touch-action: none;
+}
+
+/* peek-pinned 헤더 — peek 비율(0.18)에서도 항상 보이는 영역: 핸들 + 요약 + 필터 칩(§5 peek 콘텐츠). */
+.peekHeader {
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-2) var(--sp-4) var(--sp-2);
+  flex-shrink: 0;
+}
+
+.handleRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--c-border);
+  margin-bottom: var(--sp-2);
+}
+
+/* 탭 대체 버튼(제스처 발견성↓ 보완, ux §1) — 핸들 영역 전체가 스냅 전환 버튼. */
+.handleBtn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--c-text-weak);
+  cursor: pointer;
+  padding: var(--sp-1) 0 var(--sp-2);
+  font-size: var(--fs-caption);
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.summary {
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--sp-3) var(--sp-4) calc(var(--sp-6) + 72px + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* 필터 칩 행 — peek 헤더 안(요약 아래). 좁은 화면에서 가로 스크롤 허용(고정 높이 박스 금지, ux §4). */
+.filterRow {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filterChip {
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-weak);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.filterOn {
+  background: var(--c-surface-2);
+  color: var(--c-brand);
+  font-weight: 600;
+  border-color: var(--c-brand);
+}
