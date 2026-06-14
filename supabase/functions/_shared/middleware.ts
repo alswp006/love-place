@@ -69,7 +69,7 @@ export async function authenticate(
     .order('connected_at', { ascending: false, nullsFirst: false })
 
   if (coupleErr) {
-    console.error('[authenticate] couple lookup failed', userId, coupleErr.message)
+    console.error('[authenticate] couple lookup failed', userId, JSON.stringify(coupleErr))
     return {
       error: errorResponse(
         'NOT_COUPLE_MEMBER',
@@ -124,9 +124,14 @@ export async function checkRateLimit(
   return { ok: true }
 }
 
-// 호출 기록(레이트리밋·월 사용량 집계용).
+// 호출 기록(레이트리밋·월 사용량 집계용). best-effort — 실패해도 결과 반환을 막지 않는다.
 export async function recordCall(ctx: ProxyCtx, fn: string): Promise<void> {
-  await ctx.admin.from('proxy_call_log').insert({ couple_id: ctx.coupleId, fn })
+  try {
+    const { error } = await ctx.admin.from('proxy_call_log').insert({ couple_id: ctx.coupleId, fn })
+    if (error) console.error('[recordCall] skip (non-fatal)', fn, error.message)
+  } catch (e) {
+    console.error('[recordCall] threw (non-fatal)', fn, e instanceof Error ? e.message : String(e))
+  }
 }
 
 // 캐시 조회/기록(§0.6). cache_key = fn + ':' + sha256(정규화 입력).
@@ -156,7 +161,14 @@ export async function cacheSet(
   ttlSec: number,
 ): Promise<void> {
   const expires = new Date(Date.now() + ttlSec * 1000).toISOString()
-  await ctx.admin
-    .from('proxy_cache')
-    .upsert({ cache_key: cacheKey, fn, payload, expires_at: expires })
+  // 캐시 쓰기는 best-effort: cache_key 제약 부재/PostgREST 이슈로 실패해도 검색 결과 반환을 막지 않는다.
+  // onConflict 명시 — proxy_cache.cache_key 유니크 제약이 있으면 upsert, 없으면 아래 catch로 무시.
+  try {
+    const { error } = await ctx.admin
+      .from('proxy_cache')
+      .upsert({ cache_key: cacheKey, fn, payload, expires_at: expires }, { onConflict: 'cache_key' })
+    if (error) console.error('[cacheSet] skip (non-fatal)', cacheKey, error.message)
+  } catch (e) {
+    console.error('[cacheSet] threw (non-fatal)', cacheKey, e instanceof Error ? e.message : String(e))
+  }
 }
