@@ -71,4 +71,92 @@ describe.skipIf(!ready)('RLS 커플 격리 (라이브 통합)', () => {
       .select('id')
     expect(updated ?? []).toHaveLength(0)
   })
+
+  it('A는 B 커플의 reactions(PLACE)를 못 본다 (교차 SELECT 0건)', async () => {
+    const { data: bR } = await cb
+      .from('reactions')
+      .select('id')
+      .eq('target_type', 'PLACE')
+      .is('deleted_at', null)
+      .limit(1)
+    const someBR = bR?.[0]?.id
+    if (!someBR) {
+      expect(true).toBe(true)
+      return
+    }
+    const { data: leaked } = await ca.from('reactions').select('id').eq('id', someBR)
+    expect(leaked ?? []).toHaveLength(0)
+  })
+
+  it('A는 자기 커플 장소에 PLACE 리액션을 본인 명의로 추가할 수 있다', async () => {
+    const { data: aCouple } = await ca.rpc('current_couple_id')
+    const { data: aPlaces } = await ca.from('places').select('id').limit(1)
+    const placeId = aPlaces?.[0]?.id
+    if (!placeId) {
+      expect(true).toBe(true)
+      return
+    }
+    const { data: inserted, error } = await ca
+      .from('reactions')
+      .insert({
+        couple_id: aCouple,
+        user_id: aUserId,
+        target_type: 'PLACE',
+        target_id: placeId,
+        emoji: '❤️',
+        created_by: aUserId,
+        updated_by: aUserId,
+      })
+      .select('id')
+    expect(error).toBeNull()
+    // 정리 — 방금 넣은 리액션 soft-delete(테스트 격리 유지).
+    const newId = inserted?.[0]?.id
+    if (newId) {
+      await ca
+        .from('reactions')
+        .update({ deleted_at: new Date().toISOString(), updated_by: aUserId })
+        .eq('id', newId)
+    }
+  })
+
+  it('A는 user_id를 위조해 PLACE 리액션을 만들 수 없다 (WITH CHECK 거부)', async () => {
+    const { data: aCouple } = await ca.rpc('current_couple_id')
+    const { data: aPlaces } = await ca.from('places').select('id').limit(1)
+    const placeId = aPlaces?.[0]?.id
+    if (!placeId) {
+      expect(true).toBe(true)
+      return
+    }
+    const fakeUser = '00000000-0000-0000-0000-000000000000'
+    const { error } = await ca.from('reactions').insert({
+      couple_id: aCouple,
+      user_id: fakeUser,
+      target_type: 'PLACE',
+      target_id: placeId,
+      emoji: '❤️',
+      created_by: aUserId,
+      updated_by: aUserId,
+    })
+    expect(error).not.toBeNull()
+  })
+
+  it('A는 couple_id를 B로 위조해 PLACE 리액션을 만들 수 없다 (WITH CHECK 거부)', async () => {
+    const { data: bCouple } = await cb.rpc('current_couple_id')
+    const { data: bPlaces } = await cb.from('places').select('id').limit(1)
+    const placeId = bPlaces?.[0]?.id
+    if (!placeId) {
+      expect(true).toBe(true)
+      return
+    }
+    const { error } = await ca.from('reactions').insert({
+      couple_id: bCouple,
+      user_id: aUserId,
+      target_type: 'PLACE',
+      target_id: placeId,
+      emoji: '❤️',
+      created_by: aUserId,
+      updated_by: aUserId,
+    })
+    expect(error).not.toBeNull()
+  })
 })
