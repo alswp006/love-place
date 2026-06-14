@@ -29,6 +29,17 @@
   color: var(--c-success);
 }
 
+/* 선택 강조 — 확대 + 링(색 + 모양 이중화, §8). transform/transition만 사용(reduce-motion 자동 무력화). */
+.pinSelected {
+  transform: translate(-50%, -100%) scale(1.5);
+  filter: drop-shadow(0 0 0 var(--c-brand));
+  text-shadow:
+    0 0 0 var(--c-brand),
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    0 0 2px #fff;
+  transition: transform var(--motion-fast) var(--ease);
+}
+
 .fallback {
   display: flex;
   flex-direction: column;
