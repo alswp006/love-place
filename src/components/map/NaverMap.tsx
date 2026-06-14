@@ -152,7 +152,11 @@ export function NaverMap({
     }
     if (pts.length > 1) map.fitBounds(bounds)
     else map.setCenter(new nv.maps.LatLng(pts[0]!.lat!, pts[0]!.lng!))
-  }, [places, ready, visitedIds, onSelect])
+    // visitedIds는 deps에서 제외: 방문 토글로 마커를 통째로 재생성하면 fitBounds가 재실행돼
+    // 지도가 튄다. 방문 상태에 따른 아이콘 갱신은 아래 "선택 강조" 효과(setIcon)가 담당한다.
+    // 초기 아이콘은 이 효과 실행 시점의 visitedIds(클로저)로 정확히 그려진다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places, ready, onSelect])
 
   // 선택 강조 — 해당 마커 아이콘만 교체(확대+링)·zIndex↑·panTo. fitBounds 재실행 안 함(지도 튐 방지).
   useEffect(() => {

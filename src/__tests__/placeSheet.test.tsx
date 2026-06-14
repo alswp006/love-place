@@ -107,4 +107,16 @@ describe('PlaceSheet (드래그 시트)', () => {
     expect(screen.getByTestId('trips-section')).toBeInTheDocument()
     expect(screen.getByRole('group', { name: '장소 필터' })).toBeInTheDocument()
   })
+
+  it('뷰포트 높이 변화(resize)에 시트 위치(translateY)를 갱신한다(iOS 주소창/회전 대응)', () => {
+    const orig = window.innerHeight
+    renderSheet()
+    const sheet = screen.getByRole('dialog', { name: '장소 시트' })
+    const before = sheet.style.transform // peek: translateY = vh*(1-0.18)
+    // iOS 주소창 노출 등으로 innerHeight 축소 → resize 발화 → vh state 갱신 → translateY 재계산.
+    Object.defineProperty(window, 'innerHeight', { value: orig - 300, configurable: true, writable: true })
+    fireEvent(window, new Event('resize'))
+    expect(sheet.style.transform).not.toBe(before)
+    Object.defineProperty(window, 'innerHeight', { value: orig, configurable: true, writable: true })
+  })
 })
