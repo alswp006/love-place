@@ -1,6 +1,6 @@
 import { MapPin, CalendarDays, Sparkles, Users, type IconComponent } from '@/components/nav/icons'
 
-// 5탭 IA의 단일 출처(설계서 §3). TabBar·router·페이지 셸·테스트가 모두 여기서 도출 —
+// 4탭 IA의 단일 출처(설계서 §3 — 장소 탭은 지도에 통합). TabBar·router·페이지 셸·테스트가 모두 여기서 도출 —
 // 한 곳만 고치면 라우팅·네비·테스트가 동기화된다(메타 중복으로 인한 무성 회귀 방지).
 export type TabDef = {
   /** 라우트 경로(절대) */
