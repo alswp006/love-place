@@ -55,10 +55,11 @@ beforeEach(() => {
 })
 
 describe('4탭 라우팅 (설계서 §3 IA — 장소→지도 통합)', () => {
-  it('루트(/)는 지도 화면을 첫 화면으로 렌더한다', async () => {
+  it('루트(/)는 지도 화면을 첫 화면으로 렌더한다(풀블리드 — 라지 타이틀 없이 region 이름 유지)', async () => {
     renderAt('/')
     expect(await screen.findByTestId('page-map')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '지도' })).toBeInTheDocument()
+    // 풀블리드 지도엔 라지 타이틀(h1)이 없고 section aria-label='지도'로 접근성 이름 유지.
+    expect(screen.getByRole('region', { name: '지도' })).toBeInTheDocument()
   })
 
   // 탭 메타는 단일 출처(@/app/tabs)에서 도출 — 테스트가 별도 하드코딩을 갖지 않는다.
@@ -67,7 +68,12 @@ describe('4탭 라우팅 (설계서 §3 IA — 장소→지도 통합)', () => {
     async (path, testId, heading) => {
       renderAt(path)
       expect(await screen.findByTestId(testId)).toBeInTheDocument()
-      expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument()
+      if (path === '/') {
+        // 지도는 풀블리드 — h1 대신 region 이름으로 접근성 이름 확인.
+        expect(screen.getByRole('region', { name: heading })).toBeInTheDocument()
+      } else {
+        expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument()
+      }
     },
   )
 

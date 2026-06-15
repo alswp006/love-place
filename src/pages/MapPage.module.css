@@ -1,6 +1,11 @@
+/* 풀블리드 지도 — .fullBleed(flex 컬럼)를 flex로 가득 채우고, 하단은 시트 peek 밴드(--sheet-peek-h)
+   만큼만 인셋해서 네이버 로고/축척이 peek 시트 바로 위에 보이게 한다(research 01 §10). peek 밴드는
+   viewport 하단(bottom:0)에서 측정되며 시트가 하단 safe-area를 자체 흡수하므로 --safe-bottom을
+   추가하지 않는다(이중 가산 금지). 시트가 half/full로 펼쳐지면 의도적으로 지도를 덮는 오버레이가 된다. */
 .mapWrap {
   position: relative;
-  height: calc(100dvh - 220px);
-  min-height: 60vh;
+  flex: 1;
   display: flex;
+  min-height: 0;
+  padding-bottom: var(--sheet-peek-h);
 }

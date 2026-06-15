@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
 import { NaverMap } from '@/components/map/NaverMap'
-import { TodayCard } from '@/components/common/TodayCard'
 import { PlaceSheet } from '@/components/places/PlaceSheet'
 import { MapSearchOverlay } from '@/components/places/MapSearchOverlay'
 import { isNaverMapConfigured } from '@/lib/naver/loadNaverMaps'
@@ -59,8 +58,7 @@ export default function MapPage() {
   }
 
   return (
-    <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
-      <TodayCard coupleId={coupleId} />
+    <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId} fullBleed>
       {isNaverMapConfigured() ? (
         <div className={styles.mapWrap}>
           {/* 검색바는 시트가 아니라 지도 위 상단 오버레이(spec §5) — peek에서도 도달, ≤3탭 보존. */}
