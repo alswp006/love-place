@@ -70,7 +70,6 @@ export function useMarkVisited(coupleId: string | null, myId: string | null) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['visits', coupleId] })
-      void queryClient.invalidateQueries({ queryKey: ['places', coupleId] })
     },
   })
 }
@@ -78,27 +77,28 @@ export function useMarkVisited(coupleId: string | null, myId: string | null) {
 // "가봤음 취소"(토글) — 해당 place의 활성 방문행(들)을 soft-delete(deleted_at). 낙관적 락(§4.3):
 // version 조건부 softDelete가 0행이면 충돌 → onConflict(무음 덮어쓰기 금지). 여러 행이면 모두 처리해야
 // "가봤음"(visits 존재) 도출이 해제된다. realtime visits:${coupleId}가 양측에 전파.
+// 결과로 { conflicted }를 돌려줘 호출 측이 !conflicted일 때만 성공 토스트를 띄우게 한다.
 export function useUnmarkVisited(
   coupleId: string | null,
   myId: string | null,
   onConflict: () => void,
 ) {
   const queryClient = useQueryClient()
-  return useMutation<void, Error, { placeId: string; visits: VisitRow[] }>({
+  return useMutation<{ conflicted: boolean }, Error, { placeId: string; visits: VisitRow[] }>({
     mutationFn: async ({ placeId, visits }) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
       const active = visits.filter((v) => v.place_id === placeId)
-      if (active.length === 0) return
+      if (active.length === 0) return { conflicted: false }
       let conflicted = false
       for (const v of active) {
         const res = await softDelete('visits', v.id, v.version, myId)
         if (res.status === 'conflict') conflicted = true
       }
       if (conflicted) onConflict()
+      return { conflicted }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['visits', coupleId] })
-      void queryClient.invalidateQueries({ queryKey: ['places', coupleId] })
     },
   })
 }

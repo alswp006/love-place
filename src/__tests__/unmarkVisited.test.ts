@@ -10,4 +10,10 @@ describe('가봤어요 토글 — 방문 취소 충돌 계약', () => {
   it('soft-delete가 0행이면 conflict(상대가 먼저 수정/삭제) — 무음 덮어쓰기 금지', () => {
     expect(interpretRows([]).status).toBe('conflict')
   })
+  it('충돌 행이 하나라도 있으면 conflicted=true로 집계된다(계약)', () => {
+    // 활성 방문행 2개 중 1개가 0행(conflict)이면 conflicted=true.
+    const results = [interpretRows([{ id: 'v1' }]), interpretRows([])]
+    const conflicted = results.some((r) => r.status === 'conflict')
+    expect(conflicted).toBe(true)
+  })
 })

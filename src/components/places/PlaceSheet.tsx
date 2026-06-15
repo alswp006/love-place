@@ -251,7 +251,7 @@ export function PlaceSheet({
               onUnvisit={() =>
                 unmarkVisited.mutate(
                   { placeId: selectedPlace.id, visits },
-                  { onSuccess: () => toast.show('가봤음 기록을 취소했어요') },
+                  { onSuccess: (r) => { if (!r.conflicted) toast.show('가봤음 기록을 취소했어요') } },
                 )
               }
               onReact={() => toggleReaction.mutate({ placeId: selectedPlace.id })}
@@ -275,7 +275,7 @@ export function PlaceSheet({
             onUnvisit={(placeId) =>
               unmarkVisited.mutate(
                 { placeId, visits },
-                { onSuccess: () => toast.show('가봤음 기록을 취소했어요') },
+                { onSuccess: (r) => { if (!r.conflicted) toast.show('가봤음 기록을 취소했어요') } },
               )
             }
             unvisitPending={unmarkVisited.isPending}
