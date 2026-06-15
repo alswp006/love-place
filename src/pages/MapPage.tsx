@@ -118,27 +118,30 @@ export default function MapPage() {
           hint="네이버 지도 키를 설정하면 여기에 우리 장소가 마커로 떠요."
         />
       )}
-      <PlaceSheet
-        coupleId={coupleId}
-        myId={myId}
-        coupleActive={coupleActive}
-        places={enriched}
-        wishes={wishes}
-        visits={visits ?? []}
-        visitedIds={visitedIds}
-        placesLoading={placesLoading}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        previewHit={previewHit}
-        reactions={reactions}
-        onSave={() => onSheetSave()}
-        onCloseDetail={() => {
-          setSelectedId(null)
-          setPreviewHit(null)
-        }}
-        snap={snap}
-        onSnapChange={setSnap}
-      />
+      {/* 키 없을 때(준비 중)는 시트를 렌더하지 않아 '준비 중' 안내 1개만 보이게 한다(spec §3.3). */}
+      {isNaverMapConfigured() ? (
+        <PlaceSheet
+          coupleId={coupleId}
+          myId={myId}
+          coupleActive={coupleActive}
+          places={enriched}
+          wishes={wishes}
+          visits={visits ?? []}
+          visitedIds={visitedIds}
+          placesLoading={placesLoading}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          previewHit={previewHit}
+          reactions={reactions}
+          onSave={() => onSheetSave()}
+          onCloseDetail={() => {
+            setSelectedId(null)
+            setPreviewHit(null)
+          }}
+          snap={snap}
+          onSnapChange={setSnap}
+        />
+      ) : null}
       <Toast msg={toast.msg} />
     </ScreenScaffold>
   )

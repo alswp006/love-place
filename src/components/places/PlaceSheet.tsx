@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { Toast } from '@/components/common/Toast'
@@ -220,6 +221,11 @@ export function PlaceSheet({
             emoji="💑"
             title="먼저 상대와 연결해요"
             hint="'우리' 탭에서 초대 코드로 연결하면, 둘이 함께 장소를 모을 수 있어요."
+            action={
+              <Link className={styles.emptyAction} to="/us">
+                우리 탭에서 연결하기
+              </Link>
+            }
           />
         </div>
       ) : (

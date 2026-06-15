@@ -101,6 +101,19 @@
   border-color: var(--c-brand);
 }
 
+/* 미연결 빈 상태의 행동 유도 링크 — 버튼형(CTA 토큰, ≥44px). '우리' 탭으로 이동(ux §7). */
+.emptyAction {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 999px;
+  background: var(--c-cta-bg);
+  color: var(--c-cta-fg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* full/half 확장 시 지도 위 백드롭 — 탭하면 collapse. 탭바(46)·시트(45) 아래(44). */
 .backdrop {
   position: fixed;

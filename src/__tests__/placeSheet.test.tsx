@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { useState } from 'react'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import type { SnapStop } from '@/lib/places/sheetSnap'
 
 // PlaceSheet는 데이터 훅(useWishes/useVisits 등)을 직접 호출하지 않고 props로 받는 표현형 컴포넌트.
@@ -56,11 +57,13 @@ function renderSheet(over: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
     ...over,
   }
   return render(
-    <QueryClientProvider client={qc}>
-      <OfflineQueueProvider>
-        <Harness {...props} />
-      </OfflineQueueProvider>
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={qc}>
+        <OfflineQueueProvider>
+          <Harness {...props} />
+        </OfflineQueueProvider>
+      </QueryClientProvider>
+    </MemoryRouter>,
   )
 }
 
@@ -153,6 +156,12 @@ describe('PlaceSheet (드래그 시트)', () => {
   it('커플 미연결이면 연결 안내 빈 상태를 보여준다', () => {
     renderSheet({ coupleActive: false })
     expect(screen.getByText('먼저 상대와 연결해요')).toBeInTheDocument()
+  })
+
+  it('미연결 빈 상태에 /us로 가는 액션 버튼이 있다', () => {
+    // PlaceSheet의 미연결 EmptyState는 Router 컨텍스트가 필요 → MemoryRouter로 감싸 렌더.
+    renderSheet({ coupleActive: false })
+    expect(screen.getByRole('link', { name: /우리 탭에서 연결/ })).toHaveAttribute('href', '/us')
   })
 
   it('연결 상태면 필터·목록을 호스팅하되 여행/휴지통 섹션은 더는 렌더하지 않는다(P4)', () => {
