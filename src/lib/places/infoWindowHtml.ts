@@ -1,9 +1,7 @@
-import type { ProfileMap } from '@/hooks/useProfiles'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import { markerVisual } from '@/lib/places/markerVisual'
 import type { WithWish } from '@/lib/places/wishStatus'
 import iwStyles from '@/components/map/InfoWindow.module.css'
-import avStyles from '@/components/common/SourceAvatar.module.css'
 
 // 말풍선 HTML 문자열 — 순수 함수(테스트로 못박음). naver/DOM 비의존, 사용자 텍스트는 전부 이스케이프.
 // 상태/소유자는 색+글리프+텍스트 이중화(§8). 액션 버튼은 data-action/data-id(위임 핸들러가 읽음).
@@ -16,24 +14,9 @@ export function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
-// SourceAvatar와 동일한 색/이니셜 도출을 HTML 문자열로 재현(React 컴포넌트는 문자열에 못 씀).
-export function avatarHtml(userId: string, profiles: ProfileMap, myId: string | null): string {
-  const p = profiles[userId]
-  const isMe = userId === myId
-  const name = p?.displayName.trim() || (isMe ? '나' : '상대')
-  const color = p?.color ?? 'var(--c-text-weak)'
-  const initial = escapeHtml(name.slice(0, 1).toUpperCase())
-  const label = escapeHtml(`${name} 추가`)
-  const inner = p?.avatarUrl
-    ? `<img src="${escapeHtml(p.avatarUrl)}" alt="" class="${avStyles.img}" />`
-    : initial
-  return `<span class="${avStyles.avatar}" style="background-color:${escapeHtml(color)}" aria-label="${label}" title="${label}">${inner}</span>`
-}
-
+// 편차: 장소 말풍선 출처 아바타 제거(ux §2 예외, spec §3.2). profiles/myId 인자 제거.
 export function infoWindowHtml(
   place: WithWish<PlaceRow>,
-  profiles: ProfileMap,
-  myId: string | null,
   state: { visited: boolean; didIReact: boolean; count: number },
 ): string {
   const visual = markerVisual({
@@ -67,7 +50,6 @@ export function infoWindowHtml(
     `<div class="${iwStyles.sub}">`,
     `<span class="${iwStyles.status}">${escapeHtml(statusText)}</span>`,
     meta ? `<span class="${iwStyles.meta}">${meta}</span>` : '',
-    avatarHtml(place.added_by, profiles, myId),
     `</div>`,
     `<div class="${iwStyles.actions}">`,
     `<button type="button" class="${iwStyles.action}" data-action="directions" data-id="${id}" aria-label="${name} 길찾기">🧭 길찾기</button>`,

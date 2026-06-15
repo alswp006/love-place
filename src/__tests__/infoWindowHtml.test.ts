@@ -15,20 +15,20 @@ describe('infoWindowHtml (말풍선 HTML — 순수)', () => {
   })
 
   it('이름을 이스케이프하고 둘 다 찜 글리프(♥)+텍스트를 포함한다(색만 의존 금지)', () => {
-    const html = infoWindowHtml(place, {}, 'u1', { visited: false, didIReact: false, count: 0 })
+    const html = infoWindowHtml(place,{ visited: false, didIReact: false, count: 0 })
     expect(html).toContain('칠성&quot;조선소')
     expect(html).toContain('♥')
     expect(html).toContain('둘 다 찜')
   })
 
   it('가봤음이면 채운 별(★)+가봤음 라벨(둘 다 찜보다 우선)', () => {
-    const html = infoWindowHtml(place, {}, 'u1', { visited: true, didIReact: false, count: 0 })
+    const html = infoWindowHtml(place,{ visited: true, didIReact: false, count: 0 })
     expect(html).toContain('★')
     expect(html).toContain('가봤음')
   })
 
   it('세 액션(길찾기/가봤어요/리액션)에 data-action·data-id를 부여한다', () => {
-    const html = infoWindowHtml(place, {}, 'u1', { visited: false, didIReact: false, count: 0 })
+    const html = infoWindowHtml(place,{ visited: false, didIReact: false, count: 0 })
     expect(html).toContain('data-action="directions"')
     expect(html).toContain('data-action="visit"')
     expect(html).toContain('data-action="react"')
@@ -37,15 +37,15 @@ describe('infoWindowHtml (말풍선 HTML — 순수)', () => {
   })
 
   it('내가 리액션했으면 채운 하트(❤️), 아니면 빈 하트(🤍)', () => {
-    const on = infoWindowHtml(place, {}, 'u1', { visited: false, didIReact: true, count: 1 })
-    const off = infoWindowHtml(place, {}, 'u1', { visited: false, didIReact: false, count: 0 })
+    const on = infoWindowHtml(place,{ visited: false, didIReact: true, count: 1 })
+    const off = infoWindowHtml(place,{ visited: false, didIReact: false, count: 0 })
     expect(on).toContain('❤️')
     expect(off).toContain('🤍')
   })
 
   it('리액션 총 개수가 1 이상이면 하트 옆에 숫자를 표시한다(spec §7 총 개수)', () => {
-    const two = infoWindowHtml(place, {}, 'u1', { visited: false, didIReact: true, count: 2 })
-    const zero = infoWindowHtml(place, {}, 'u1', { visited: false, didIReact: false, count: 0 })
+    const two = infoWindowHtml(place,{ visited: false, didIReact: true, count: 2 })
+    const zero = infoWindowHtml(place,{ visited: false, didIReact: false, count: 0 })
     // 리액션 버튼 안에 하트 + 개수(2)가 함께 렌더.
     expect(two).toMatch(/❤️\s*2/)
     // 0개면 숫자를 노출하지 않는다(빈 하트만).
@@ -53,8 +53,8 @@ describe('infoWindowHtml (말풍선 HTML — 순수)', () => {
   })
 
   it('이미 가봤음이면 가봤어요 액션은 비활성 "가봤음" 상태로 렌더한다(중복 방문 insert 방지, spec §3)', () => {
-    const visited = infoWindowHtml(place, {}, 'u1', { visited: true, didIReact: false, count: 0 })
-    const notVisited = infoWindowHtml(place, {}, 'u1', { visited: false, didIReact: false, count: 0 })
+    const visited = infoWindowHtml(place,{ visited: true, didIReact: false, count: 0 })
+    const notVisited = infoWindowHtml(place,{ visited: false, didIReact: false, count: 0 })
     // 미방문: 누를 수 있는 가봤어요 액션(data-action=visit) 노출.
     expect(notVisited).toContain('data-action="visit"')
     expect(notVisited).toContain('✅ 가봤어요')
@@ -65,7 +65,7 @@ describe('infoWindowHtml (말풍선 HTML — 순수)', () => {
   })
 
   it('meta(카테고리·지역)는 해시된 클래스 안에 렌더된다(class="undefined" 회귀 방지)', () => {
-    const html = infoWindowHtml(place, {}, 'u1', { visited: false, didIReact: false, count: 0 })
+    const html = infoWindowHtml(place,{ visited: false, didIReact: false, count: 0 })
     expect(html).toContain('카페 · 속초')
     // CSS module .meta가 존재해 해시 클래스가 들어가야 함(class="undefined" 금지).
     expect(html).not.toContain('class="undefined"')

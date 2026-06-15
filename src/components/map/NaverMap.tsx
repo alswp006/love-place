@@ -214,8 +214,6 @@ export function NaverMap({
 
     const html = infoWindowHtml(
       { ...place, wish: place.wish ?? deriveWishStatus(undefined, myId ?? null) },
-      profiles ?? {},
-      myId ?? null,
       {
         visited: visitedIds?.has(selectedId) ?? false,
         didIReact: reactions?.[selectedId]?.didIReact ?? false,
