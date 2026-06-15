@@ -184,6 +184,7 @@ export function NaverMap({
                 pinClass,
                 label: visual.label,
                 selected: p.id === selectedId,
+                badge: visual.badge,
               }),
               anchor: new nv.maps.Point(12, 24),
             },
@@ -346,7 +347,7 @@ export function NaverMap({
       const pinClass = `${styles.pin} ${modifier}`.trim()
       const selected = id === selectedId
       marker.setIcon({
-        content: markerIconHtml({ glyph: visual.glyph, pinClass, label: visual.label, selected }),
+        content: markerIconHtml({ glyph: visual.glyph, pinClass, label: visual.label, selected, badge: visual.badge }),
         anchor: new nv.maps.Point(12, 24),
       })
       marker.setZIndex(selected ? SELECTED_ZINDEX : BASE_ZINDEX)

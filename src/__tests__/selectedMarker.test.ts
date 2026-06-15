@@ -23,4 +23,9 @@ describe('selectedMarker (선택 마커 강조 — 순수)', () => {
   it('선택 zIndex는 기본보다 크다(앞으로 끌어올림)', () => {
     expect(SELECTED_ZINDEX).toBeGreaterThan(BASE_ZINDEX)
   })
+
+  it('badge가 주어지면 체크 배지 스팬이 렌더된다', () => {
+    const html = markerIconHtml({ glyph: '★', pinClass: 'pin pinVisited', label: '카페 — 가봤음', selected: false, badge: '✓' })
+    expect(html).toContain('✓')
+  })
 })

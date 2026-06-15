@@ -84,6 +84,9 @@
     /* 다크: 밝은 테라코타 배경 + 어두운 글자(대비 AA) */
     --c-cta-bg: #d98a6f;
     --c-cta-fg: #241e1b;
+    /* 다크에서 success/danger를 밝게 올려 어두운 표면(--c-surface #241e1b) 위 AA 대비(≥4.5:1) 확보 */
+    --c-success: #6fb98a;
+    --c-danger: #e87a6d;
   }
 }
 

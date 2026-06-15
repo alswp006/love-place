@@ -20,4 +20,9 @@ describe('markerVisual (마커 모양 이중화)', () => {
     expect(v.kind).toBe('visited')
     expect(v.label).toContain('가봤음')
   })
+  it('가봤음 마커엔 체크 배지(✓)가 붙는다(색만이 아닌 실루엣 구분)', () => {
+    expect(markerVisual({ visited: true, bothWished: false, name: '카페' }).badge).toBe('✓')
+    expect(markerVisual({ visited: false, bothWished: true, name: '카페' }).badge).toBeUndefined()
+    expect(markerVisual({ visited: false, bothWished: false, name: '카페' }).badge).toBeUndefined()
+  })
 })

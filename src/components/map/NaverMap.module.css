@@ -29,6 +29,23 @@
   color: var(--c-success);
 }
 
+/* 가봤음 체크 배지 — ★ 위 작은 ✓(색이 아닌 실루엣으로 구분, §8). */
+.pinCheck {
+  position: absolute;
+  margin-left: -6px;
+  margin-top: -10px;
+  font-size: 11px;
+  color: #fff;
+  background: var(--c-success);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 /* 프리뷰(미저장 검색 후보) 핀 — ＋ 글리프 + 점선 링으로 저장 핀(★/♥)과 모양 구분(§8). */
 .pinPreview {
   color: var(--c-cta-bg);

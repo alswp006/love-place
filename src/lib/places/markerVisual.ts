@@ -3,11 +3,11 @@
 // 순수 함수(테스트로 못박음).
 
 export type MarkerKind = 'wish' | 'both' | 'visited'
-export type MarkerVisual = { glyph: string; kind: MarkerKind; label: string }
+export type MarkerVisual = { glyph: string; kind: MarkerKind; label: string; badge?: string }
 
 export function markerVisual(opts: { visited: boolean; bothWished: boolean; name: string }): MarkerVisual {
   const { visited, bothWished, name } = opts
-  if (visited) return { glyph: '★', kind: 'visited', label: `${name} — 가봤음` }
+  if (visited) return { glyph: '★', kind: 'visited', label: `${name} — 가봤음`, badge: '✓' }
   if (bothWished) return { glyph: '♥', kind: 'both', label: `${name} — 둘 다 찜` }
   return { glyph: '☆', kind: 'wish', label: `${name} — 가고싶음` }
 }

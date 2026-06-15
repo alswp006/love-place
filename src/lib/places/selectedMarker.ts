@@ -10,7 +10,9 @@ export function markerIconHtml(opts: {
   pinClass: string
   label: string
   selected: boolean
+  badge?: string
 }): string {
   const cls = `${opts.pinClass}${opts.selected ? ` ${pin.pinSelected}` : ''}`.trim()
-  return `<div class="${cls}" aria-label="${escapeHtml(opts.label)}">${opts.glyph}</div>`
+  const badge = opts.badge ? `<span class="${pin.pinCheck}" aria-hidden>${escapeHtml(opts.badge)}</span>` : ''
+  return `<div class="${cls}" aria-label="${escapeHtml(opts.label)}">${opts.glyph}${badge}</div>`
 }
