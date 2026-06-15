@@ -1,12 +1,13 @@
 // 현재 위치 순수 래퍼(spec §3.5) — navigator.geolocation을 Promise로 감싸고 에러를 정규화한다.
 // geo를 주입 가능하게 해서 vitest에서 모킹(테스트 용이). 권한 요청은 호출 시점(맥락 요청, security §3.1).
 export type GeoResult =
-  | { ok: true; lat: number; lng: number }
+  | { ok: true; lat: number; lng: number; accuracy: number }
   | { ok: false; reason: 'unsupported' | 'denied' | 'unavailable' | 'timeout' }
 
 type Options = {
   geo?: Geolocation | null
   timeoutMs?: number
+  highAccuracy?: boolean
 }
 
 // 미지정 시 브라우저 navigator.geolocation 사용(없으면 null → unsupported).
@@ -29,9 +30,39 @@ export function getCurrentPosition(opts: Options = {}): Promise<GeoResult> {
   const timeout = opts.timeoutMs ?? 8000
   return new Promise<GeoResult>((resolve) => {
     geo.getCurrentPosition(
-      (pos) => resolve({ ok: true, lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) =>
+        resolve({
+          ok: true,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        }),
       (err) => resolve({ ok: false, reason: reasonForCode(err.code) }),
-      { enableHighAccuracy: false, timeout, maximumAge: 60_000 },
+      { enableHighAccuracy: opts.highAccuracy ?? false, timeout, maximumAge: 60_000 },
     )
   })
+}
+
+// 자동 locate 게이트(추가 프롬프트 없이 granted일 때만, dossier 02 §4.6).
+export async function getPermissionState(
+  opts: { permissions?: Permissions | null } = {},
+): Promise<PermissionState> {
+  const perms =
+    opts.permissions !== undefined
+      ? opts.permissions
+      : typeof navigator !== 'undefined' && 'permissions' in navigator
+        ? navigator.permissions
+        : null
+  if (!perms) return 'prompt'
+  try {
+    const s = await perms.query({ name: 'geolocation' as PermissionName })
+    return s.state
+  } catch {
+    return 'prompt' // Safari 일부 미지원 → 프롬프트 회피(자동 locate 안 함)
+  }
+}
+
+/** 로드 시 자동 locate 여부 — granted일 때만(추가 프롬프트 회피, spec §3.5). 순수. */
+export function shouldAutoLocate(state: PermissionState): boolean {
+  return state === 'granted'
 }

@@ -110,6 +110,46 @@
   z-index: 40;
 }
 
+/* 📍 버튼 로딩(isLocating) — 비활성 + 스피너. 색만이 아니라 모양/aria-busy로 상태 이중화(§8). */
+.myLocBtn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+/* 위치 확인 중 스피너 — reduce-motion에서는 회전 정지(장식 모션 생략, ux §5). */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--c-border);
+  border-top-color: var(--c-brand);
+  border-radius: 50%;
+  animation: naverMapSpin 0.8s linear infinite;
+}
+
+@keyframes naverMapSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+/* 내 위치 점 — 파란 점(accuracy 원과 함께, spec §3.5). 색+모양으로 마커와 구분. */
+.selfDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4285f4;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  transform: translate(-50%, -50%);
+}
+
 /* 위치 실패/거부 토스트 — 하단 중앙, 시트 위. 시트가 탭바 위에 앵커되므로
    peek 밴드 + 탭바 높이만큼 띄워 peek에서 시트/탭바에 가리지 않게 한다. */
 .locToast {

@@ -8,7 +8,7 @@ import { markerIconHtml, BASE_ZINDEX, SELECTED_ZINDEX } from '@/lib/places/selec
 import { escapeHtml } from '@/lib/places/infoWindowHtml'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import type { SnapStop } from '@/lib/places/sheetSnap'
-import { getCurrentPosition } from '@/lib/geo/currentPosition'
+import { getCurrentPosition, getPermissionState, shouldAutoLocate } from '@/lib/geo/currentPosition'
 import styles from './NaverMap.module.css'
 
 // 네이버 지도 + 장소 마커(§5.5). 네이버 검색 좌표(WGS84)를 그대로 핀으로 찍는다.
@@ -44,8 +44,14 @@ export function NaverMap({
   const mapMoveRef = useRef<naver.maps.MapEventListener[]>([])
   const mapClickRef = useRef<naver.maps.MapEventListener | null>(null)
   const previewMarkerRef = useRef<naver.maps.Marker | null>(null)
+  // 내 위치 self-dot + accuracy 원(spec §3.5). userMovedRef: 사용자가 지도를 드래그하면 자동 센터링 중단.
+  const selfMarkerRef = useRef<naver.maps.Marker | null>(null)
+  const accuracyCircleRef = useRef<naver.maps.Circle | null>(null)
+  const userMovedRef = useRef(false)
+  const userMovedListenerRef = useRef<naver.maps.MapEventListener | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [isLocating, setIsLocating] = useState(false)
   // 로드 실패 후 '다시 시도'로 init effect를 재실행하기 위한 버전 키(ux §7 에러 상태).
   const [loadKey, setLoadKey] = useState(0)
   const [locToast, setLocToast] = useState<string | null>(null)
@@ -83,6 +89,10 @@ export function NaverMap({
       mapClickRef.current = nv.maps.Event.addListener(mapRef.current, 'click', () =>
         onCloseRef.current?.(),
       )
+      // 사용자 드래그 → 자동 센터링 중단(dragend만 — 프로그램적 setZoom의 zoom_changed 오탐 방지, dossier 02 §4.4).
+      userMovedListenerRef.current = nv.maps.Event.addListener(mapRef.current, 'dragend', () => {
+        userMovedRef.current = true
+      })
     }
     const existing =
       (typeof window !== 'undefined' && window.naver?.maps && window.naver) || null
@@ -110,6 +120,13 @@ export function NaverMap({
       mapMoveRef.current = []
       previewMarkerRef.current?.setMap(null)
       previewMarkerRef.current = null
+      selfMarkerRef.current?.setMap(null)
+      selfMarkerRef.current = null
+      accuracyCircleRef.current?.setMap(null)
+      accuracyCircleRef.current = null
+      if (userMovedListenerRef.current)
+        window.naver?.maps.Event.removeListener(userMovedListenerRef.current)
+      userMovedListenerRef.current = null
       mapRef.current = null
     }
   }, [loadKey])
@@ -215,30 +232,81 @@ export function NaverMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, ready])
 
-  // 초기 센터링 1/2 — geolocation 시도(ready 직후 1회, spec §3.5).
-  // 성공: 내 위치 setCenter+zoom 14, centeredRef로 고정(이후 자동 이동 없음).
-  // 실패/거부/미지원: 여기서 지도를 건드리지 않고 geoSettledRef='failed'만 기록 →
-  //   저장장소 fitBounds 폴백은 아래 별도 효과가 places 적재 시점에 맞춰 1회 수행(빈→채움 순서 가드).
-  useEffect(() => {
+  // 내 위치 self-dot(파란 점) + accuracy 원을 그리고 self+places로 fitBounds(spec §3.5).
+  // 마커/원은 1개만 — 위치/반경만 갱신(재생성 금지). places의 좌표 유효 핀까지 bounds에 포함.
+  const showSelf = (lat: number, lng: number, accuracy: number) => {
     const nv = window.naver
     const map = mapRef.current
-    if (!ready || !nv || !map || geoSettledRef.current !== 'pending') return
+    if (!nv || !map) return
+    const pos = new nv.maps.LatLng(lat, lng)
+    if (selfMarkerRef.current) selfMarkerRef.current.setPosition(pos)
+    else
+      selfMarkerRef.current = new nv.maps.Marker({
+        position: pos,
+        map,
+        zIndex: SELECTED_ZINDEX + 2,
+        icon: {
+          content: `<div class="${styles.selfDot}" aria-label="내 위치"></div>`,
+          anchor: new nv.maps.Point(8, 8),
+        },
+      })
+    if (accuracyCircleRef.current) {
+      accuracyCircleRef.current.setCenter(pos)
+      accuracyCircleRef.current.setRadius(accuracy)
+    } else
+      accuracyCircleRef.current = new nv.maps.Circle({
+        map,
+        center: pos,
+        radius: accuracy,
+        strokeColor: '#4285F4',
+        strokeWeight: 1,
+        strokeOpacity: 0.4,
+        fillColor: '#4285F4',
+        fillOpacity: 0.12,
+        clickable: false,
+        zIndex: 0,
+      })
+    const pts = places.filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number')
+    const b = new nv.maps.LatLngBounds(pos, pos)
+    for (const p of pts) b.extend(new nv.maps.LatLng(p.lat!, p.lng!))
+    map.fitBounds(b)
+  }
+
+  // 초기 센터링 1/2 — granted일 때만 자동 locate(추가 프롬프트 금지, spec §3.5 / dossier 02 §4.6).
+  // 성공: self-dot + accuracy 원 + self+places fitBounds, centeredRef로 고정(이후 자동 이동 없음).
+  //   단 사용자가 이미 지도를 드래그(userMovedRef)했으면 자동 센터링 생략.
+  // 미granted/실패/미지원: 지도를 건드리지 않고 geoSettledRef='failed'만 기록 →
+  //   저장장소 fitBounds 폴백은 아래 별도 효과가 places 적재 시점에 맞춰 1회 수행(빈→채움 순서 가드).
+  useEffect(() => {
+    const map = mapRef.current
+    if (!ready || !window.naver || !map || geoSettledRef.current !== 'pending') return
     let cancelled = false
-    void getCurrentPosition().then((r) => {
+    void getPermissionState().then((state) => {
       if (cancelled || !mapRef.current) return
-      if (r.ok) {
-        geoSettledRef.current = 'ok'
-        centeredRef.current = true
-        mapRef.current.setCenter(new nv.maps.LatLng(r.lat, r.lng))
-        mapRef.current.setZoom(14)
-      } else {
-        // 실패 — best-effort 폴백은 places 효과에 위임(아래). 의도적으로 지도는 그대로(서울 초기 center).
+      if (!shouldAutoLocate(state)) {
+        // 추가 프롬프트 회피 — 자동 locate 안 함. 서울/저장장소 폴백에 위임.
         geoSettledRef.current = 'failed'
+        return
       }
+      void getCurrentPosition().then((r) => {
+        if (cancelled || !mapRef.current) return
+        if (r.ok) {
+          geoSettledRef.current = 'ok'
+          if (!userMovedRef.current) {
+            centeredRef.current = true
+            showSelf(r.lat, r.lng, r.accuracy)
+          }
+        } else {
+          // 실패 — best-effort 폴백은 places 효과에 위임(아래). 지도는 그대로(서울 초기 center).
+          geoSettledRef.current = 'failed'
+        }
+      })
     })
     return () => {
       cancelled = true
     }
+    // showSelf는 매 렌더 재생성되지만 ready 직후 1회만 실행(geoSettledRef 가드) — deps 제외.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])
 
   // 초기 센터링 2/2 — geolocation 실패 시 저장장소 폴백(best-effort, spec §2).
@@ -329,25 +397,31 @@ export function NaverMap({
     return () => window.removeEventListener('keydown', onKey)
   }, [selectedId, onClose])
 
-  // '내 위치' 버튼 — 현재 위치 재요청 후 panTo. 거부/실패면 토스트(최소 폴백, spec §3.5).
+  // '내 위치' 버튼(📍) — 명시적 사용자 탭. high-accuracy 요청 → self-dot+accuracy 원 + fitBounds.
+  // isLocating 중 중복 호출 방지(스피너/비활성). 거부/타임아웃/insecure 별 복구 메시지(spec §3.5).
   const recenter = () => {
     const nv = window.naver
     const map = mapRef.current
-    if (!nv || !map) return
-    void getCurrentPosition().then((r) => {
-      if (r.ok) {
-        map.panTo(new nv.maps.LatLng(r.lat, r.lng))
-        map.setZoom(14)
-        setLocToast(null)
-      } else {
-        setLocToast(
-          r.reason === 'denied'
-            ? '위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해 주세요.'
-            : '현재 위치를 가져오지 못했어요.',
-        )
-        window.setTimeout(() => setLocToast(null), 3000)
-      }
-    })
+    if (!nv || !map || isLocating) return
+    setIsLocating(true)
+    void getCurrentPosition({ highAccuracy: true })
+      .then((r) => {
+        if (r.ok) {
+          userMovedRef.current = false
+          showSelf(r.lat, r.lng, r.accuracy)
+          setLocToast(null)
+        } else {
+          const msg = !window.isSecureContext
+            ? '보안 연결(HTTPS)에서만 위치를 쓸 수 있어요.'
+            : r.reason === 'denied'
+              ? '위치 권한이 꺼져 있어요. 설정 > Safari > 위치에서 허용해 주세요.'
+              : r.reason === 'timeout'
+                ? '위치 확인이 오래 걸려요. 다시 시도해 주세요.'
+                : '현재 위치를 가져오지 못했어요.'
+          setLocToast(msg)
+        }
+      })
+      .finally(() => setIsLocating(false))
   }
 
   if (error) {
@@ -380,12 +454,14 @@ export function NaverMap({
         type="button"
         className={styles.myLocBtn}
         onClick={recenter}
-        aria-label="내 위치로 이동"
+        aria-label={isLocating ? '내 위치 확인 중' : '내 위치로 이동'}
+        aria-busy={isLocating}
+        disabled={isLocating}
         aria-hidden={floatingHidden}
         data-hidden={floatingHidden ? 'true' : undefined}
         tabIndex={floatingHidden ? -1 : 0}
       >
-        📍
+        {isLocating ? <span className={styles.spinner} aria-hidden="true" /> : '📍'}
       </button>
       {locToast ? (
         <div
