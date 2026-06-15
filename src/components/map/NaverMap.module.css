@@ -57,3 +57,48 @@
 .fallbackHint {
   font-size: var(--fs-caption);
 }
+
+/* 지도 호스트 — 풀블리드 영역을 채우고 플로팅 버튼/토스트를 절대배치할 기준. */
+.mapHost {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+/* '내 위치' 플로팅 버튼 — 우하단, peek 시트 위(spec §3.5). 터치 타깃 ≥44px.
+   peek 밴드(--sheet-peek-h)는 viewport 하단에서 측정되고 시트가 safe-area를 자체 흡수하므로
+   --safe-bottom을 추가하지 않는다(이중 가산 금지, research 01 §10). */
+.myLocBtn {
+  position: absolute;
+  right: var(--sp-3);
+  bottom: calc(var(--sheet-peek-h) + var(--sp-3));
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 1.25rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  z-index: 40;
+}
+
+/* 위치 실패/거부 토스트 — 하단 중앙, 시트 위. peek 밴드는 viewport 하단 측정 + 시트가
+   safe-area 자체 흡수 → --safe-bottom 추가 안 함(이중 가산 금지, research 01 §10). */
+.locToast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--sheet-peek-h) + var(--sp-6));
+  transform: translateX(-50%);
+  max-width: 90%;
+  background: var(--c-text);
+  color: var(--c-bg);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 999px;
+  font-size: var(--fs-caption);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 41;
+}
