@@ -117,6 +117,17 @@ export function PlaceSheet({
     if (selectedId && snap === 'peek') setSnap('half')
   }, [selectedId, snap])
 
+  // 빈/미연결/로딩이면 첫 화면이 죽지 않게 half로 자동 오픈(spec §3.3). peek에서만(사용자 펼침 존중).
+  const autoHalfRef = useRef(false)
+  useEffect(() => {
+    if (autoHalfRef.current) return
+    const nothingToShow = !coupleActive || placesLoading || places.length === 0
+    if (nothingToShow && snap === 'peek') {
+      autoHalfRef.current = true
+      setSnap('half')
+    }
+  }, [coupleActive, placesLoading, places.length, snap])
+
   const onPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
     sheetRef.current?.style.setProperty('transition', 'none')
     dragStart.current = { pointerY: e.clientY, baseY: restY }
@@ -174,7 +185,9 @@ export function PlaceSheet({
             aria-expanded={snap !== 'peek'}
             aria-label={handleLabel}
           >
-            <span className={styles.summary}>우리 장소 {places.length}곳</span>
+            <span className={styles.summary}>
+              {placesLoading ? '불러오는 중…' : `우리 장소 ${places.length}곳`}
+            </span>
           </button>
         </div>
 

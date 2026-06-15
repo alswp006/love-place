@@ -14,6 +14,22 @@ import { PlaceSheet } from '@/components/places/PlaceSheet'
 // useOfflineQueue()를 호출 → <OfflineQueueProvider> 조상이 없으면 throw. 따라서 시트를 마운트하는
 // 모든 테스트는 OfflineQueueProvider로 감싼다. (jsdom에는 indexedDB가 없어 outboxStore가 자동으로
 // 메모리 스토어로 폴백하고 navigator.onLine도 정의돼 있으므로 추가 mock은 불필요.)
+// 비어있지 않은 장소 1개 — auto-half(T14: 빈/미연결/로딩 시 half 자동 오픈)를 발화시키지 않고
+// peek 기본값을 유지해야 하는 테스트용 픽스처. (places.length>0 이면 'nothingToShow'가 false.)
+const aPlace = {
+  id: 'p1',
+  name: '칠성조선소',
+  address: '속초',
+  region_label: '속초',
+  lat: 38,
+  lng: 128,
+  category: '카페',
+  kakao_place_id: 'k1',
+  added_by: 'u1',
+  version: 1,
+  wish: { wishedByMe: true, wishedByPartner: false, bothWished: false, wishCount: 1, totalPriority: 0, maxPriority: 0 },
+} as Parameters<typeof PlaceSheet>[0]['places'][number]
+
 // renderSheet: wrap PlaceSheet so snap stays interactive in tests(controlled snap → MapPage가 정본).
 function Harness(props: Omit<Parameters<typeof PlaceSheet>[0], 'snap' | 'onSnapChange'>) {
   const [snap, setSnap] = useState<SnapStop>('peek')
@@ -55,8 +71,9 @@ describe('PlaceSheet (드래그 시트)', () => {
   })
 
   it('핸들 버튼에 aria-expanded(peek=false)가 있다', () => {
-    renderSheet()
-    const btn = screen.getByRole('button', { name: /시트/ })
+    // 장소가 있으면 auto-half(T14)가 발화하지 않아 기본 peek 유지 → aria-expanded=false.
+    renderSheet({ places: [aPlace] })
+    const btn = screen.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
     expect(btn).toHaveAttribute('aria-expanded', 'false')
   })
 
@@ -66,8 +83,9 @@ describe('PlaceSheet (드래그 시트)', () => {
   })
 
   it('탭 대체 버튼 클릭 시 시트 단계가 올라간다(aria-label 변화)', () => {
-    renderSheet()
-    const btn = screen.getByRole('button', { name: /시트/ })
+    // 장소가 있으면 auto-half(T14) 미발화 → peek에서 시작(백드롭 없음 → 핸들만 /시트/ 매칭).
+    renderSheet({ places: [aPlace] })
+    const btn = screen.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
     fireEvent.click(btn)
     // peek→half로 올라가면 다음 라벨은 여전히 펼치기(half→full)거나 dialog가 확장됨.
     expect(screen.getByRole('region', { name: '장소 시트' })).toBeInTheDocument()
@@ -96,7 +114,8 @@ describe('PlaceSheet (드래그 시트)', () => {
               coupleId="c1"
               myId="u1"
               coupleActive
-              places={[]}
+              // 장소가 있어야 auto-half(T14)가 발화하지 않아 selectedId→half 효과를 단독 검증할 수 있다.
+              places={[aPlace]}
               wishes={{ byPlace: {}, mine: {} }}
               visits={[]}
               visitedIds={new Set<string>()}
@@ -158,12 +177,29 @@ describe('PlaceSheet (드래그 시트)', () => {
   })
 
   it('half/full 확장 시 백드롭이 뜨고 탭하면 peek로 접힌다', () => {
-    renderSheet()
-    const handle = screen.getByRole('button', { name: /시트/ })
+    // 장소가 있으면 auto-half(T14) 미발화 → peek에서 시작(백드롭 없음 → 핸들만 /시트/ 매칭).
+    renderSheet({ places: [aPlace] })
+    const handle = screen.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
     fireEvent.click(handle) // peek→half
     const backdrop = screen.getByRole('button', { name: '시트 접기' })
     expect(backdrop).toBeInTheDocument()
     fireEvent.click(backdrop)
     expect(screen.queryByRole('button', { name: '시트 접기' })).toBeNull()
+  })
+
+  it('빈 상태(0곳·연결됨)면 마운트 시 시트가 half로 자동 오픈', () => {
+    renderSheet({ places: [], coupleActive: true, placesLoading: false })
+    // half면 핸들 aria-expanded=true. (auto-half 후 백드롭 '시트 접기'도 /시트/에 걸리므로
+    // 핸들만 매칭하는 구체 라벨로 한정 — 현 트리에 백드롭 버튼이 존재함, 플랜의 /시트/ 광역 셀렉터 adapt.)
+    expect(screen.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+  })
+
+  it('로딩 중 peek 요약은 "불러오는 중…"(‘0곳’ 금지)', () => {
+    renderSheet({ places: [], placesLoading: true })
+    expect(screen.getByText(/불러오는 중…/)).toBeInTheDocument()
+    expect(screen.queryByText('우리 장소 0곳')).toBeNull()
   })
 })
