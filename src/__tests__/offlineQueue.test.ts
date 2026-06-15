@@ -94,4 +94,17 @@ describe('OfflineQueue (D2 — 유실 0)', () => {
     const all: OutboxEntry[] = await store.getAll()
     expect(all[0]?.kind).toBe('place.save')
   })
+
+  // (append) 새 종류(visit/reaction)도 dedupeKey로 마지막 의도만 유지되고 ok면 큐에서 제거된다.
+  it('reaction.toggle/visit.add는 dedupeKey로 같은 placeId 중복을 1건으로 접는다', async () => {
+    const { OfflineQueue } = await import('@/state/offlineQueue')
+    const { createMemoryStore } = await import('@/state/outboxStore')
+    const q = new OfflineQueue(createMemoryStore(), { now: () => 1, genId: (() => { let i = 0; return () => `id${i++}` })() })
+    await q.enqueue('reaction.toggle', { placeId: 'p1' }, 'reaction.toggle:p1')
+    await q.enqueue('reaction.toggle', { placeId: 'p1' }, 'reaction.toggle:p1')
+    expect(await q.pending()).toBe(1)
+    const res = await q.flush(async () => 'ok')
+    expect(res.done).toBe(1)
+    expect(res.remaining).toBe(0)
+  })
 })

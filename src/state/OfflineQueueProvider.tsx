@@ -50,6 +50,8 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
         void queryClient.invalidateQueries({ queryKey: ['places'] })
         void queryClient.invalidateQueries({ queryKey: ['wishes'] })
         void queryClient.invalidateQueries({ queryKey: ['placesTrash'] })
+        void queryClient.invalidateQueries({ queryKey: ['visits'] })
+        void queryClient.invalidateQueries({ queryKey: ['reactions'] })
       }
       if (res.conflicts.length > 0) setFlushConflicts((c) => c + res.conflicts.length)
       await refreshPending()

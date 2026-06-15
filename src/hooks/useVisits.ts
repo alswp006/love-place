@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { dayKey } from '@/lib/calendar/eventDays'
 import { softDelete } from '@/lib/sync/versionedUpdate'
+import { useOfflineQueue } from '@/state/OfflineQueueProvider'
 
 // 방문(가봤음) — "상태 플래그가 아니라 기록 추가"(§5.3·CLAUDE.md §7). 같은 장소 재방문은 각각 행.
 // "가봤음 = visits 존재"로 도출(마커 채운 별). 키 ['visits', coupleId], realtime 전파.
@@ -57,10 +58,20 @@ export function useVisits(coupleId: string | null) {
 // alreadyVisited면 no-op — 더블탭/중복 호출로 같은 장소 방문행이 또 생기는 것을 막는다(spec §3.4).
 export function useMarkVisited(coupleId: string | null, myId: string | null) {
   const queryClient = useQueryClient()
+  const { enqueue } = useOfflineQueue()
   return useMutation<void, Error, { placeId: string; visitDate?: string; alreadyVisited?: boolean }>({
     mutationFn: async ({ placeId, visitDate, alreadyVisited }) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
       if (alreadyVisited) return // 중복 방문 insert 방지(spec §3.4)
+      // 오프라인: 큐에 적재 → 재연결 시 동기화(D2, "여행 중 기록 유실" 방지). dedupeKey로 같은 장소 1건.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await enqueue(
+          'visit.add',
+          { coupleId, placeId, visitDate: visitDate ?? dayKey(new Date().toISOString()), myId },
+          `visit.add:${placeId}`,
+        )
+        return
+      }
       const { error } = await supabase.from('visits').insert({
         couple_id: coupleId,
         place_id: placeId,
@@ -86,11 +97,21 @@ export function useUnmarkVisited(
   onConflict: () => void,
 ) {
   const queryClient = useQueryClient()
+  const { enqueue } = useOfflineQueue()
   return useMutation<{ conflicted: boolean }, Error, { placeId: string; visits: VisitRow[] }>({
     mutationFn: async ({ placeId, visits }) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
       const active = visits.filter((v) => v.place_id === placeId)
       if (active.length === 0) return { conflicted: false }
+      // 오프라인: 활성 행 스냅샷을 큐에 적재(version 보존) → 재연결 시 version 조건부 softDelete로 충돌 감지.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await enqueue(
+          'visit.remove',
+          { visits: active.map((v) => ({ id: v.id, version: v.version })), myId },
+          `visit.remove:${placeId}`,
+        )
+        return { conflicted: false }
+      }
       let conflicted = false
       for (const v of active) {
         const res = await softDelete('visits', v.id, v.version, myId)

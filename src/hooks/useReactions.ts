@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { softDelete } from '@/lib/sync/versionedUpdate'
+import { useOfflineQueue } from '@/state/OfflineQueueProvider'
 import {
   aggregateReactions,
   type ReactionRow,
@@ -58,9 +59,15 @@ export function useToggleReaction(
   onConflict: () => void,
 ) {
   const queryClient = useQueryClient()
+  const { enqueue } = useOfflineQueue()
   return useMutation<void, Error, { placeId: string }>({
     mutationFn: async ({ placeId }) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
+      // 오프라인: 큐에 적재 → 재연결 시 재조회(현재 상태 기준 토글, dossier 04 §C.1). dedupeKey로 같은 장소 1건.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await enqueue('reaction.toggle', { coupleId, placeId, myId }, `reaction.toggle:${placeId}`)
+        return
+      }
       // stale-cache race 회피 — mutationFn에서 내 살아있는 리액션을 직접 조회(id+version).
       const { data: mine, error: selErr } = await supabase
         .from('reactions')
