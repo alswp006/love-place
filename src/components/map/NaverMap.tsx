@@ -76,6 +76,13 @@ export function NaverMap({
   onActionRef.current = onAction
   const onPreviewActionRef = useRef(onPreviewAction)
   onPreviewActionRef.current = onPreviewAction
+  // onSelect/selectedId/previewHit도 ref로 읽어 마커 재드로우 효과의 deps에서 제외(매 렌더 재구축 방지).
+  const onSelectRef = useRef(onSelect)
+  onSelectRef.current = onSelect
+  const selectedIdRef = useRef(selectedId)
+  selectedIdRef.current = selectedId
+  const previewHitRef = useRef(previewHit)
+  previewHitRef.current = previewHit
 
   // 지도 1회 초기화
   useEffect(() => {
@@ -204,7 +211,7 @@ export function NaverMap({
               anchor: new nv.maps.Point(12, 24),
             },
           })
-          const handle = nv.maps.Event.addListener(marker, 'click', () => onSelect?.(p.id))
+          const handle = nv.maps.Event.addListener(marker, 'click', () => onSelectRef.current?.(p.id))
           listenersRef.current.push(handle)
           markersRef.current.push(marker)
           markerMapRef.current.set(p.id, marker)
@@ -230,6 +237,15 @@ export function NaverMap({
           clusterMarkersRef.current.push(cluster)
         }
       }
+      // 열린 saved 말풍선이 있으면 재구축된 마커에 다시 앵커 — 팬/줌으로 마커가 새로 그려져도 말풍선 유지
+      // (idle/zoom_changed → render()가 마커를 교체하므로 옛 마커에 붙은 말풍선이 끊긴다, research 02).
+      // 해당 장소가 클러스터로 묶여 개별 마커가 없으면 말풍선을 닫는다(줌인 시 render가 다시 앵커).
+      const sid = selectedIdRef.current
+      if (sid && !previewHitRef.current && infoRef.current) {
+        const mk = markerMapRef.current.get(sid)
+        if (mk) infoRef.current.open(m, mk)
+        else infoRef.current.close()
+      }
     }
 
     render()
@@ -243,8 +259,10 @@ export function NaverMap({
       mapMoveRef.current = []
     }
     // selectedId/visitedIds는 강조 효과가 setIcon으로 갱신하므로 deps 제외(지도 튐/재구독 방지).
+    // onSelect/selectedId/previewHit은 ref로 읽으므로 deps에서 제외 — 매 렌더(인라인 핸들러)마다
+    // 마커를 통째로 재구축해 깜빡이거나 idle/zoom 리스너를 재구독하지 않게 한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places, ready, onSelect])
+  }, [places, ready])
 
   // 초기 센터링 1/2 — geolocation 시도(ready 직후 1회, spec §3.5).
   // 성공: 내 위치 setCenter+zoom 14, centeredRef로 고정(이후 자동 이동 없음).
@@ -423,7 +441,6 @@ export function NaverMap({
       el.addEventListener('click', handler)
       previewHandlerRef.current = handler
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewHit, ready])
 
   // ESC로 말풍선 닫기(EventSheet 패턴). 선택 중일 때만 바인딩.
