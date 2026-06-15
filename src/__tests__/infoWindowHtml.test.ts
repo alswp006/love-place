@@ -52,16 +52,17 @@ describe('infoWindowHtml (말풍선 HTML — 순수)', () => {
     expect(zero).not.toMatch(/🤍\s*0/)
   })
 
-  it('이미 가봤음이면 가봤어요 액션은 비활성 "가봤음" 상태로 렌더한다(중복 방문 insert 방지, spec §3)', () => {
-    const visited = infoWindowHtml(place,{ visited: true, didIReact: false, count: 0 })
-    const notVisited = infoWindowHtml(place,{ visited: false, didIReact: false, count: 0 })
-    // 미방문: 누를 수 있는 가봤어요 액션(data-action=visit) 노출.
+  it('방문 액션은 토글: 미방문이면 data-action=visit, 가봤음이면 data-action=unvisit(취소)', () => {
+    const visited = infoWindowHtml(place, { visited: true, didIReact: false, count: 0 })
+    const notVisited = infoWindowHtml(place, { visited: false, didIReact: false, count: 0 })
+    // 미방문: 누를 수 있는 가봤어요 액션(visit).
     expect(notVisited).toContain('data-action="visit"')
     expect(notVisited).toContain('✅ 가봤어요')
-    // 방문 후: data-action=visit 버튼은 사라지고 disabled 상태 글리프(가봤음)만.
+    expect(notVisited).not.toContain('data-action="unvisit"')
+    // 가봤음: 누르면 취소되는 토글(unvisit). 텍스트로도 취소 가능 표시(§8).
+    expect(visited).toContain('data-action="unvisit"')
+    expect(visited).toContain('가봤음 (취소)')
     expect(visited).not.toContain('data-action="visit"')
-    expect(visited).toContain('disabled')
-    expect(visited).toContain('✅ 가봤음')
   })
 
   it('meta(카테고리·지역)는 해시된 클래스 안에 렌더된다(class="undefined" 회귀 방지)', () => {

@@ -35,9 +35,9 @@ export function infoWindowHtml(
   const heart = state.didIReact ? '❤️' : '🤍'
   // ❤️ 총 개수(spec §3·§7) — 1 이상이면 하트 옆에 숫자, 0이면 숨김.
   const countLabel = state.count > 0 ? ` ${state.count}` : ''
-  // 이미 가봤음이면 누를 수 있는 visit 액션 대신 비활성 "가봤음" 상태(중복 방문 insert 방지, spec §3).
+  // 방문 토글(spec §3.3): 미방문→가봤어요(visit), 가봤음→취소(unvisit). 색+텍스트 이중화(§8).
   const visitAction = state.visited
-    ? `<span class="${iwStyles.action} ${iwStyles.actionDone}" aria-disabled="true" data-disabled="true" disabled>✅ 가봤음</span>`
+    ? `<button type="button" class="${iwStyles.action} ${iwStyles.actionDone}" data-action="unvisit" data-id="${id}" aria-label="${name} 가봤음 기록 취소">✅ 가봤음 (취소)</button>`
     : `<button type="button" class="${iwStyles.action}" data-action="visit" data-id="${id}" aria-label="${name} 가봤어요로 기록">✅ 가봤어요</button>`
 
   return [
