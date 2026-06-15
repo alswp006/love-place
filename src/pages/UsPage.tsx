@@ -7,6 +7,10 @@ import { useDisconnectCouple } from '@/hooks/useCoupleInvite'
 import { fetchCoupleExport, downloadJson } from '@/lib/export/dumpSchema'
 import { dayKey } from '@/lib/calendar/eventDays'
 import { tabByPath } from '@/app/tabs'
+import { TrashSection } from '@/components/places/TrashSection'
+import { useTrashPlaces, useRestorePlace } from '@/hooks/usePlaceTrash'
+import { useConflict } from '@/lib/sync/useConflict'
+import { ConflictBanner } from '@/components/common/ConflictBanner'
 import styles from './UsPage.module.css'
 
 // 💑 우리 — 프로필·연결·내보내기(§3, §10). 연결 후 상대 표시 + 연결 해제.
@@ -20,6 +24,15 @@ export default function UsPage() {
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
+  const myId = user?.id ?? null
+  const conflict = useConflict()
+  const [trashOpen, setTrashOpen] = useState(false)
+  const { data: trash } = useTrashPlaces(couple?.coupleId ?? null, trashOpen)
+  const { restorePlace, isPending: restorePending } = useRestorePlace(
+    couple?.coupleId ?? null,
+    myId,
+    conflict.flag,
+  )
 
   // 연결해제 확인 다이얼로그(파괴적): 열리면 취소에 초기 포커스 + ESC로 닫기(§8).
   useEffect(() => {
@@ -105,6 +118,20 @@ export default function UsPage() {
                 {exportError}
               </p>
             ) : null}
+          </section>
+        ) : null}
+
+        {/* 휴지통(P4) — 시트에서 우리 탭으로 이동. 삭제는 복구 가능(soft-delete, §4.3). */}
+        {couple?.coupleId ? (
+          <section className={styles.card} aria-label="휴지통">
+            {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
+            <TrashSection
+              open={trashOpen}
+              onToggle={() => setTrashOpen((v) => !v)}
+              items={trash ?? []}
+              busy={restorePending}
+              onRestore={(t) => restorePlace({ id: t.id, expectedVersion: t.version })}
+            />
           </section>
         ) : null}
 

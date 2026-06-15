@@ -10,6 +10,7 @@ import {
   type RouteObject,
 } from 'react-router-dom'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
+import { OfflineQueueProvider } from '@/state/OfflineQueueProvider'
 
 // 탭은 RequireAuth 뒤에 있으므로, 라우팅 렌더 테스트에선 로그인된 세션을 모킹한다.
 // (가드 자체의 비로그인→/auth 동작은 auth-guard.spec.ts·route-guard 단위테스트가 검증.)
@@ -45,7 +46,9 @@ function renderAt(path: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
-      <RouterProvider router={router} />
+      <OfflineQueueProvider>
+        <RouterProvider router={router} />
+      </OfflineQueueProvider>
     </QueryClientProvider>,
   )
 }
