@@ -8,7 +8,7 @@ import type { UseMutationResult } from '@tanstack/react-query'
 import { cyclePriority, MAX_PRIORITY, type WishStatus, type WithWish } from '@/lib/places/wishStatus'
 import styles from './PlaceList.module.css'
 
-type MarkVisited = UseMutationResult<void, Error, { placeId: string; visitDate?: string }>
+type MarkVisited = UseMutationResult<void, Error, { placeId: string; visitDate?: string; alreadyVisited?: boolean }>
 
 // 장소 카드 리스트(PlacesPage에서 추출). 카드 본문 탭 → onSelect(placeId)로 지도/말풍선 동기화.
 export function PlaceList({
@@ -123,7 +123,7 @@ export function PlaceList({
                       className={styles.visitBtn}
                       onClick={() =>
                         markVisited.mutate(
-                          { placeId: p.id },
+                          { placeId: p.id, alreadyVisited: visitedIds.has(p.id) },
                           { onSuccess: () => onToast('가봤어요로 기록했어요 ✅') },
                         )
                       }

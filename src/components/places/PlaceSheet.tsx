@@ -63,9 +63,8 @@ export function PlaceSheet({
   const unmarkVisited = useUnmarkVisited(coupleId, myId, conflict.flag)
   const { setPriority, isPending: priorityPending } = useSetWishPriority(coupleId, myId, conflict.flag)
   const { deletePlace, isPending: deletePending } = useDeletePlace(coupleId, myId, conflict.flag)
-  // 시트 소유 리액션 토글(말풍선 폐지 준비). useToggleReaction은 (coupleId, myId) 2-인자 — 플랜의
-  // conflict.flag 세 번째 인자는 현 시그니처에 없어 컴파일 불가라 생략(adapt).
-  const toggleReaction = useToggleReaction(coupleId, myId)
+  // 시트 소유 리액션 토글(말풍선 폐지). 끄기는 version 조건부 softDelete — 충돌 시 conflict.flag로 배너.
+  const toggleReaction = useToggleReaction(coupleId, myId, conflict.flag)
   const selectedPlace = selectedId ? places.find((p) => p.id === selectedId) ?? null : null
   const [placeFilter, setPlaceFilter] = useState<'all' | 'wish' | 'visited'>('all')
 
@@ -246,7 +245,10 @@ export function PlaceSheet({
               busy={markVisited.isPending || unmarkVisited.isPending}
               onVisit={() => {
                 if (!visitedIds.has(selectedPlace.id))
-                  markVisited.mutate({ placeId: selectedPlace.id }, { onSuccess: () => toast.show('가봤어요로 기록했어요 ✅') })
+                  markVisited.mutate(
+                    { placeId: selectedPlace.id, alreadyVisited: visitedIds.has(selectedPlace.id) },
+                    { onSuccess: () => toast.show('가봤어요로 기록했어요 ✅') },
+                  )
               }}
               onUnvisit={() =>
                 unmarkVisited.mutate(

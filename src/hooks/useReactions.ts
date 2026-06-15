@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import { softDelete } from '@/lib/sync/versionedUpdate'
 import {
   aggregateReactions,
   type ReactionRow,
@@ -50,15 +51,20 @@ export function useReactions(coupleId: string | null, myId: string | null) {
 }
 
 // ❤️ 토글 — 내 살아있는 리액션이 없으면 insert, 있으면 soft-delete(본인 행만 — reactions_update).
-export function useToggleReaction(coupleId: string | null, myId: string | null) {
+// 끄기는 LWW 평문 update가 아니라 version 조건부 softDelete(0행=충돌)로 — 충돌 시 onConflict(§4.3).
+export function useToggleReaction(
+  coupleId: string | null,
+  myId: string | null,
+  onConflict: () => void,
+) {
   const queryClient = useQueryClient()
   return useMutation<void, Error, { placeId: string }>({
     mutationFn: async ({ placeId }) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
-      // stale-cache race 회피 — mutationFn에서 내 살아있는 리액션을 직접 조회.
+      // stale-cache race 회피 — mutationFn에서 내 살아있는 리액션을 직접 조회(id+version).
       const { data: mine, error: selErr } = await supabase
         .from('reactions')
-        .select('id')
+        .select('id, version')
         .eq('couple_id', coupleId)
         .eq('target_type', 'PLACE')
         .eq('target_id', placeId)
@@ -66,13 +72,15 @@ export function useToggleReaction(coupleId: string | null, myId: string | null) 
         .is('deleted_at', null)
         .limit(1)
       if (selErr) throw new Error(selErr.message)
-      const existing = mine?.[0]?.id
+      const existing = mine?.[0]
       if (existing) {
-        const { error } = await supabase
-          .from('reactions')
-          .update({ deleted_at: new Date().toISOString(), updated_by: myId })
-          .eq('id', existing)
-        if (error) throw new Error(error.message)
+        const res = await softDelete(
+          'reactions',
+          existing.id as string,
+          existing.version as number,
+          myId,
+        )
+        if (res.status === 'conflict') onConflict()
       } else {
         const { error } = await supabase.from('reactions').insert({
           couple_id: coupleId,

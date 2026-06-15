@@ -54,11 +54,13 @@ export function useVisits(coupleId: string | null) {
 }
 
 // "다녀왔어요" — 방문 기록 추가(insert). 마커가 가봤음으로 도출 전환(§5.3).
+// alreadyVisited면 no-op — 더블탭/중복 호출로 같은 장소 방문행이 또 생기는 것을 막는다(spec §3.4).
 export function useMarkVisited(coupleId: string | null, myId: string | null) {
   const queryClient = useQueryClient()
-  return useMutation<void, Error, { placeId: string; visitDate?: string }>({
-    mutationFn: async ({ placeId, visitDate }) => {
+  return useMutation<void, Error, { placeId: string; visitDate?: string; alreadyVisited?: boolean }>({
+    mutationFn: async ({ placeId, visitDate, alreadyVisited }) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
+      if (alreadyVisited) return // 중복 방문 insert 방지(spec §3.4)
       const { error } = await supabase.from('visits').insert({
         couple_id: coupleId,
         place_id: placeId,
