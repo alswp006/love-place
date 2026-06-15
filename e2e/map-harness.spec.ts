@@ -16,8 +16,8 @@ function shot(name: string) {
 test('빈 상태(0곳) — peek 요약', async ({ page }) => {
   await seedAuthedMap(page, {})
   await page.goto('/')
-  // 시트는 role="dialog"(PlaceSheet.tsx) — 플랜 본문의 role:'region'은 실제 컴포넌트와 안 맞아 dialog로 적응.
-  await expect(page.getByRole('dialog', { name: '장소 시트' })).toBeVisible()
+  // 시트는 role="region"(PlaceSheet.tsx — 항상 보이는 패널, modal 아님). 실제 컴포넌트에 맞춰 region으로 검증.
+  await expect(page.getByRole('region', { name: '장소 시트' })).toBeVisible()
   const s = shot('map-empty')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true })
@@ -38,11 +38,26 @@ test('선택 상세 — 리스트 탭 시 시트가 half로 상세 표시', asyn
   // peek에선 리스트가 화면 밖(뷰포트 아래) — 핸들로 한 단계 펼쳐 리스트를 노출한 뒤 탭한다(플랜 §162 "리스트 선택 구동").
   await page.getByRole('button', { name: '시트 펼치기' }).click()
   await page.getByRole('button', { name: '속초 칠성조선소 지도에서 보기' }).click()
-  // 시트는 role="dialog"(PlaceSheet.tsx) — 플랜 본문의 role:'region'을 dialog로 적응. 선택 후에도 시트는 표시된다.
-  await expect(page.getByRole('dialog', { name: '장소 시트' })).toBeVisible()
+  // 시트는 role="region"(PlaceSheet.tsx). 선택 후에도 시트는 표시된다.
+  await expect(page.getByRole('region', { name: '장소 시트' })).toBeVisible()
   const s = shot('map-selected')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true })
+})
+
+test('내 위치 버튼은 시트가 half로 펼쳐지면 가려지지 않게 숨는다(snap>peek)', async ({ page }) => {
+  await seedAuthedMap(page, { places: PLACES })
+  await page.goto('/')
+  // 숨김 시 aria-hidden=true가 붙어 getByRole(a11y 트리)에서 사라지므로, role 대신 attribute 셀렉터로
+  // DOM 노드를 직접 잡아 data-hidden/가시성을 검증한다(플랜의 getByRole은 aria-hidden과 모순이라 적응).
+  const locBtn = page.locator('button[aria-label="내 위치로 이동"]')
+  // peek에서는 보임(탭바 위 가시 밴드).
+  await expect(locBtn).toBeVisible()
+  await expect(locBtn).not.toHaveAttribute('data-hidden', 'true')
+  // 핸들을 눌러 half로 펼치면(snap>peek) 버튼은 data-hidden=true로 숨겨 시트에 가리지 않는다.
+  await page.getByRole('button', { name: '시트 펼치기' }).click()
+  await expect(locBtn).toHaveAttribute('data-hidden', 'true')
+  await expect(locBtn).toBeHidden()
 })
 
 test('다크 모드 — 빈 상태', async ({ page }) => {

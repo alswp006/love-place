@@ -7,7 +7,7 @@
   flex: 1;
   display: flex;
   min-height: 0;
-  padding-bottom: var(--sheet-peek-h);
+  padding-bottom: calc(var(--sheet-peek-h) + var(--tabbar-h) + var(--safe-bottom));
 }
 
 /* 지도 위 충돌 배너 — 검색 오버레이와 같은 z 레이어(시트 45 < 오버레이 50). */

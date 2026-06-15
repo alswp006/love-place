@@ -21,6 +21,7 @@ import { useSavePlace } from '@/hooks/useSavePlace'
 import { useToast } from '@/hooks/useToast'
 import { Toast } from '@/components/common/Toast'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
+import { type SnapStop } from '@/lib/places/sheetSnap'
 import { tabByPath } from '@/app/tabs'
 import styles from './MapPage.module.css'
 
@@ -51,6 +52,8 @@ export default function MapPage() {
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [previewHit, setPreviewHit] = useState<KakaoPlaceHit | null>(null)
+  // 시트 snap을 MapPage로 끌어올려 NaverMap(플로팅 버튼/토스트 숨김)과 PlaceSheet가 같은 값을 읽게 한다.
+  const [snap, setSnap] = useState<SnapStop>('peek')
   const savePlace = useSavePlace(coupleId)
   const toast = useToast()
 
@@ -129,6 +132,7 @@ export default function MapPage() {
             reactions={reactions}
             selectedId={selectedId}
             previewHit={previewHit}
+            snap={snap}
             onSelect={(id) => {
               setPreviewHit(null)
               setSelectedId(id)
@@ -159,6 +163,8 @@ export default function MapPage() {
         placesLoading={placesLoading}
         selectedId={selectedId}
         onSelect={setSelectedId}
+        snap={snap}
+        onSnapChange={setSnap}
       />
       <Toast msg={toast.msg} />
     </ScreenScaffold>

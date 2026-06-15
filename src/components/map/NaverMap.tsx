@@ -10,6 +10,7 @@ import { clusterPlaces, type ClusterPoint } from '@/lib/places/clusterPlaces'
 import { markerIconHtml, BASE_ZINDEX, SELECTED_ZINDEX } from '@/lib/places/selectedMarker'
 import { infoWindowHtml, previewWindowHtml, escapeHtml } from '@/lib/places/infoWindowHtml'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
+import type { SnapStop } from '@/lib/places/sheetSnap'
 import { getCurrentPosition } from '@/lib/geo/currentPosition'
 import styles from './NaverMap.module.css'
 
@@ -28,6 +29,7 @@ export function NaverMap({
   reactions,
   selectedId,
   previewHit,
+  snap,
   onSelect,
   onClose,
   onAction,
@@ -40,6 +42,7 @@ export function NaverMap({
   reactions?: ReactionMap
   selectedId?: string | null
   previewHit?: KakaoPlaceHit | null
+  snap: SnapStop
   onSelect?: (id: string) => void
   onClose?: () => void
   onAction?: (action: string, id: string) => void
@@ -483,14 +486,31 @@ export function NaverMap({
     )
   }
 
+  // snap>peek면 확장된 시트에 가려지므로 플로팅 버튼/토스트를 숨긴다(트리 유지·data-hidden, spec §3.1).
+  const floatingHidden = snap !== 'peek'
+
   return (
     <div className={styles.mapHost}>
       <div ref={elRef} className={styles.map} aria-label="장소 지도" />
-      <button type="button" className={styles.myLocBtn} onClick={recenter} aria-label="내 위치로 이동">
+      <button
+        type="button"
+        className={styles.myLocBtn}
+        onClick={recenter}
+        aria-label="내 위치로 이동"
+        aria-hidden={floatingHidden}
+        data-hidden={floatingHidden ? 'true' : undefined}
+        tabIndex={floatingHidden ? -1 : 0}
+      >
         📍
       </button>
       {locToast ? (
-        <div className={styles.locToast} role="status" aria-live="polite">
+        <div
+          className={styles.locToast}
+          role="status"
+          aria-live="polite"
+          aria-hidden={floatingHidden}
+          data-hidden={floatingHidden ? 'true' : undefined}
+        >
           {locToast}
         </div>
       ) : null}

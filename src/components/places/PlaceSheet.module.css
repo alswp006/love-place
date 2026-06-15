@@ -100,3 +100,17 @@
   font-weight: 600;
   border-color: var(--c-brand);
 }
+
+/* full/half 확장 시 지도 위 백드롭 — 탭하면 collapse. 탭바(46)·시트(45) 아래(44). */
+.backdrop {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+  background: rgba(0, 0, 0, 0.28);
+  z-index: 44;
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--motion-base) var(--ease);
+}

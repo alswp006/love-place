@@ -82,12 +82,11 @@
 }
 
 /* '내 위치' 플로팅 버튼 — 우하단, peek 시트 위(spec §3.5). 터치 타깃 ≥44px.
-   peek 밴드(--sheet-peek-h)는 viewport 하단에서 측정되고 시트가 safe-area를 자체 흡수하므로
-   --safe-bottom을 추가하지 않는다(이중 가산 금지, research 01 §10). */
+   시트가 탭바 위에 앵커되므로 peek 밴드 + 탭바 높이만큼 띄워 peek에서 시트/탭바에 가리지 않게 한다. */
 .myLocBtn {
   position: absolute;
   right: var(--sp-3);
-  bottom: calc(var(--sheet-peek-h) + var(--sp-3));
+  bottom: calc(var(--sheet-peek-h) + var(--tabbar-h) + var(--sp-3));
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -100,12 +99,12 @@
   z-index: 40;
 }
 
-/* 위치 실패/거부 토스트 — 하단 중앙, 시트 위. peek 밴드는 viewport 하단 측정 + 시트가
-   safe-area 자체 흡수 → --safe-bottom 추가 안 함(이중 가산 금지, research 01 §10). */
+/* 위치 실패/거부 토스트 — 하단 중앙, 시트 위. 시트가 탭바 위에 앵커되므로
+   peek 밴드 + 탭바 높이만큼 띄워 peek에서 시트/탭바에 가리지 않게 한다. */
 .locToast {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--sheet-peek-h) + var(--sp-6));
+  bottom: calc(var(--sheet-peek-h) + var(--tabbar-h) + var(--sp-6));
   transform: translateX(-50%);
   max-width: 90%;
   background: var(--c-text);
@@ -115,6 +114,14 @@
   font-size: var(--fs-caption);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   z-index: 41;
+}
+
+/* snap>peek면 확장된 시트에 가리지 않게 플로팅 버튼/토스트를 숨긴다(spec §3.1). */
+.myLocBtn[data-hidden='true'],
+.locToast[data-hidden='true'] {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 /* 클러스터 마커 — 색(브랜드)+개수 텍스트 이중화(§8). 원형 배지. */

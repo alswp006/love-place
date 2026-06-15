@@ -34,6 +34,13 @@ export const NAVER_STUB_JS = `
   Marker.prototype.setZIndex = function () {};
   Marker.prototype.setPosition = function (p) { this._pos = p; };
   Marker.prototype.getPosition = function () { return this._pos; };
+  // InfoWindow 스텁 — NaverMap 초기화가 new nv.maps.InfoWindow(...)를 호출하므로 생성자만 제공해야
+  // 지도 호스트(.mapHost)가 에러 폴백 대신 정상 렌더된다(말풍선 픽셀은 하베스 범위 밖, DOM만).
+  function InfoWindow(opts) { this._opts = opts || {}; this._content = (opts && opts.content) || ''; }
+  InfoWindow.prototype.setContent = function (c) { this._content = c; };
+  InfoWindow.prototype.getContentElement = function () { return null; };
+  InfoWindow.prototype.open = function () {};
+  InfoWindow.prototype.close = function () {};
   function Map(elOrId, opts) {
     this._el = typeof elOrId === 'string' ? document.getElementById(elOrId) : elOrId;
     this._opts = opts || {};
@@ -48,6 +55,6 @@ export const NAVER_STUB_JS = `
     addListener: function (t, name, fn) { var h = { target: t, name: name, fn: fn }; return h; },
     removeListener: function () {},
   };
-  window.naver = { maps: { Map: Map, LatLng: LatLng, LatLngBounds: LatLngBounds, Point: Point, Marker: Marker, Circle: Circle, Event: Event } };
+  window.naver = { maps: { Map: Map, LatLng: LatLng, LatLngBounds: LatLngBounds, Point: Point, Marker: Marker, Circle: Circle, InfoWindow: InfoWindow, Event: Event } };
 })();
 `

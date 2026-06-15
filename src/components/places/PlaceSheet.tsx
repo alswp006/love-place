@@ -28,6 +28,8 @@ export function PlaceSheet({
   placesLoading,
   selectedId,
   onSelect,
+  snap,
+  onSnapChange,
 }: {
   coupleId: string | null
   myId: string | null
@@ -39,6 +41,8 @@ export function PlaceSheet({
   placesLoading: boolean
   selectedId: string | null
   onSelect: (id: string) => void
+  snap: SnapStop
+  onSnapChange: (s: SnapStop) => void
 }) {
   const toast = useToast()
   const conflict = useConflict()
@@ -56,7 +60,8 @@ export function PlaceSheet({
 
   // 스냅 상태 + 드래그 — transform: translateY로 위치. JS 드래그는 애니메이션이 아니라 즉시 반영,
   // 손 뗀 뒤 정착만 CSS transition(reduce-motion이 0으로 만듦, ux §5).
-  const [snap, setSnap] = useState<SnapStop>('peek')
+  // snap은 MapPage가 정본(NaverMap의 플로팅 버튼/토스트도 같은 값을 읽음) — setSnap은 그 setter 별칭.
+  const setSnap = onSnapChange
   const [dragY, setDragY] = useState<number | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
   const dragStart = useRef<{ pointerY: number; baseY: number } | null>(null)
@@ -116,17 +121,28 @@ export function PlaceSheet({
   }
 
   // 탭 대체(제스처 발견성↓ 보완, ux §1): full이면 한 단계 접고, 아니면 한 단계 펼친다.
-  const cycleSnap = () => setSnap((s) => (s === 'full' ? prevSnap(s) : nextSnap(s)))
+  // snap은 controlled(prop) — 함수형 updater 대신 현재 값으로 다음 스냅을 계산해 onSnapChange로 올린다.
+  const cycleSnap = () => setSnap(snap === 'full' ? prevSnap(snap) : nextSnap(snap))
   const handleLabel = snap === 'full' ? '시트 단계 전환(접기)' : '시트 펼치기'
 
   return (
-    <div
-      ref={sheetRef}
-      className={styles.sheet}
-      role="region"
-      aria-label="장소 시트"
-      style={{ transform: `translateY(${translateY}px)` }}
-    >
+    <>
+      {/* full/half 확장 시 지도 위 백드롭 — 탭하면 peek로 collapse(z 44, 시트 45 아래·탭바 46 아래). */}
+      {snap !== 'peek' ? (
+        <button
+          type="button"
+          className={styles.backdrop}
+          aria-label="시트 접기"
+          onClick={() => setSnap('peek')}
+        />
+      ) : null}
+      <div
+        ref={sheetRef}
+        className={styles.sheet}
+        role="region"
+        aria-label="장소 시트"
+        style={{ transform: `translateY(${translateY}px)` }}
+      >
       {/* peek-pinned 헤더 — peek 비율에서도 항상 보임: 핸들 + 요약 + 필터 칩(§5 peek 콘텐츠). */}
       <div ref={peekRef} className={styles.peekHeader} data-peek-pinned="true">
         <div className={styles.handleRow}>
@@ -208,6 +224,7 @@ export function PlaceSheet({
         </div>
       )}
       <Toast msg={toast.msg} />
-    </div>
+      </div>
+    </>
   )
 }

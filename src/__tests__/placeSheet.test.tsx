@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
+import { useState } from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
+import type { SnapStop } from '@/lib/places/sheetSnap'
 
 // PlaceSheet는 데이터 훅(useWishes/useVisits 등)을 직접 호출하지 않고 props로 받는 표현형 컴포넌트.
 // 검색(PlaceSearch)은 시트가 아니라 지도 위 상단 오버레이(MapPage)로 옮겨졌으므로 여기서 mock하지 않는다.
@@ -12,9 +14,15 @@ import { PlaceSheet } from '@/components/places/PlaceSheet'
 // useOfflineQueue()를 호출 → <OfflineQueueProvider> 조상이 없으면 throw. 따라서 시트를 마운트하는
 // 모든 테스트는 OfflineQueueProvider로 감싼다. (jsdom에는 indexedDB가 없어 outboxStore가 자동으로
 // 메모리 스토어로 폴백하고 navigator.onLine도 정의돼 있으므로 추가 mock은 불필요.)
+// renderSheet: wrap PlaceSheet so snap stays interactive in tests(controlled snap → MapPage가 정본).
+function Harness(props: Omit<Parameters<typeof PlaceSheet>[0], 'snap' | 'onSnapChange'>) {
+  const [snap, setSnap] = useState<SnapStop>('peek')
+  return <PlaceSheet {...props} snap={snap} onSnapChange={setSnap} />
+}
+
 function renderSheet(over: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const props: Parameters<typeof PlaceSheet>[0] = {
+  const props: Omit<Parameters<typeof PlaceSheet>[0], 'snap' | 'onSnapChange'> = {
     coupleId: 'c1',
     myId: 'u1',
     coupleActive: true,
@@ -30,7 +38,7 @@ function renderSheet(over: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
   return render(
     <QueryClientProvider client={qc}>
       <OfflineQueueProvider>
-        <PlaceSheet {...props} />
+        <Harness {...props} />
       </OfflineQueueProvider>
     </QueryClientProvider>,
   )
@@ -75,29 +83,34 @@ describe('PlaceSheet (드래그 시트)', () => {
   it('peek에서 selectedId가 생기면 half로 살짝 올린다(§6 (c))', () => {
     // 같은 provider 트리에서 selectedId만 바꿔 effect가 발화하도록(리마운트 시 내부 snap이 초기화됨).
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    const Harness = ({ selectedId }: { selectedId: string | null }) => (
-      <QueryClientProvider client={qc}>
-        <OfflineQueueProvider>
-          <PlaceSheet
-            coupleId="c1"
-            myId="u1"
-            coupleActive
-            places={[]}
-            wishes={{ byPlace: {}, mine: {} }}
-            visits={[]}
-            visitedIds={new Set<string>()}
-            placesLoading={false}
-            selectedId={selectedId}
-            onSelect={() => {}}
-          />
-        </OfflineQueueProvider>
-      </QueryClientProvider>
-    )
-    const { rerender } = render(<Harness selectedId={null} />)
+    const SelHarness = ({ selectedId }: { selectedId: string | null }) => {
+      const [snap, setSnap] = useState<SnapStop>('peek')
+      return (
+        <QueryClientProvider client={qc}>
+          <OfflineQueueProvider>
+            <PlaceSheet
+              coupleId="c1"
+              myId="u1"
+              coupleActive
+              places={[]}
+              wishes={{ byPlace: {}, mine: {} }}
+              visits={[]}
+              visitedIds={new Set<string>()}
+              placesLoading={false}
+              selectedId={selectedId}
+              onSelect={() => {}}
+              snap={snap}
+              onSnapChange={setSnap}
+            />
+          </OfflineQueueProvider>
+        </QueryClientProvider>
+      )
+    }
+    const { rerender } = render(<SelHarness selectedId={null} />)
     const sheet = screen.getByRole('region', { name: '장소 시트' })
     const peekY = sheet.style.transform
     // 선택 발생(마커 클릭 등) → peek면 half로 상향(같은 인스턴스, prop만 변경).
-    rerender(<Harness selectedId="p1" />)
+    rerender(<SelHarness selectedId="p1" />)
     expect(sheet.style.transform).not.toBe(peekY)
   })
 
@@ -125,5 +138,15 @@ describe('PlaceSheet (드래그 시트)', () => {
     fireEvent(window, new Event('resize'))
     expect(sheet.style.transform).not.toBe(before)
     Object.defineProperty(window, 'innerHeight', { value: orig, configurable: true, writable: true })
+  })
+
+  it('half/full 확장 시 백드롭이 뜨고 탭하면 peek로 접힌다', () => {
+    renderSheet()
+    const handle = screen.getByRole('button', { name: /시트/ })
+    fireEvent.click(handle) // peek→half
+    const backdrop = screen.getByRole('button', { name: '시트 접기' })
+    expect(backdrop).toBeInTheDocument()
+    fireEvent.click(backdrop)
+    expect(screen.queryByRole('button', { name: '시트 접기' })).toBeNull()
   })
 })
