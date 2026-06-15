@@ -1,6 +1,7 @@
 import type { PlaceRow } from '@/hooks/usePlaces'
 import { markerVisual } from '@/lib/places/markerVisual'
 import type { WithWish } from '@/lib/places/wishStatus'
+import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import iwStyles from '@/components/map/InfoWindow.module.css'
 
 // 말풍선 HTML 문자열 — 순수 함수(테스트로 못박음). naver/DOM 비의존, 사용자 텍스트는 전부 이스케이프.
@@ -55,6 +56,31 @@ export function infoWindowHtml(
     `<button type="button" class="${iwStyles.action}" data-action="directions" data-id="${id}" aria-label="${name} 길찾기">🧭 길찾기</button>`,
     visitAction,
     `<button type="button" class="${iwStyles.action}" data-action="react" data-id="${id}" aria-label="${name} 하트 리액션 (총 ${state.count}개)">${heart}${countLabel}</button>`,
+    `</div>`,
+    `</div>`,
+  ].join('')
+}
+
+// 검색 프리뷰 말풍선(spec §3.6) — 아직 저장 안 한 후보. 이름·카테고리·주소 + [저장]/[길찾기].
+// data-id는 kakaoPlaceId(프리뷰는 placeId가 아직 없음). 순수 함수(테스트로 못박음).
+export function previewWindowHtml(hit: KakaoPlaceHit): string {
+  const name = escapeHtml(hit.name)
+  const id = escapeHtml(hit.kakaoPlaceId)
+  const meta = [hit.category, hit.address]
+    .filter((x): x is string => Boolean(x))
+    .map((x) => escapeHtml(x))
+    .join(' · ')
+  return [
+    `<div class="${iwStyles.bubble}" role="dialog" aria-label="${name} 검색 결과">`,
+    `<button type="button" class="${iwStyles.close}" data-action="close" data-id="${id}" aria-label="닫기">✕</button>`,
+    `<div class="${iwStyles.head}">`,
+    `<span class="${iwStyles.glyph}" aria-hidden>＋</span>`,
+    `<span class="${iwStyles.name}">${name}</span>`,
+    `</div>`,
+    meta ? `<div class="${iwStyles.sub}"><span class="${iwStyles.meta}">${meta}</span></div>` : '',
+    `<div class="${iwStyles.actions}">`,
+    `<button type="button" class="${iwStyles.action}" data-action="save" data-id="${id}" aria-label="${name} 저장">⭐ 저장</button>`,
+    `<button type="button" class="${iwStyles.action}" data-action="directions" data-id="${id}" aria-label="${name} 길찾기">🧭 길찾기</button>`,
     `</div>`,
     `</div>`,
   ].join('')
