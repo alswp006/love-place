@@ -38,7 +38,8 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      # Playwright webServer는 위 build의 dist를 preview로 서빙(재빌드 없음).
+      # pree2e가 build:e2e(더미 공개 env)로 dist를 재빌드 → 비주얼 하베스가 인증된 지도 화면에 도달.
+      # webServer는 그 dist를 preview로 서빙. (위 prod build는 빌드 게이트 + check:secrets용.)
       - name: Functional + visual smoke (Playwright)
         run: npm run e2e
 

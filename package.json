@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "pree2e": "npm run build:e2e",
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps chromium",
     "iphone:lan": "node scripts/iphone-lan.mjs",

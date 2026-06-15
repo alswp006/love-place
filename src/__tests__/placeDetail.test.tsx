@@ -22,10 +22,10 @@ describe('PlaceDetail (선택 장소 시트 상세 — React)', () => {
     expect(screen.getByLabelText('장소 상세')).toHaveAttribute('aria-live', 'polite')
   })
   it('가봤음이면 ★ + 가봤음(취소) 토글 → onUnvisit', () => {
-    render(<PlaceDetail {...base()} visited />)
-    const btn = screen.getByRole('button', { name: /가봤음 기록 취소/ })
-    fireEvent.click(btn)
-    expect(base().onUnvisit).toBeDefined()
+    const p = base()
+    render(<PlaceDetail {...p} visited />)
+    fireEvent.click(screen.getByRole('button', { name: /가봤음 기록 취소/ }))
+    expect(p.onUnvisit).toHaveBeenCalledTimes(1)
   })
   it('미방문이면 다녀왔어요 → onVisit', () => {
     const p = base()
