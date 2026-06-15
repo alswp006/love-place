@@ -7,7 +7,8 @@ import type { ProfileMap } from '@/hooks/useProfiles'
 import type { ReactionMap } from '@/hooks/useReactions'
 import { markerVisual } from '@/lib/places/markerVisual'
 import { markerIconHtml, BASE_ZINDEX, SELECTED_ZINDEX } from '@/lib/places/selectedMarker'
-import { infoWindowHtml } from '@/lib/places/infoWindowHtml'
+import { infoWindowHtml, previewWindowHtml, escapeHtml } from '@/lib/places/infoWindowHtml'
+import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import { getCurrentPosition } from '@/lib/geo/currentPosition'
 import styles from './NaverMap.module.css'
 
@@ -25,9 +26,11 @@ export function NaverMap({
   myId,
   reactions,
   selectedId,
+  previewHit,
   onSelect,
   onClose,
   onAction,
+  onPreviewAction,
 }: {
   places: MarkerPlace[]
   visitedIds?: Set<string>
@@ -35,9 +38,11 @@ export function NaverMap({
   myId?: string | null
   reactions?: ReactionMap
   selectedId?: string | null
+  previewHit?: KakaoPlaceHit | null
   onSelect?: (id: string) => void
   onClose?: () => void
   onAction?: (action: string, id: string) => void
+  onPreviewAction?: (action: string) => void
 }) {
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<naver.maps.Map | null>(null)
@@ -47,6 +52,10 @@ export function NaverMap({
   const infoRef = useRef<naver.maps.InfoWindow | null>(null)
   const infoHandlerRef = useRef<((e: MouseEvent) => void) | null>(null)
   const mapClickRef = useRef<naver.maps.MapEventListener | null>(null)
+  const previewMarkerRef = useRef<naver.maps.Marker | null>(null)
+  // 프리뷰 전용 InfoWindow + 핸들러 — saved용 infoRef/infoHandlerRef와 분리(공유 소유권 경합 방지).
+  const previewInfoRef = useRef<naver.maps.InfoWindow | null>(null)
+  const previewHandlerRef = useRef<((e: MouseEvent) => void) | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [locToast, setLocToast] = useState<string | null>(null)
@@ -62,6 +71,8 @@ export function NaverMap({
   onCloseRef.current = onClose
   const onActionRef = useRef(onAction)
   onActionRef.current = onAction
+  const onPreviewActionRef = useRef(onPreviewAction)
+  onPreviewActionRef.current = onPreviewAction
 
   // 지도 1회 초기화
   useEffect(() => {
@@ -80,6 +91,14 @@ export function NaverMap({
         setReady(true)
         // 단일 InfoWindow 1회 생성(말풍선 재사용).
         infoRef.current = new nv.maps.InfoWindow({
+          content: '',
+          borderWidth: 0,
+          disableAnchor: false,
+          backgroundColor: 'transparent',
+          pixelOffset: new nv.maps.Point(0, -8),
+        })
+        // 프리뷰 전용 InfoWindow(saved와 분리) — 동일 옵션(테두리 없음/배경 투명, CSS가 말풍선 그림).
+        previewInfoRef.current = new nv.maps.InfoWindow({
           content: '',
           borderWidth: 0,
           disableAnchor: false,
@@ -109,6 +128,14 @@ export function NaverMap({
       markersRef.current.forEach((m) => m.setMap(null))
       markersRef.current = []
       markerMapRef.current.clear()
+      previewMarkerRef.current?.setMap(null)
+      previewMarkerRef.current = null
+      if (previewHandlerRef.current && previewInfoRef.current) {
+        previewInfoRef.current.getContentElement()?.removeEventListener('click', previewHandlerRef.current)
+      }
+      previewHandlerRef.current = null
+      previewInfoRef.current?.close()
+      previewInfoRef.current = null
       mapRef.current = null
     }
   }, [])
@@ -255,7 +282,10 @@ export function NaverMap({
     if (prevEl && infoHandlerRef.current) prevEl.removeEventListener('click', infoHandlerRef.current)
     infoHandlerRef.current = null
 
-    if (!selectedId) {
+    // 프리뷰가 떠 있으면 saved 말풍선은 자기 것만 닫고 즉시 종료(preview 우선, spec §3.6 — 동시 표시 안 함).
+    // 프리뷰 effect의 previewInfoRef/previewHandlerRef는 절대 건드리지 않는다(소유권 분리 → realtime
+    // places/reactions 무효화로 이 effect가 재실행돼도 열려 있는 프리뷰 말풍선을 부수지 않음, research 02 §3(3)).
+    if (previewHit || !selectedId) {
       info.close()
       return
     }
@@ -291,7 +321,60 @@ export function NaverMap({
       el.addEventListener('click', handler)
       infoHandlerRef.current = handler
     }
-  }, [selectedId, places, ready, visitedIds, reactions, profiles, myId])
+  }, [selectedId, places, ready, visitedIds, reactions, profiles, myId, previewHit])
+
+  // 프리뷰(미저장 검색 후보) — 전용 transient 마커 + 전용 InfoWindow(previewInfoRef)를 구동(saved와 배타).
+  // saved용 infoRef/infoHandlerRef는 절대 만지지 않는다(소유권 분리, research 02 §3(3)).
+  useEffect(() => {
+    const nv = window.naver
+    const map = mapRef.current
+    const info = previewInfoRef.current
+    if (!ready || !nv || !map || !info) return
+
+    // 이전 프리뷰 위임 리스너 제거(중복 바인딩 방지) — 프리뷰 핸들러 ref만 사용.
+    const prevEl = info.getContentElement()
+    if (prevEl && previewHandlerRef.current) prevEl.removeEventListener('click', previewHandlerRef.current)
+    previewHandlerRef.current = null
+
+    if (!previewHit) {
+      info.close()
+      previewMarkerRef.current?.setMap(null)
+      previewMarkerRef.current = null
+      return
+    }
+
+    const pos = new nv.maps.LatLng(previewHit.lat, previewHit.lng)
+    // 프리뷰 마커는 1개만 — 위치만 갱신(클러스터 대상 아님, transient).
+    if (previewMarkerRef.current) {
+      previewMarkerRef.current.setPosition(pos)
+    } else {
+      previewMarkerRef.current = new nv.maps.Marker({
+        position: pos,
+        map,
+        zIndex: SELECTED_ZINDEX + 1,
+        icon: {
+          content: `<div class="${styles.pin} ${styles.pinPreview}" aria-label="${escapeHtml(previewHit.name)} 미리보기">＋</div>`,
+          anchor: new nv.maps.Point(12, 24),
+        },
+      })
+    }
+    map.panTo(pos)
+
+    info.setContent(previewWindowHtml(previewHit))
+    info.open(map, previewMarkerRef.current)
+
+    const el = info.getContentElement()
+    if (el) {
+      const handler = (e: MouseEvent) => {
+        const btn = (e.target as HTMLElement).closest('[data-action]') as HTMLElement | null
+        if (!btn) return
+        onPreviewActionRef.current?.(btn.dataset.action ?? '')
+      }
+      el.addEventListener('click', handler)
+      previewHandlerRef.current = handler
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewHit, ready])
 
   // ESC로 말풍선 닫기(EventSheet 패턴). 선택 중일 때만 바인딩.
   useEffect(() => {

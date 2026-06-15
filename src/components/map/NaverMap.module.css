@@ -29,6 +29,20 @@
   color: var(--c-success);
 }
 
+/* 프리뷰(미저장 검색 후보) 핀 — ＋ 글리프 + 점선 링으로 저장 핀(★/♥)과 모양 구분(§8). */
+.pinPreview {
+  color: var(--c-cta-bg);
+  font-weight: 700;
+  border: 2px dashed var(--c-cta-bg);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-surface);
+}
+
 /* 선택 강조 — 확대 + 링(색 + 모양 이중화, §8). transform/transition만 사용(reduce-motion 자동 무력화). */
 .pinSelected {
   transform: translate(-50%, -100%) scale(1.5);

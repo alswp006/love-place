@@ -17,6 +17,10 @@ import { useReactions, useToggleReaction } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
 import { attachAndSortWishes } from '@/lib/places/wishStatus'
 import { openDirections } from '@/lib/places/directionsUrl'
+import { useSavePlace } from '@/hooks/useSavePlace'
+import { useToast } from '@/hooks/useToast'
+import { Toast } from '@/components/common/Toast'
+import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import { tabByPath } from '@/app/tabs'
 import styles from './MapPage.module.css'
 
@@ -46,6 +50,9 @@ export default function MapPage() {
     [places],
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [previewHit, setPreviewHit] = useState<KakaoPlaceHit | null>(null)
+  const savePlace = useSavePlace(coupleId)
+  const toast = useToast()
 
   const conflict = useConflict()
   const toggleReaction = useToggleReaction(coupleId, myId)
@@ -68,6 +75,39 @@ export default function MapPage() {
     }
   }
 
+  // 검색 결과 탭(spec §3.6): 이미 저장됐으면 기존 마커 선택, 아니면 프리뷰 띄움(즉시 저장 안 함).
+  const onPick = (hit: KakaoPlaceHit) => {
+    const existing = enriched.find((p) => p.kakao_place_id === hit.kakaoPlaceId)
+    if (existing) {
+      setPreviewHit(null)
+      setSelectedId(existing.id)
+    } else {
+      setSelectedId(null)
+      setPreviewHit(hit)
+    }
+  }
+
+  // 프리뷰 말풍선 액션(저장/길찾기/닫기). data-id = kakaoPlaceId(프리뷰는 placeId 없음).
+  const onPreviewAction = (action: string) => {
+    if (!previewHit) return
+    if (action === 'close') {
+      setPreviewHit(null)
+    } else if (action === 'directions') {
+      openDirections({ lat: previewHit.lat, lng: previewHit.lng, name: previewHit.name })
+    } else if (action === 'save') {
+      savePlace.mutate(previewHit, {
+        onSuccess: (r) => {
+          setPreviewHit(null)
+          // 온라인 저장(r): 새 place(또는 이미 담긴 곳) 선택 → 일반 마커로 전환.
+          // 오프라인 큐(r===null): 선택 없이 큐 메시지(spec §3.6 "오프라인이면 기존 큐 메시지").
+          if (r) setSelectedId(r.placeId)
+          else toast.show('오프라인이라 큐에 담았어요 — 연결되면 저장돼요')
+        },
+        onError: (e) => toast.show(e.message, 3000),
+      })
+    }
+  }
+
   return (
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId} fullBleed>
       {isNaverMapConfigured() ? (
@@ -79,15 +119,7 @@ export default function MapPage() {
           ) : null}
           {/* 검색바는 시트가 아니라 지도 위 상단 오버레이(spec §5) — peek에서도 도달, ≤3탭 보존. */}
           {coupleActive ? (
-            <MapSearchOverlay
-              coupleId={coupleId}
-              savedKakaoIds={savedKakaoIds}
-              onPick={(hit) => {
-                // Task 16 stopgap: 저장된 결과면 기존 마커 선택(프리뷰/저장 흐름은 Task 17에서 완성).
-                const existing = enriched.find((p) => p.kakao_place_id === hit.kakaoPlaceId)
-                if (existing) setSelectedId(existing.id)
-              }}
-            />
+            <MapSearchOverlay coupleId={coupleId} savedKakaoIds={savedKakaoIds} onPick={onPick} />
           ) : null}
           <NaverMap
             places={enriched}
@@ -96,9 +128,17 @@ export default function MapPage() {
             myId={myId}
             reactions={reactions}
             selectedId={selectedId}
-            onSelect={setSelectedId}
-            onClose={() => setSelectedId(null)}
+            previewHit={previewHit}
+            onSelect={(id) => {
+              setPreviewHit(null)
+              setSelectedId(id)
+            }}
+            onClose={() => {
+              setSelectedId(null)
+              setPreviewHit(null)
+            }}
             onAction={onAction}
+            onPreviewAction={onPreviewAction}
           />
         </div>
       ) : (
@@ -120,6 +160,7 @@ export default function MapPage() {
         selectedId={selectedId}
         onSelect={setSelectedId}
       />
+      <Toast msg={toast.msg} />
     </ScreenScaffold>
   )
 }
