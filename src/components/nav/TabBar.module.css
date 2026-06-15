@@ -1,4 +1,6 @@
 .tabbar {
+  position: relative;
+  z-index: 46;
   display: flex;
   justify-content: space-around;
   align-items: stretch;
