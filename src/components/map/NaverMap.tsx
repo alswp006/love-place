@@ -46,6 +46,8 @@ export function NaverMap({
   const previewMarkerRef = useRef<naver.maps.Marker | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  // 로드 실패 후 '다시 시도'로 init effect를 재실행하기 위한 버전 키(ux §7 에러 상태).
+  const [loadKey, setLoadKey] = useState(0)
   const [locToast, setLocToast] = useState<string | null>(null)
   // 초기 센터링은 ready 직후 1회만(이후 마커 변경으로 지도가 튀지 않게, spec §3.5).
   // centeredRef: 한 번이라도 센터를 잡았으면(내 위치 성공 또는 저장장소 fitBounds) true → 더는 자동 이동 안 함.
@@ -61,29 +63,38 @@ export function NaverMap({
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
 
-  // 지도 1회 초기화
+  // 지도 초기화(loadKey 재시도 시 재실행). loadNaverMaps()는 promise를 메모이즈하므로
+  // 1차 실패가 캐시되면 재시도가 같은 거부 promise를 다시 받는다 → window.naver.maps가
+  // 이미 있으면 그것으로 바로 지도를 만들고, 없을 때만 loadNaverMaps()를 호출한다(회복 시 재로드 가능).
   useEffect(() => {
     let cancelled = false
-    loadNaverMaps()
-      .then((nv) => {
-        if (cancelled || !elRef.current) return
-        mapRef.current = new nv.maps.Map(elRef.current, {
-          center: new nv.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
-          zoom: 11,
-          // 로고는 ToS상 유지(필수), 축척 표시 명시(spec §3.1). 데이터 컨트롤은 숨김.
-          logoControl: true,
-          scaleControl: true,
-          mapDataControl: false,
+    const build = (nv: typeof naver) => {
+      if (cancelled || !elRef.current) return
+      mapRef.current = new nv.maps.Map(elRef.current, {
+        center: new nv.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
+        zoom: 11,
+        // 로고는 ToS상 유지(필수), 축척 표시 명시(spec §3.1). 데이터 컨트롤은 숨김.
+        logoControl: true,
+        scaleControl: true,
+        mapDataControl: false,
+      })
+      setReady(true)
+      // 지도 빈 곳 클릭 → 선택 해제(닫기).
+      mapClickRef.current = nv.maps.Event.addListener(mapRef.current, 'click', () =>
+        onCloseRef.current?.(),
+      )
+    }
+    const existing =
+      (typeof window !== 'undefined' && window.naver?.maps && window.naver) || null
+    if (existing) {
+      build(existing)
+    } else {
+      loadNaverMaps()
+        .then((nv) => build(nv))
+        .catch((e: Error) => {
+          if (!cancelled) setError(e.message)
         })
-        setReady(true)
-        // 지도 빈 곳 클릭 → 선택 해제(닫기).
-        mapClickRef.current = nv.maps.Event.addListener(mapRef.current, 'click', () =>
-          onCloseRef.current?.(),
-        )
-      })
-      .catch((e: Error) => {
-        if (!cancelled) setError(e.message)
-      })
+    }
     return () => {
       cancelled = true
       window.naver?.maps.Event.removeListener(listenersRef.current)
@@ -101,7 +112,7 @@ export function NaverMap({
       previewMarkerRef.current = null
       mapRef.current = null
     }
-  }, [])
+  }, [loadKey])
 
   // 장소/줌 변경 시 마커를 클러스터 인지 방식으로 다시 그림(spec §3.7).
   // 단일(single)은 기존처럼 markerMapRef에 등록(선택 강조 효과가 이를 사용).
@@ -344,6 +355,17 @@ export function NaverMap({
       <div className={styles.fallback} role="alert">
         <p>지도를 불러오지 못했어요.</p>
         <p className={styles.fallbackHint}>{error}</p>
+        <button
+          type="button"
+          className={styles.retryBtn}
+          onClick={() => {
+            setError(null)
+            setReady(false)
+            setLoadKey((k) => k + 1)
+          }}
+        >
+          다시 시도
+        </button>
       </div>
     )
   }

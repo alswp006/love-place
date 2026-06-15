@@ -72,6 +72,17 @@
   font-size: var(--fs-caption);
 }
 
+.retryBtn {
+  margin-top: var(--sp-2);
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 999px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  cursor: pointer;
+}
+
 /* 지도 호스트 — 풀블리드 영역을 채우고 플로팅 버튼/토스트를 절대배치할 기준. */
 .mapHost {
   position: relative;
