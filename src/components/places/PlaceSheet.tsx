@@ -10,7 +10,6 @@ import { useMarkVisited, type VisitRow } from '@/hooks/useVisits'
 import { useSetWishPriority } from '@/hooks/useSetWishPriority'
 import { useTrashPlaces, useDeletePlace, useRestorePlace } from '@/hooks/usePlaceTrash'
 import { useConflict } from '@/lib/sync/useConflict'
-import type { ProfileMap } from '@/hooks/useProfiles'
 import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WithWish } from '@/lib/places/wishStatus'
@@ -27,7 +26,6 @@ export function PlaceSheet({
   wishes,
   visits,
   visitedIds,
-  profiles,
   placesLoading,
   selectedId,
   onSelect,
@@ -39,7 +37,6 @@ export function PlaceSheet({
   wishes: WishData | undefined
   visits: VisitRow[]
   visitedIds: Set<string>
-  profiles: ProfileMap
   placesLoading: boolean
   selectedId: string | null
   onSelect: (id: string) => void
@@ -176,8 +173,6 @@ export function PlaceSheet({
             visible={visible}
             wishes={wishes}
             visitedIds={visitedIds}
-            profiles={profiles}
-            myId={myId}
             placesLoading={placesLoading}
             placeFilter={placeFilter}
             selectedId={selectedId}

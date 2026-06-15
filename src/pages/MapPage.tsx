@@ -90,7 +90,6 @@ export default function MapPage() {
         wishes={wishes}
         visits={visits ?? []}
         visitedIds={visitedIds}
-        profiles={profiles ?? {}}
         placesLoading={placesLoading}
         selectedId={selectedId}
         onSelect={setSelectedId}

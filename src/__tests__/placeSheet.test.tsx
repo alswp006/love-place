@@ -26,7 +26,6 @@ function renderSheet(over: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
     wishes: { byPlace: {}, mine: {} },
     visits: [],
     visitedIds: new Set<string>(),
-    profiles: {},
     placesLoading: false,
     selectedId: null,
     onSelect: () => {},
@@ -80,7 +79,6 @@ describe('PlaceSheet (드래그 시트)', () => {
             wishes={{ byPlace: {}, mine: {} }}
             visits={[]}
             visitedIds={new Set<string>()}
-            profiles={{}}
             placesLoading={false}
             selectedId={selectedId}
             onSelect={() => {}}

@@ -1,9 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Skeleton } from '@/components/common/Skeleton'
-import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { Heart } from '@/components/nav/icons'
-import type { ProfileMap } from '@/hooks/useProfiles'
 import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { UseMutationResult } from '@tanstack/react-query'
@@ -17,8 +15,6 @@ export function PlaceList({
   visible,
   wishes,
   visitedIds,
-  profiles,
-  myId,
   placesLoading,
   placeFilter,
   selectedId,
@@ -33,8 +29,6 @@ export function PlaceList({
   visible: WithWish<PlaceRow>[]
   wishes: WishData | undefined
   visitedIds: Set<string>
-  profiles: ProfileMap
-  myId: string | null
   placesLoading: boolean
   placeFilter: 'all' | 'wish' | 'visited'
   selectedId: string | null
@@ -125,7 +119,7 @@ export function PlaceList({
                       다녀왔어요
                     </button>
                   )}
-                  <SourceAvatar userId={p.added_by} profiles={profiles} myId={myId} context=" 추가" />
+                  {/* 편차: 장소 카드 출처 아바타 제거(ux §2 "모든 공유 항목 출처" 예외 — 사용자 결정, spec §3.2). */}
                   {p.region_label ? <span className={styles.badge}>{p.region_label}</span> : null}
                   <button
                     type="button"

@@ -15,8 +15,6 @@ const baseProps = {
   visible: [place] as WithWish<PlaceRow>[],
   wishes: { byPlace: {}, mine: {} },
   visitedIds: new Set<string>(),
-  profiles: {},
-  myId: 'u1',
   placesLoading: false,
   placeFilter: 'all' as const,
   selectedId: null as string | null,
