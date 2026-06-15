@@ -40,20 +40,25 @@ vi.mock('@/lib/naver/loadNaverMaps', () => ({ isNaverMapConfigured: () => true }
 vi.mock('@/hooks/useKakaoSearch', () => ({
   useKakaoSearch: () => ({ query: '카', setQuery: () => {}, clear: () => {}, status: 'done', hits, error: null }),
 }))
-// PlaceSheet은 무거우니 가벼운 스텁(이 테스트는 검색→프리뷰→저장 흐름만 검증).
-vi.mock('@/components/places/PlaceSheet', () => ({ PlaceSheet: () => <div data-testid="sheet" /> }))
-// NaverMap 스텁 — previewHit/selectedId를 노출하고 onSelect/onPreviewAction을 버튼으로 트리거.
+// PlaceSheet 스텁 — 이제 프리뷰 저장은 시트의 onSave로 흐른다(말풍선 폐지). previewHit 노출 + 저장 버튼.
+vi.mock('@/components/places/PlaceSheet', () => ({
+  PlaceSheet: (props: { previewHit: { kakaoPlaceId: string } | null; onSave: () => void }) => (
+    <div data-testid="sheet">
+      <div data-testid="sheet-preview">{props.previewHit?.kakaoPlaceId ?? 'none'}</div>
+      <button onClick={props.onSave}>sheet-save</button>
+    </div>
+  ),
+}))
+// NaverMap 스텁 — previewHit/selectedId를 노출하고 onSelect만 버튼으로 트리거(상세/액션은 시트).
 vi.mock('@/components/map/NaverMap', () => ({
   NaverMap: (props: {
     previewHit: KakaoPlaceHit | null
     selectedId: string | null
     onSelect: (id: string) => void
-    onPreviewAction: (action: string) => void
   }) => (
     <div>
       <div data-testid="preview">{props.previewHit?.kakaoPlaceId ?? 'none'}</div>
       <div data-testid="selected">{props.selectedId ?? 'none'}</div>
-      <button onClick={() => props.onPreviewAction('save')}>preview-save</button>
     </div>
   ),
 }))
@@ -88,13 +93,19 @@ describe('MapPage 검색→프리뷰→저장 오케스트레이션(spec §3.6)'
     expect(screen.getByTestId('selected')).toHaveTextContent('none')
   })
 
-  it('프리뷰 저장 성공(r) 시 savePlace 호출 + previewHit 해제 + 새 place 선택', () => {
+  it('미저장 결과를 탭하면 시트에 프리뷰가 전달된다', () => {
+    renderMap()
+    fireEvent.click(screen.getByText('새 식당'))
+    expect(screen.getByTestId('sheet-preview')).toHaveTextContent('new1')
+  })
+
+  it('프리뷰 저장 성공(r) 시 savePlace 호출 + previewHit 해제 + 새 place 선택(시트 onSave)', () => {
     // opts? — vitest 정리(cleanup) 단계에서 모듈 스코프 spy가 인자 없이 한 번 더 호출되는 러너 동작 방어.
     // (어설션은 모두 통과; 정리 시점의 무인자 호출이 onSuccess 접근으로 깨지지 않게 가드. 동작/의도 동일.)
     saveMutate.mockImplementation((_hit, opts) => opts?.onSuccess({ placeId: 'p2', jumped: false }))
     renderMap()
     fireEvent.click(screen.getByText('새 식당'))
-    fireEvent.click(screen.getByText('preview-save'))
+    fireEvent.click(screen.getByText('sheet-save'))
     expect(saveMutate).toHaveBeenCalledTimes(1)
     expect(saveMutate.mock.calls[0]![0]).toMatchObject({ kakaoPlaceId: 'new1' })
     expect(screen.getByTestId('preview')).toHaveTextContent('none')
@@ -106,7 +117,7 @@ describe('MapPage 검색→프리뷰→저장 오케스트레이션(spec §3.6)'
     saveMutate.mockImplementation((_hit, opts) => opts?.onSuccess(null))
     renderMap()
     fireEvent.click(screen.getByText('새 식당'))
-    fireEvent.click(screen.getByText('preview-save'))
+    fireEvent.click(screen.getByText('sheet-save'))
     expect(screen.getByTestId('selected')).toHaveTextContent('none')
     expect(screen.getByText(/오프라인이라 큐에 담았어요/)).toBeInTheDocument()
   })

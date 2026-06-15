@@ -8,15 +8,13 @@ import { isNaverMapConfigured } from '@/lib/naver/loadNaverMaps'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { usePlaces } from '@/hooks/usePlaces'
-import { useProfiles } from '@/hooks/useProfiles'
 import { useWishes } from '@/hooks/useWishes'
-import { useVisits, useMarkVisited, useUnmarkVisited } from '@/hooks/useVisits'
+import { useVisits } from '@/hooks/useVisits'
 import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
-import { useReactions, useToggleReaction } from '@/hooks/useReactions'
+import { useReactions } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
 import { attachAndSortWishes } from '@/lib/places/wishStatus'
-import { openDirections } from '@/lib/places/directionsUrl'
 import { useSavePlace } from '@/hooks/useSavePlace'
 import { useToast } from '@/hooks/useToast'
 import { Toast } from '@/components/common/Toast'
@@ -35,7 +33,6 @@ export default function MapPage() {
   const coupleId = couple?.coupleId ?? null
   const coupleActive = couple?.status === 'ACTIVE'
   const { data: places, isLoading: placesLoading } = usePlaces(coupleId)
-  const { data: profiles } = useProfiles(coupleId)
   const { data: wishes } = useWishes(coupleId, myId)
   const { data: visits } = useVisits(coupleId)
   const { data: reactions } = useReactions(coupleId, myId)
@@ -58,25 +55,6 @@ export default function MapPage() {
   const toast = useToast()
 
   const conflict = useConflict()
-  const toggleReaction = useToggleReaction(coupleId, myId)
-  const markVisited = useMarkVisited(coupleId, myId)
-  const unmarkVisited = useUnmarkVisited(coupleId, myId, conflict.flag)
-  const onAction = (action: string, id: string) => {
-    const p = enriched.find((pl) => pl.id === id)
-    if (action === 'directions') {
-      if (p && typeof p.lat === 'number' && typeof p.lng === 'number') {
-        openDirections({ lat: p.lat, lng: p.lng, name: p.name })
-      }
-    } else if (action === 'visit') {
-      // 미방문일 때만 기록 추가(원탭 1건).
-      if (!visitedIds.has(id)) markVisited.mutate({ placeId: id })
-    } else if (action === 'unvisit') {
-      // 가봤음 취소(토글) — 활성 방문행 soft-delete. 충돌은 conflict.flag로 배너 표시.
-      unmarkVisited.mutate({ placeId: id, visits: visits ?? [] })
-    } else if (action === 'react') {
-      toggleReaction.mutate({ placeId: id })
-    }
-  }
 
   // 검색 결과 탭(spec §3.6): 이미 저장됐으면 기존 마커 선택, 아니면 프리뷰 띄움(즉시 저장 안 함).
   const onPick = (hit: KakaoPlaceHit) => {
@@ -90,7 +68,8 @@ export default function MapPage() {
     }
   }
 
-  // 시트 프리뷰 저장(말풍선 폐지 준비). onPreviewAction의 save 분기와 동일 로직(Task 13에서 일원화).
+  // 시트 프리뷰 저장(말풍선 폐지 — 저장은 시트의 onSave로 일원화, Task 12).
+  // 온라인 저장(r): 새 place 선택 → 일반 마커로 전환. 오프라인 큐(r===null): 선택 없이 큐 메시지(spec §3.6).
   const onSheetSave = () => {
     if (!previewHit) return
     savePlace.mutate(previewHit, {
@@ -101,27 +80,6 @@ export default function MapPage() {
       },
       onError: (e) => toast.show(e.message, 3000),
     })
-  }
-
-  // 프리뷰 말풍선 액션(저장/길찾기/닫기). data-id = kakaoPlaceId(프리뷰는 placeId 없음).
-  const onPreviewAction = (action: string) => {
-    if (!previewHit) return
-    if (action === 'close') {
-      setPreviewHit(null)
-    } else if (action === 'directions') {
-      openDirections({ lat: previewHit.lat, lng: previewHit.lng, name: previewHit.name })
-    } else if (action === 'save') {
-      savePlace.mutate(previewHit, {
-        onSuccess: (r) => {
-          setPreviewHit(null)
-          // 온라인 저장(r): 새 place(또는 이미 담긴 곳) 선택 → 일반 마커로 전환.
-          // 오프라인 큐(r===null): 선택 없이 큐 메시지(spec §3.6 "오프라인이면 기존 큐 메시지").
-          if (r) setSelectedId(r.placeId)
-          else toast.show('오프라인이라 큐에 담았어요 — 연결되면 저장돼요')
-        },
-        onError: (e) => toast.show(e.message, 3000),
-      })
-    }
   }
 
   return (
@@ -140,9 +98,6 @@ export default function MapPage() {
           <NaverMap
             places={enriched}
             visitedIds={visitedIds}
-            profiles={profiles ?? {}}
-            myId={myId}
-            reactions={reactions}
             selectedId={selectedId}
             previewHit={previewHit}
             snap={snap}
@@ -154,8 +109,6 @@ export default function MapPage() {
               setSelectedId(null)
               setPreviewHit(null)
             }}
-            onAction={onAction}
-            onPreviewAction={onPreviewAction}
           />
         </div>
       ) : (
