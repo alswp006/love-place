@@ -33,6 +33,7 @@
   cursor: pointer;
 }
 
+/* 결과 패널 — 지도/시트를 가리지 않게 최대 높이 + 내부 스크롤(spec §3.6). */
 .results {
   list-style: none;
   margin: 0;
@@ -40,6 +41,17 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
+  max-height: 40dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 저장됨 배지 — 색(브랜드)+★+텍스트 이중화(§8). */
+.savedTag {
+  align-self: flex-start;
+  font-size: 0.75rem;
+  color: var(--c-brand);
+  font-weight: 600;
 }
 
 .resultItem {

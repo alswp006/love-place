@@ -41,6 +41,10 @@ export default function MapPage() {
     [places, wishes, myId],
   )
   const visitedIds = useMemo(() => new Set((visits ?? []).map((v) => v.place_id)), [visits])
+  const savedKakaoIds = useMemo(
+    () => new Set((places ?? []).map((p) => p.kakao_place_id).filter((x): x is string => x != null)),
+    [places],
+  )
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const conflict = useConflict()
@@ -74,7 +78,17 @@ export default function MapPage() {
             </div>
           ) : null}
           {/* 검색바는 시트가 아니라 지도 위 상단 오버레이(spec §5) — peek에서도 도달, ≤3탭 보존. */}
-          {coupleActive ? <MapSearchOverlay coupleId={coupleId} /> : null}
+          {coupleActive ? (
+            <MapSearchOverlay
+              coupleId={coupleId}
+              savedKakaoIds={savedKakaoIds}
+              onPick={(hit) => {
+                // Task 16 stopgap: 저장된 결과면 기존 마커 선택(프리뷰/저장 흐름은 Task 17에서 완성).
+                const existing = enriched.find((p) => p.kakao_place_id === hit.kakaoPlaceId)
+                if (existing) setSelectedId(existing.id)
+              }}
+            />
+          ) : null}
           <NaverMap
             places={enriched}
             visitedIds={visitedIds}

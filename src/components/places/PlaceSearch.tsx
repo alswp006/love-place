@@ -1,38 +1,23 @@
-import { useState } from 'react'
 import { useKakaoSearch } from '@/hooks/useKakaoSearch'
-import { useSavePlace } from '@/hooks/useSavePlace'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import styles from './PlaceSearch.module.css'
 
-// 장소 검색창 + 후보 목록(§5.2). 입력 → 디바운스 자동완성 → 탭하면 저장(≤3탭).
-export function PlaceSearch({ coupleId }: { coupleId: string | null }) {
+// 장소 검색창 + 후보 목록(§5.2). 입력 → 디바운스 자동완성 → 결과 탭하면 onPick(hit)을 부모로 위임.
+// 저장은 더 이상 여기서 즉시 하지 않는다(spec §3.6): 부모(MapPage)가 저장됨이면 선택, 미저장이면 프리뷰.
+export function PlaceSearch({
+  coupleId,
+  savedKakaoIds,
+  onPick,
+}: {
+  coupleId: string | null
+  savedKakaoIds: Set<string>
+  onPick: (hit: KakaoPlaceHit) => void
+}) {
   const { query, setQuery, clear, status, hits, error } = useKakaoSearch()
-  const save = useSavePlace(coupleId)
-  const [toast, setToast] = useState<string | null>(null)
-
-  const onPick = (hit: KakaoPlaceHit) => {
-    save.mutate(hit, {
-      onSuccess: (r) => {
-        // r === null = 오프라인 큐 적재(재연결 시 동기화).
-        setToast(
-          r === null
-            ? '오프라인이라 큐에 담았어요 — 연결되면 저장돼요'
-            : r.jumped
-              ? `이미 담은 곳이에요 — 찜에 추가했어요`
-              : `'${hit.name}' 저장!`,
-        )
-        clear()
-        setTimeout(() => setToast(null), 2000)
-      },
-      onError: (e) => {
-        setToast(e.message)
-        setTimeout(() => setToast(null), 3000)
-      },
-    })
-  }
+  void coupleId // coupleId는 부모 저장 흐름에서 사용(여기선 표식만 유지).
 
   return (
-    <div className={styles.wrap}>
+    <div className={styles.wrap} data-testid="place-search">
       <div className={styles.searchRow}>
         <input
           type="search"
@@ -66,26 +51,27 @@ export function PlaceSearch({ coupleId }: { coupleId: string | null }) {
 
       {hits.length > 0 ? (
         <ul className={styles.results}>
-          {hits.map((hit) => (
-            <li key={hit.kakaoPlaceId}>
-              <button
-                className={styles.resultItem}
-                onClick={() => onPick(hit)}
-                disabled={save.isPending}
-              >
-                <span className={styles.name}>{hit.name}</span>
-                <span className={styles.addr}>{hit.address}</span>
-                {hit.category ? <span className={styles.cat}>{hit.category}</span> : null}
-              </button>
-            </li>
-          ))}
+          {hits.map((hit) => {
+            const saved = savedKakaoIds.has(hit.kakaoPlaceId)
+            return (
+              <li key={hit.kakaoPlaceId}>
+                <button
+                  className={styles.resultItem}
+                  onClick={() => onPick(hit)}
+                  aria-label={saved ? `${hit.name} (이미 저장됨) 지도에서 보기` : `${hit.name} 미리보기`}
+                >
+                  <span className={styles.name}>{hit.name}</span>
+                  <span className={styles.addr}>{hit.address}</span>
+                  {hit.category ? <span className={styles.cat}>{hit.category}</span> : null}
+                  {saved ? (
+                    // 저장됨 표시 — 색만이 아니라 ★ 아이콘 + "저장됨" 텍스트로 이중화(§8).
+                    <span className={styles.savedTag}>★ 저장됨</span>
+                  ) : null}
+                </button>
+              </li>
+            )
+          })}
         </ul>
-      ) : null}
-
-      {toast ? (
-        <div className={styles.toast} role="status" aria-live="polite">
-          {toast}
-        </div>
       ) : null}
     </div>
   )
