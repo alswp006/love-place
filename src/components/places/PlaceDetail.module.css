@@ -1,0 +1,47 @@
+.detail {
+  position: relative;
+  background: var(--c-surface);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.close {
+  position: absolute;
+  top: var(--sp-1);
+  right: var(--sp-1);
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--c-text-weak);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+.head { display: flex; align-items: center; gap: var(--sp-2); padding-right: var(--sp-6); }
+.glyph { font-size: 1.1rem; color: var(--c-brand); }
+.name { font-weight: 700; }
+.sub { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); font-size: var(--fs-caption); color: var(--c-text-weak); flex-wrap: wrap; }
+.status { font-weight: 600; color: var(--c-brand); }
+.meta { overflow: hidden; text-overflow: ellipsis; }
+.actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+.action {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-radius: 999px;
+  padding: var(--sp-2) var(--sp-1);
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 44px;
+  white-space: nowrap;
+}
+/* 가봤음 — 색+텍스트 상태 표시(§8). 허위 disabled(opacity/cursor) 제거: 정상 토글. */
+.actionDone { color: var(--c-success); font-weight: 600; }
