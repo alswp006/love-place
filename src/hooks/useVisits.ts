@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { dayKey } from '@/lib/calendar/eventDays'
+import { softDelete } from '@/lib/sync/versionedUpdate'
 
 // 방문(가봤음) — "상태 플래그가 아니라 기록 추가"(§5.3·CLAUDE.md §7). 같은 장소 재방문은 각각 행.
 // "가봤음 = visits 존재"로 도출(마커 채운 별). 키 ['visits', coupleId], realtime 전파.
@@ -66,6 +67,34 @@ export function useMarkVisited(coupleId: string | null, myId: string | null) {
         updated_by: myId,
       })
       if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['visits', coupleId] })
+      void queryClient.invalidateQueries({ queryKey: ['places', coupleId] })
+    },
+  })
+}
+
+// "가봤음 취소"(토글) — 해당 place의 활성 방문행(들)을 soft-delete(deleted_at). 낙관적 락(§4.3):
+// version 조건부 softDelete가 0행이면 충돌 → onConflict(무음 덮어쓰기 금지). 여러 행이면 모두 처리해야
+// "가봤음"(visits 존재) 도출이 해제된다. realtime visits:${coupleId}가 양측에 전파.
+export function useUnmarkVisited(
+  coupleId: string | null,
+  myId: string | null,
+  onConflict: () => void,
+) {
+  const queryClient = useQueryClient()
+  return useMutation<void, Error, { placeId: string; visits: VisitRow[] }>({
+    mutationFn: async ({ placeId, visits }) => {
+      if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
+      const active = visits.filter((v) => v.place_id === placeId)
+      if (active.length === 0) return
+      let conflicted = false
+      for (const v of active) {
+        const res = await softDelete('visits', v.id, v.version, myId)
+        if (res.status === 'conflict') conflicted = true
+      }
+      if (conflicted) onConflict()
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['visits', coupleId] })
