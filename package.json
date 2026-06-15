@@ -8,6 +8,7 @@
     "dev": "vite",
     "dev:host": "vite --host",
     "build": "tsc --noEmit && vite build",
+    "build:e2e": "VITE_SUPABASE_URL=https://e2e.supabase.co VITE_SUPABASE_ANON_KEY=e2e-anon-key VITE_NAVER_MAP_CLIENT_ID=e2e-naver-key vite build",
     "check:secrets": "node scripts/check-bundle-secrets.mjs",
     "preview": "vite preview",
     "preview:host": "vite preview --host --port 4173 --strictPort",
