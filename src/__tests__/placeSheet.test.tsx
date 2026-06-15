@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { useState } from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import type { SnapStop } from '@/lib/places/sheetSnap'
 
@@ -33,6 +33,10 @@ function renderSheet(over: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
     placesLoading: false,
     selectedId: null,
     onSelect: () => {},
+    previewHit: null,
+    reactions: {},
+    onSave: () => {},
+    onCloseDetail: () => {},
     ...over,
   }
   return render(
@@ -99,6 +103,10 @@ describe('PlaceSheet (드래그 시트)', () => {
               placesLoading={false}
               selectedId={selectedId}
               onSelect={() => {}}
+              previewHit={null}
+              reactions={{}}
+              onSave={() => {}}
+              onCloseDetail={() => {}}
               snap={snap}
               onSnapChange={setSnap}
             />
@@ -112,6 +120,15 @@ describe('PlaceSheet (드래그 시트)', () => {
     // 선택 발생(마커 클릭 등) → peek면 half로 상향(같은 인스턴스, prop만 변경).
     rerender(<SelHarness selectedId="p1" />)
     expect(sheet.style.transform).not.toBe(peekY)
+  })
+
+  it('selectedId가 있으면 시트 상단에 PlaceDetail(상세)을 표시한다', () => {
+    const place = { id: 'p1', name: '칠성조선소', address: '속초', region_label: '속초', lat: 38, lng: 128, category: '카페', kakao_place_id: 'k1', added_by: 'u1', version: 1, wish: { wishedByMe: true, wishedByPartner: false, bothWished: false, wishCount: 1, totalPriority: 0, maxPriority: 0 } }
+    renderSheet({ places: [place], selectedId: 'p1' })
+    const detail = screen.getByLabelText('장소 상세')
+    expect(detail).toBeInTheDocument()
+    // 이름은 상세(상단)와 목록 카드 양쪽에 나타나므로 상세 영역 내부로 한정해 단언한다.
+    expect(within(detail).getByText('칠성조선소')).toBeInTheDocument()
   })
 
   it('커플 미연결이면 연결 안내 빈 상태를 보여준다', () => {

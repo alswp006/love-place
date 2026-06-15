@@ -4,6 +4,10 @@ import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { Toast } from '@/components/common/Toast'
 import { useToast } from '@/hooks/useToast'
 import { PlaceList } from '@/components/places/PlaceList'
+import { PlaceDetail } from '@/components/places/PlaceDetail'
+import { PlacePreviewDetail } from '@/components/places/PlacePreviewDetail'
+import { useToggleReaction, type ReactionMap } from '@/hooks/useReactions'
+import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import { useMarkVisited, useUnmarkVisited, type VisitRow } from '@/hooks/useVisits'
 import { useSetWishPriority } from '@/hooks/useSetWishPriority'
 import { useDeletePlace } from '@/hooks/usePlaceTrash'
@@ -28,6 +32,10 @@ export function PlaceSheet({
   placesLoading,
   selectedId,
   onSelect,
+  previewHit,
+  reactions,
+  onSave,
+  onCloseDetail,
   snap,
   onSnapChange,
 }: {
@@ -41,6 +49,10 @@ export function PlaceSheet({
   placesLoading: boolean
   selectedId: string | null
   onSelect: (id: string) => void
+  previewHit: KakaoPlaceHit | null
+  reactions: ReactionMap | undefined
+  onSave: () => void
+  onCloseDetail: () => void
   snap: SnapStop
   onSnapChange: (s: SnapStop) => void
 }) {
@@ -50,6 +62,10 @@ export function PlaceSheet({
   const unmarkVisited = useUnmarkVisited(coupleId, myId, conflict.flag)
   const { setPriority, isPending: priorityPending } = useSetWishPriority(coupleId, myId, conflict.flag)
   const { deletePlace, isPending: deletePending } = useDeletePlace(coupleId, myId, conflict.flag)
+  // 시트 소유 리액션 토글(말풍선 폐지 준비). useToggleReaction은 (coupleId, myId) 2-인자 — 플랜의
+  // conflict.flag 세 번째 인자는 현 시그니처에 없어 컴파일 불가라 생략(adapt).
+  const toggleReaction = useToggleReaction(coupleId, myId)
+  const selectedPlace = selectedId ? places.find((p) => p.id === selectedId) ?? null : null
   const [placeFilter, setPlaceFilter] = useState<'all' | 'wish' | 'visited'>('all')
 
   const visible = useMemo(() => {
@@ -195,6 +211,35 @@ export function PlaceSheet({
         </div>
       ) : (
         <div className={styles.body}>
+          {previewHit ? (
+            <PlacePreviewDetail
+              hit={previewHit}
+              saving={false}
+              onSave={onSave}
+              onClose={onCloseDetail}
+            />
+          ) : selectedPlace ? (
+            <PlaceDetail
+              place={selectedPlace}
+              visited={visitedIds.has(selectedPlace.id)}
+              didIReact={reactions?.[selectedPlace.id]?.didIReact ?? false}
+              reactionCount={reactions?.[selectedPlace.id]?.count ?? 0}
+              busy={markVisited.isPending || unmarkVisited.isPending}
+              onVisit={() => {
+                if (!visitedIds.has(selectedPlace.id))
+                  markVisited.mutate({ placeId: selectedPlace.id }, { onSuccess: () => toast.show('가봤어요로 기록했어요 ✅') })
+              }}
+              onUnvisit={() =>
+                unmarkVisited.mutate(
+                  { placeId: selectedPlace.id, visits },
+                  { onSuccess: () => toast.show('가봤음 기록을 취소했어요') },
+                )
+              }
+              onReact={() => toggleReaction.mutate({ placeId: selectedPlace.id })}
+              onClose={onCloseDetail}
+            />
+          ) : null}
+
           {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
 
           <PlaceList

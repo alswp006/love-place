@@ -90,6 +90,19 @@ export default function MapPage() {
     }
   }
 
+  // 시트 프리뷰 저장(말풍선 폐지 준비). onPreviewAction의 save 분기와 동일 로직(Task 13에서 일원화).
+  const onSheetSave = () => {
+    if (!previewHit) return
+    savePlace.mutate(previewHit, {
+      onSuccess: (r) => {
+        setPreviewHit(null)
+        if (r) setSelectedId(r.placeId)
+        else toast.show('오프라인이라 큐에 담았어요 — 연결되면 저장돼요')
+      },
+      onError: (e) => toast.show(e.message, 3000),
+    })
+  }
+
   // 프리뷰 말풍선 액션(저장/길찾기/닫기). data-id = kakaoPlaceId(프리뷰는 placeId 없음).
   const onPreviewAction = (action: string) => {
     if (!previewHit) return
@@ -163,6 +176,13 @@ export default function MapPage() {
         placesLoading={placesLoading}
         selectedId={selectedId}
         onSelect={setSelectedId}
+        previewHit={previewHit}
+        reactions={reactions}
+        onSave={() => onSheetSave()}
+        onCloseDetail={() => {
+          setSelectedId(null)
+          setPreviewHit(null)
+        }}
         snap={snap}
         onSnapChange={setSnap}
       />
