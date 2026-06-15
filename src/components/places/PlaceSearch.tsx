@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { useKakaoSearch } from '@/hooks/useKakaoSearch'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import styles from './PlaceSearch.module.css'
@@ -14,12 +15,14 @@ export function PlaceSearch({
   onPick: (hit: KakaoPlaceHit) => void
 }) {
   const { query, setQuery, clear, status, hits, error } = useKakaoSearch()
+  const inputRef = useRef<HTMLInputElement>(null)
   void coupleId // coupleId는 부모 저장 흐름에서 사용(여기선 표식만 유지).
 
   return (
     <div className={styles.wrap} data-testid="place-search">
       <div className={styles.searchRow}>
         <input
+          ref={inputRef}
           type="search"
           className={styles.input}
           placeholder="가고싶은 곳 검색 (예: 속초 칠성조선소)"
@@ -57,7 +60,11 @@ export function PlaceSearch({
               <li key={hit.kakaoPlaceId}>
                 <button
                   className={styles.resultItem}
-                  onClick={() => onPick(hit)}
+                  onClick={() => {
+                    onPick(hit)
+                    clear()
+                    inputRef.current?.blur()
+                  }}
                   aria-label={saved ? `${hit.name} (이미 저장됨) 지도에서 보기` : `${hit.name} 미리보기`}
                 >
                   <span className={styles.name}>{hit.name}</span>

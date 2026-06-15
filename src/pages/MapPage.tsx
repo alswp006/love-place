@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
 import { NaverMap } from '@/components/map/NaverMap'
@@ -69,18 +69,36 @@ export default function MapPage() {
   }
 
   // 시트 프리뷰 저장(말풍선 폐지 — 저장은 시트의 onSave로 일원화, Task 12).
-  // 온라인 저장(r): 새 place 선택 → 일반 마커로 전환. 오프라인 큐(r===null): 선택 없이 큐 메시지(spec §3.6).
+  // 온라인 저장(r): 새 place/기존(jumped) 선택 → 일반 마커로 전환 + 토스트 피드백.
+  // 오프라인 큐(r===null): 선택 없이 큐 메시지(spec §3.6).
   const onSheetSave = () => {
     if (!previewHit) return
     savePlace.mutate(previewHit, {
       onSuccess: (r) => {
         setPreviewHit(null)
-        if (r) setSelectedId(r.placeId)
-        else toast.show('오프라인이라 큐에 담았어요 — 연결되면 저장돼요')
+        if (!r) {
+          toast.show('오프라인이라 큐에 담았어요 — 연결되면 저장돼요')
+          return
+        }
+        if (r.jumped) toast.show('이미 담아둔 곳이에요 — 지도에서 보여줄게요')
+        else toast.show('저장했어요')
+        setSelectedId(r.placeId)
       },
       onError: (e) => toast.show(e.message, 3000),
     })
   }
+
+  // 프리뷰 중 상대가 같은 곳을 저장하면(savedKakaoIds에 등장) 프리뷰→선택 자동 전환.
+  // 같은 핀이 프리뷰/일반 마커로 중복 노출되는 깜빡임을 방지(spec §3.6, realtime 전파).
+  useEffect(() => {
+    if (previewHit && savedKakaoIds.has(previewHit.kakaoPlaceId)) {
+      const existing = enriched.find((p) => p.kakao_place_id === previewHit.kakaoPlaceId)
+      if (existing) {
+        setPreviewHit(null)
+        setSelectedId(existing.id)
+      }
+    }
+  }, [previewHit, savedKakaoIds, enriched])
 
   return (
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId} fullBleed>

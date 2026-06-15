@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
@@ -17,11 +17,13 @@ vi.mock('@/state/auth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }))
 vi.mock('@/hooks/useCouple', () => ({
   useCouple: () => ({ data: { coupleId: 'c1', status: 'ACTIVE', userA: 'u1', userB: 'u2' } }),
 }))
+// 가변 places 데이터 — 자동 전환 테스트에서 new1을 저장됨 상태로 흘려보내기 위해 런타임에 교체.
+type PlaceRow = { id: string; name: string; kakao_place_id: string; lat: number; lng: number; added_by: string }
+let placesData: PlaceRow[] = [
+  { id: 'p1', name: '저장된 카페', kakao_place_id: 'saved1', lat: 38, lng: 128, added_by: 'u1' },
+]
 vi.mock('@/hooks/usePlaces', () => ({
-  usePlaces: () => ({
-    data: [{ id: 'p1', name: '저장된 카페', kakao_place_id: 'saved1', lat: 38, lng: 128, added_by: 'u1' }],
-    isLoading: false,
-  }),
+  usePlaces: () => ({ data: placesData, isLoading: false }),
 }))
 vi.mock('@/hooks/useProfiles', () => ({ useProfiles: () => ({ data: {} }) }))
 vi.mock('@/hooks/useWishes', () => ({ useWishes: () => ({ data: { byPlace: {}, mine: {} } }) }))
@@ -77,7 +79,10 @@ function renderMap() {
 }
 
 describe('MapPage 검색→프리뷰→저장 오케스트레이션(spec §3.6)', () => {
-  beforeEach(() => saveMutate.mockReset())
+  beforeEach(() => {
+    saveMutate.mockReset()
+    placesData = [{ id: 'p1', name: '저장된 카페', kakao_place_id: 'saved1', lat: 38, lng: 128, added_by: 'u1' }]
+  })
 
   it('이미 저장된 결과를 탭하면 기존 place를 선택(previewHit 없음, selectedId=p1)', () => {
     renderMap()
@@ -120,5 +125,45 @@ describe('MapPage 검색→프리뷰→저장 오케스트레이션(spec §3.6)'
     fireEvent.click(screen.getByText('sheet-save'))
     expect(screen.getByTestId('selected')).toHaveTextContent('none')
     expect(screen.getByText(/오프라인이라 큐에 담았어요/)).toBeInTheDocument()
+  })
+
+  it('새로 저장(jumped=false) 시 "저장했어요" 토스트', () => {
+    saveMutate.mockImplementation((_hit, opts) => opts?.onSuccess({ placeId: 'p2', jumped: false }))
+    renderMap()
+    fireEvent.click(screen.getByText('새 식당'))
+    fireEvent.click(screen.getByText('sheet-save'))
+    expect(screen.getByText('저장했어요')).toBeInTheDocument()
+  })
+
+  it('저장 성공(jumped=true) 시 "이미 담아둔 곳" 토스트', () => {
+    saveMutate.mockImplementation((_hit, opts) => opts?.onSuccess({ placeId: 'p9', jumped: true }))
+    renderMap()
+    fireEvent.click(screen.getByText('새 식당'))
+    fireEvent.click(screen.getByText('sheet-save'))
+    expect(screen.getByText('이미 담아둔 곳이에요 — 지도에서 보여줄게요')).toBeInTheDocument()
+    expect(screen.getByTestId('selected')).toHaveTextContent('p9')
+  })
+
+  it('프리뷰 중 상대가 같은 곳을 저장하면 프리뷰→선택 자동 전환', async () => {
+    // 같은 트리/클라이언트로 rerender해야 MapPage 상태(previewHit)가 보존된다.
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const tree = () => (
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <MapPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+    const { rerender } = render(tree())
+    fireEvent.click(screen.getByText('새 식당'))
+    expect(screen.getByTestId('preview')).toHaveTextContent('new1')
+    // 상대가 new1을 저장 → places에 등장(realtime/invalidate 반영을 모킹).
+    placesData = [
+      ...placesData,
+      { id: 'pX', name: '새 식당', kakao_place_id: 'new1', lat: 37.7, lng: 128.9, added_by: 'u2' },
+    ]
+    rerender(tree())
+    await waitFor(() => expect(screen.getByTestId('preview')).toHaveTextContent('none'))
+    expect(screen.getByTestId('selected')).toHaveTextContent('pX')
   })
 })

@@ -8,8 +8,10 @@ const hits: KakaoPlaceHit[] = [
 ]
 
 // useKakaoSearch를 done+hits 상태로 모킹(검색 호출 없이 결과 렌더).
+// clearSpy로 결과 탭 시 clear() 호출을 검증(목록/키보드 닫기 → 프리뷰 노출).
+const clearSpy = vi.fn()
 vi.mock('@/hooks/useKakaoSearch', () => ({
-  useKakaoSearch: () => ({ query: '카', setQuery: () => {}, clear: () => {}, status: 'done', hits, error: null }),
+  useKakaoSearch: () => ({ query: '카', setQuery: () => {}, clear: clearSpy, status: 'done', hits, error: null }),
 }))
 
 import { PlaceSearch } from '@/components/places/PlaceSearch'
@@ -27,5 +29,15 @@ describe('PlaceSearch (검색 개편 — 프리뷰/선택 위임 + 저장됨 표
     fireEvent.click(screen.getByText('새 식당'))
     expect(onPick).toHaveBeenCalledTimes(1)
     expect(onPick.mock.calls[0]![0]).toMatchObject({ kakaoPlaceId: 'new1' })
+  })
+
+  it('결과 탭 시 clear()를 호출하고 입력에서 포커스를 뗀다(목록/키보드 닫고 프리뷰 노출)', () => {
+    clearSpy.mockClear()
+    render(<PlaceSearch coupleId="c1" savedKakaoIds={new Set<string>()} onPick={() => {}} />)
+    const input = screen.getByLabelText('장소 검색')
+    input.focus()
+    fireEvent.click(screen.getByText('새 식당'))
+    expect(clearSpy).toHaveBeenCalledTimes(1)
+    expect(document.activeElement).not.toBe(input)
   })
 })
