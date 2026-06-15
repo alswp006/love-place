@@ -3,12 +3,10 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { Toast } from '@/components/common/Toast'
 import { useToast } from '@/hooks/useToast'
-import { TripsSection } from '@/components/places/TripsSection'
 import { PlaceList } from '@/components/places/PlaceList'
-import { TrashSection } from '@/components/places/TrashSection'
 import { useMarkVisited, useUnmarkVisited, type VisitRow } from '@/hooks/useVisits'
 import { useSetWishPriority } from '@/hooks/useSetWishPriority'
-import { useTrashPlaces, useDeletePlace, useRestorePlace } from '@/hooks/usePlaceTrash'
+import { useDeletePlace } from '@/hooks/usePlaceTrash'
 import { useConflict } from '@/lib/sync/useConflict'
 import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
@@ -47,9 +45,6 @@ export function PlaceSheet({
   const unmarkVisited = useUnmarkVisited(coupleId, myId, conflict.flag)
   const { setPriority, isPending: priorityPending } = useSetWishPriority(coupleId, myId, conflict.flag)
   const { deletePlace, isPending: deletePending } = useDeletePlace(coupleId, myId, conflict.flag)
-  const { restorePlace, isPending: restorePending } = useRestorePlace(coupleId, myId, conflict.flag)
-  const [trashOpen, setTrashOpen] = useState(false)
-  const { data: trash } = useTrashPlaces(coupleId, trashOpen)
   const [placeFilter, setPlaceFilter] = useState<'all' | 'wish' | 'visited'>('all')
 
   const visible = useMemo(() => {
@@ -193,15 +188,7 @@ export function PlaceSheet({
             onToast={toast.show}
           />
 
-          <TripsSection coupleId={coupleId} myId={myId} visits={visits} />
-
-          <TrashSection
-            open={trashOpen}
-            onToggle={() => setTrashOpen((v) => !v)}
-            items={trash ?? []}
-            busy={restorePending}
-            onRestore={(t) => restorePlace({ id: t.id, expectedVersion: t.version })}
-          />
+          {/* 여행 섹션은 코드 보존하되 시트에서 숨김(spec §3.4). 휴지통은 '우리' 탭으로 이동(Task 12). */}
         </div>
       )}
       <Toast msg={toast.msg} />

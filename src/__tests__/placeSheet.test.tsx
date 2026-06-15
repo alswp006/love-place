@@ -1,13 +1,9 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 
 // PlaceSheet는 데이터 훅(useWishes/useVisits 등)을 직접 호출하지 않고 props로 받는 표현형 컴포넌트.
 // 검색(PlaceSearch)은 시트가 아니라 지도 위 상단 오버레이(MapPage)로 옮겨졌으므로 여기서 mock하지 않는다.
-// TripsSection은 useTrips를 쓰므로 가벼운 QueryClient만 있으면 되지만 렌더 단순화를 위해 mock.
-vi.mock('@/components/places/TripsSection', () => ({
-  TripsSection: () => <div data-testid="trips-section" />,
-}))
 
 import { OfflineQueueProvider } from '@/state/OfflineQueueProvider'
 import { PlaceSheet } from '@/components/places/PlaceSheet'
@@ -99,10 +95,12 @@ describe('PlaceSheet (드래그 시트)', () => {
     expect(screen.getByText('먼저 상대와 연결해요')).toBeInTheDocument()
   })
 
-  it('연결 상태면 필터·여행 섹션을 호스팅한다(검색은 지도 오버레이로 분리)', () => {
+  it('연결 상태면 필터·목록을 호스팅하되 여행/휴지통 섹션은 더는 렌더하지 않는다(P4)', () => {
     renderSheet()
     expect(screen.queryByTestId('place-search')).not.toBeInTheDocument()
-    expect(screen.getByTestId('trips-section')).toBeInTheDocument()
+    expect(screen.queryByTestId('trips-section')).not.toBeInTheDocument()
+    // 휴지통 토글은 '우리' 탭으로 이동 — 시트엔 없음.
+    expect(screen.queryByRole('button', { name: /휴지통/ })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: '장소 필터' })).toBeInTheDocument()
   })
 
