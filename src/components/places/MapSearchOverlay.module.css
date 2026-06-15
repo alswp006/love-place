@@ -12,3 +12,10 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.16);
   padding: var(--sp-2);
 }
+
+/* snap>peek면 검색 오버레이를 접어 펼친 시트와 겹치지 않게 한다(spec §3.1). */
+.overlay[data-hidden='true'] {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}

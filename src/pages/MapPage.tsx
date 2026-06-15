@@ -122,7 +122,7 @@ export default function MapPage() {
           ) : null}
           {/* 검색바는 시트가 아니라 지도 위 상단 오버레이(spec §5) — peek에서도 도달, ≤3탭 보존. */}
           {coupleActive ? (
-            <MapSearchOverlay coupleId={coupleId} savedKakaoIds={savedKakaoIds} onPick={onPick} />
+            <MapSearchOverlay coupleId={coupleId} savedKakaoIds={savedKakaoIds} onPick={onPick} snap={snap} />
           ) : null}
           <NaverMap
             places={enriched}
