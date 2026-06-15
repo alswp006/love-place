@@ -10,7 +10,9 @@ import { useCouple } from '@/hooks/useCouple'
 import { usePlaces } from '@/hooks/usePlaces'
 import { useProfiles } from '@/hooks/useProfiles'
 import { useWishes } from '@/hooks/useWishes'
-import { useVisits, useMarkVisited } from '@/hooks/useVisits'
+import { useVisits, useMarkVisited, useUnmarkVisited } from '@/hooks/useVisits'
+import { useConflict } from '@/lib/sync/useConflict'
+import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { useReactions, useToggleReaction } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
 import { attachAndSortWishes } from '@/lib/places/wishStatus'
@@ -41,8 +43,10 @@ export default function MapPage() {
   const visitedIds = useMemo(() => new Set((visits ?? []).map((v) => v.place_id)), [visits])
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  const conflict = useConflict()
   const toggleReaction = useToggleReaction(coupleId, myId)
   const markVisited = useMarkVisited(coupleId, myId)
+  const unmarkVisited = useUnmarkVisited(coupleId, myId, conflict.flag)
   const onAction = (action: string, id: string) => {
     const p = enriched.find((pl) => pl.id === id)
     if (action === 'directions') {
@@ -50,8 +54,11 @@ export default function MapPage() {
         openDirections({ lat: p.lat, lng: p.lng, name: p.name })
       }
     } else if (action === 'visit') {
-      // 이미 가봤음이면 중복 방문 insert 금지(spec §3 원탭 1건). 말풍선도 비활성 상태로 렌더되지만 이중 가드.
+      // 미방문일 때만 기록 추가(원탭 1건).
       if (!visitedIds.has(id)) markVisited.mutate({ placeId: id })
+    } else if (action === 'unvisit') {
+      // 가봤음 취소(토글) — 활성 방문행 soft-delete. 충돌은 conflict.flag로 배너 표시.
+      unmarkVisited.mutate({ placeId: id, visits: visits ?? [] })
     } else if (action === 'react') {
       toggleReaction.mutate({ placeId: id })
     }
@@ -61,6 +68,11 @@ export default function MapPage() {
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId} fullBleed>
       {isNaverMapConfigured() ? (
         <div className={styles.mapWrap}>
+          {conflict.conflict ? (
+            <div className={styles.bannerOverlay}>
+              <ConflictBanner onDismiss={conflict.clear} />
+            </div>
+          ) : null}
           {/* 검색바는 시트가 아니라 지도 위 상단 오버레이(spec §5) — peek에서도 도달, ≤3탭 보존. */}
           {coupleActive ? <MapSearchOverlay coupleId={coupleId} /> : null}
           <NaverMap

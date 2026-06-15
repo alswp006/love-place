@@ -9,3 +9,14 @@
   min-height: 0;
   padding-bottom: var(--sheet-peek-h);
 }
+
+/* 지도 위 충돌 배너 — 검색 오버레이와 같은 z 레이어(시트 45 < 오버레이 50). */
+.bannerOverlay {
+  position: absolute;
+  top: calc(var(--safe-top) + var(--sp-2));
+  left: var(--sp-3);
+  right: var(--sp-3);
+  max-width: 480px;
+  margin: 0 auto;
+  z-index: 50;
+}

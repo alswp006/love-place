@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/useToast'
 import { TripsSection } from '@/components/places/TripsSection'
 import { PlaceList } from '@/components/places/PlaceList'
 import { TrashSection } from '@/components/places/TrashSection'
-import { useMarkVisited, type VisitRow } from '@/hooks/useVisits'
+import { useMarkVisited, useUnmarkVisited, type VisitRow } from '@/hooks/useVisits'
 import { useSetWishPriority } from '@/hooks/useSetWishPriority'
 import { useTrashPlaces, useDeletePlace, useRestorePlace } from '@/hooks/usePlaceTrash'
 import { useConflict } from '@/lib/sync/useConflict'
@@ -44,6 +44,7 @@ export function PlaceSheet({
   const toast = useToast()
   const conflict = useConflict()
   const markVisited = useMarkVisited(coupleId, myId)
+  const unmarkVisited = useUnmarkVisited(coupleId, myId, conflict.flag)
   const { setPriority, isPending: priorityPending } = useSetWishPriority(coupleId, myId, conflict.flag)
   const { deletePlace, isPending: deletePending } = useDeletePlace(coupleId, myId, conflict.flag)
   const { restorePlace, isPending: restorePending } = useRestorePlace(coupleId, myId, conflict.flag)
@@ -180,6 +181,13 @@ export function PlaceSheet({
             setPriority={setPriority}
             priorityPending={priorityPending}
             markVisited={markVisited}
+            onUnvisit={(placeId) =>
+              unmarkVisited.mutate(
+                { placeId, visits },
+                { onSuccess: () => toast.show('가봤음 기록을 취소했어요') },
+              )
+            }
+            unvisitPending={unmarkVisited.isPending}
             deletePlace={deletePlace}
             deletePending={deletePending}
             onToast={toast.show}
