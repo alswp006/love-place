@@ -29,3 +29,14 @@
 .body {
   flex: 1;
 }
+
+/* 풀블리드(지도) — 헤더/패딩 없이 셸 콘텐츠 영역(.content, flex column)을 flex로 가득 채운다.
+   percentage height에 의존하지 않는다(.content가 overflow-y:auto 플렉스 아이템이라 height:100%
+   해상도가 불안정 — research 01 §8). flex:1 + min-height:0으로 자식(mapWrap)이 다시 flex 가능. */
+.fullBleed {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
