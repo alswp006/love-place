@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { SNAPS, nextSnap, prevSnap, snapForOffset } from '@/lib/places/sheetSnap'
+import { SNAPS, nextSnap, prevSnap, snapForOffset, translateYFor } from '@/lib/places/sheetSnap'
 
-describe('sheetSnap (시트 스냅 전이 — 순수 로직)', () => {
+describe('sheetSnap (시트 스냅 전이 — 탭바 제외)', () => {
   it('SNAPS는 peek<half<full 순으로 비율을 정의한다', () => {
     expect(SNAPS.map((s) => s.id)).toEqual(['peek', 'half', 'full'])
     expect(SNAPS[0]!.ratio).toBeLessThan(SNAPS[1]!.ratio)
@@ -20,17 +20,27 @@ describe('sheetSnap (시트 스냅 전이 — 순수 로직)', () => {
     expect(prevSnap('peek')).toBe('peek')
   })
 
-  it('snapForOffset: 가까운 스냅으로 흡착(viewport 높이 기준)', () => {
-    const h = 800
-    // peek=0.18→translateY≈656, half=0.5→400, full=0.92→64 (translateY = h*(1-ratio))
-    expect(snapForOffset(660, h)).toBe('peek')
-    expect(snapForOffset(410, h)).toBe('half')
-    expect(snapForOffset(80, h)).toBe('full')
+  it('translateYFor: peek는 콘텐츠 px만 보이게(travel - peekPx), half/full은 travel 비율', () => {
+    // travel(탭바 제외) = 728, peekPx = 128 → peek translate = 728 - 128 = 600
+    expect(translateYFor('peek', 728, 128)).toBe(600)
+    // half ratio 0.5 → translate = 728*(1-0.5) = 364
+    expect(translateYFor('half', 728, 128)).toBe(364)
+    // full ratio 0.92 → translate = 728*(1-0.92) = 58.24
+    expect(translateYFor('full', 728, 128)).toBeCloseTo(58.24, 2)
   })
 
-  it('snapForOffset: 화면 밖(음수/초과) 입력도 클램프해 가장 가까운 스냅', () => {
-    const h = 800
-    expect(snapForOffset(-50, h)).toBe('full')
-    expect(snapForOffset(99999, h)).toBe('peek')
+  it('snapForOffset: 가까운 스냅으로 흡착(travel + peekPx 기준)', () => {
+    const travel = 728
+    const peekPx = 128
+    expect(snapForOffset(600, travel, peekPx)).toBe('peek')
+    expect(snapForOffset(360, travel, peekPx)).toBe('half')
+    expect(snapForOffset(60, travel, peekPx)).toBe('full')
+  })
+
+  it('snapForOffset: 화면 밖(음수/초과)도 클램프해 가장 가까운 스냅', () => {
+    const travel = 728
+    const peekPx = 128
+    expect(snapForOffset(-50, travel, peekPx)).toBe('full')
+    expect(snapForOffset(99999, travel, peekPx)).toBe('peek')
   })
 })

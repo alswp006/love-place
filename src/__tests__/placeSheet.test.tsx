@@ -37,6 +37,17 @@ function renderSheet(over: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
 }
 
 describe('PlaceSheet (드래그 시트)', () => {
+  it('시트는 항상 보이는 패널이므로 role=region + aria-label(modal 아님, spec §3.7)', () => {
+    renderSheet()
+    expect(screen.getByRole('region', { name: '장소 시트' })).toBeInTheDocument()
+  })
+
+  it('핸들 버튼에 aria-expanded(peek=false)가 있다', () => {
+    renderSheet()
+    const btn = screen.getByRole('button', { name: /시트/ })
+    expect(btn).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('핸들에 탭 대체 버튼(스냅 전환)을 제공한다(제스처 발견성 보완)', () => {
     renderSheet()
     expect(screen.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })).toBeInTheDocument()
@@ -47,7 +58,7 @@ describe('PlaceSheet (드래그 시트)', () => {
     const btn = screen.getByRole('button', { name: /시트/ })
     fireEvent.click(btn)
     // peek→half로 올라가면 다음 라벨은 여전히 펼치기(half→full)거나 dialog가 확장됨.
-    expect(screen.getByRole('dialog', { name: '장소 시트' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '장소 시트' })).toBeInTheDocument()
   })
 
   it('필터 칩(전체/가고싶음/가봤음)은 peek 헤더(핸들/요약 영역)에 렌더된다(§5 peek 콘텐츠)', () => {
@@ -83,7 +94,7 @@ describe('PlaceSheet (드래그 시트)', () => {
       </QueryClientProvider>
     )
     const { rerender } = render(<Harness selectedId={null} />)
-    const sheet = screen.getByRole('dialog', { name: '장소 시트' })
+    const sheet = screen.getByRole('region', { name: '장소 시트' })
     const peekY = sheet.style.transform
     // 선택 발생(마커 클릭 등) → peek면 half로 상향(같은 인스턴스, prop만 변경).
     rerender(<Harness selectedId="p1" />)
@@ -107,7 +118,7 @@ describe('PlaceSheet (드래그 시트)', () => {
   it('뷰포트 높이 변화(resize)에 시트 위치(translateY)를 갱신한다(iOS 주소창/회전 대응)', () => {
     const orig = window.innerHeight
     renderSheet()
-    const sheet = screen.getByRole('dialog', { name: '장소 시트' })
+    const sheet = screen.getByRole('region', { name: '장소 시트' })
     const before = sheet.style.transform // peek: translateY = vh*(1-0.18)
     // iOS 주소창 노출 등으로 innerHeight 축소 → resize 발화 → vh state 갱신 → translateY 재계산.
     Object.defineProperty(window, 'innerHeight', { value: orig - 300, configurable: true, writable: true })

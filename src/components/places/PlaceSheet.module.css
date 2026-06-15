@@ -4,8 +4,8 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
-  height: 100dvh;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+  height: calc(var(--app-vh) - var(--tabbar-h) - var(--safe-bottom));
   max-width: 480px;
   margin: 0 auto;
   background: var(--c-surface);
@@ -16,7 +16,6 @@
   z-index: 45;
   transition: transform var(--motion-base) var(--ease);
   will-change: transform;
-  touch-action: none;
 }
 
 /* peek-pinned 헤더 — peek 비율(0.18)에서도 항상 보이는 영역: 핸들 + 요약 + 필터 칩(§5 peek 콘텐츠). */
@@ -56,6 +55,7 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  touch-action: none; /* 핸들은 드래그 전용(스크롤 제스처 흡수 방지). body는 pan-y. */
 }
 
 .summary {
@@ -67,7 +67,8 @@
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: var(--sp-3) var(--sp-4) calc(var(--sp-6) + 72px + var(--safe-bottom));
+  touch-action: pan-y; /* 본문은 세로 스크롤만(시트 자체는 핸들로 드래그). */
+  padding: var(--sp-3) var(--sp-4) var(--sp-6); /* 탭바 위로 앵커되어 더는 탭바를 가리지 않음 → 72px 패딩 제거. */
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);

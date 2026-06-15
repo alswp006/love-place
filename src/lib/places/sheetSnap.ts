@@ -25,18 +25,19 @@ export function prevSnap(cur: SnapStop): SnapStop {
   return ORDER[Math.max(i - 1, 0)]!
 }
 
-/** ratio → 시트 상단 translateY(px). 클수록 아래로 내려감(덜 펼침). */
-export function translateYFor(stop: SnapStop, viewportHeight: number): number {
+/** ratio → 시트 상단 translateY(px). 탭바 제외 travel 높이 기준. peek는 콘텐츠 px만 노출. */
+export function translateYFor(stop: SnapStop, travelHeight: number, peekPx: number): number {
+  if (stop === 'peek') return Math.max(0, travelHeight - peekPx)
   const def = SNAPS.find((s) => s.id === stop)!
-  return viewportHeight * (1 - def.ratio)
+  return travelHeight * (1 - def.ratio)
 }
 
-/** 드래그 종료 시 현재 translateY에 가장 가까운 스냅으로 흡착. */
-export function snapForOffset(translateY: number, viewportHeight: number): SnapStop {
+/** 드래그 종료 시 현재 translateY에 가장 가까운 스냅으로 흡착(탭바 제외 travel + peekPx 기준). */
+export function snapForOffset(translateY: number, travelHeight: number, peekPx: number): SnapStop {
   let best: SnapStop = 'peek'
   let bestDist = Infinity
   for (const s of SNAPS) {
-    const y = viewportHeight * (1 - s.ratio)
+    const y = s.id === 'peek' ? Math.max(0, travelHeight - peekPx) : travelHeight * (1 - s.ratio)
     const d = Math.abs(translateY - y)
     if (d < bestDist) {
       bestDist = d

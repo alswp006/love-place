@@ -12,6 +12,7 @@ import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WithWish } from '@/lib/places/wishStatus'
 import { nextSnap, prevSnap, snapForOffset, translateYFor, type SnapStop } from '@/lib/places/sheetSnap'
+import { sheetTravelHeight, setAppVh } from '@/lib/layout/appViewport'
 import styles from './PlaceSheet.module.css'
 
 // 통합 화면 하단 드래그 시트 — 검색 + 필터 + PlaceList + Trips + 휴지통. peek/half/full 스냅.
@@ -62,17 +63,31 @@ export function PlaceSheet({
   // 뷰포트 높이는 상태로 추적 — iOS Safari 주소창 show/hide·회전 시 window.innerHeight가 바뀌므로
   // 리스너로 갱신해야 시트 위치(translateY)가 어긋나지 않는다(모바일 Safari 1차 대상).
   const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 800))
+  // 시트는 탭바 위에 앵커 — translate 계산에서 탭바·safe-area를 제외한다(탭바 가림 방지).
+  const TABBAR_H = 72 // = --tabbar-h(tokens.css). 시트는 탭바 위에 앵커.
+  const peekRef = useRef<HTMLDivElement>(null)
+  const [peekPx, setPeekPx] = useState(128)
+  const [safeBottom, setSafeBottom] = useState(0)
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const update = () => setVh(window.innerHeight)
-    window.addEventListener('resize', update)
-    window.visualViewport?.addEventListener('resize', update) // iOS 주소창 변화
+    const measure = () => {
+      setVh(window.innerHeight)
+      setAppVh(window.innerHeight) // CSS(.sheet height/bottom)와 JS(translate)가 같은 vh를 읽게.
+      if (peekRef.current) setPeekPx(peekRef.current.getBoundingClientRect().height)
+      const sb = getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')
+      const px = parseFloat(sb) || 0
+      setSafeBottom(px)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('resize', measure) // iOS 주소창 변화
     return () => {
-      window.removeEventListener('resize', update)
-      window.visualViewport?.removeEventListener('resize', update)
+      window.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('resize', measure)
     }
   }, [])
-  const restY = translateYFor(snap, vh)
+  const travel = sheetTravelHeight(vh, TABBAR_H, safeBottom)
+  const restY = translateYFor(snap, travel, peekPx)
   const translateY = dragY ?? restY
 
   // 마커 클릭/리스트 탭으로 selectedId가 생기고 시트가 peek면 half로 살짝 올린다(§6 (c)).
@@ -89,12 +104,13 @@ export function PlaceSheet({
   const onPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
     if (!dragStart.current) return
     const dy = e.clientY - dragStart.current.pointerY
-    const next = Math.max(0, Math.min(vh, dragStart.current.baseY + dy))
+    // travel(탭바 제외)로 클램프 — 시트가 탭바 뒤로 내려가지 못하게.
+    const next = Math.max(0, Math.min(travel, dragStart.current.baseY + dy))
     setDragY(next)
   }
   const endDrag = () => {
     sheetRef.current?.style.removeProperty('transition')
-    if (dragY != null) setSnap(snapForOffset(dragY, vh))
+    if (dragY != null) setSnap(snapForOffset(dragY, travel, peekPx))
     setDragY(null)
     dragStart.current = null
   }
@@ -107,13 +123,12 @@ export function PlaceSheet({
     <div
       ref={sheetRef}
       className={styles.sheet}
-      role="dialog"
-      aria-modal="false"
+      role="region"
       aria-label="장소 시트"
       style={{ transform: `translateY(${translateY}px)` }}
     >
       {/* peek-pinned 헤더 — peek 비율에서도 항상 보임: 핸들 + 요약 + 필터 칩(§5 peek 콘텐츠). */}
-      <div className={styles.peekHeader} data-peek-pinned="true">
+      <div ref={peekRef} className={styles.peekHeader} data-peek-pinned="true">
         <div className={styles.handleRow}>
           <span className={styles.handle} aria-hidden />
           <button
@@ -124,6 +139,7 @@ export function PlaceSheet({
             onPointerMove={onPointerMove}
             onPointerUp={endDrag}
             onPointerCancel={endDrag}
+            aria-expanded={snap !== 'peek'}
             aria-label={handleLabel}
           >
             <span className={styles.summary}>우리 장소 {places.length}곳</span>
