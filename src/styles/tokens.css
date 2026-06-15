@@ -50,6 +50,16 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
+  /* 레이아웃 상수 — 중복 매직넘버 단일화(research 01 §9·§10).
+     --tabbar-h: 하단 탭바 실효 높이(앱 전역에서 72px로 박혀 있던 값).
+     --sheet-peek-h: 드래그 시트 peek 밴드 높이 = sheetSnap의 peek ratio 0.18을 CSS로 미러링한
+       단일 소스(18dvh ≈ 0.18*viewportHeight). 지도 하단 인셋과 시트 peek 밴드가 이 한 값을 공유해
+       JS(translateYFor: innerHeight*0.18)와 CSS가 같은 높이를 가리키게 한다(research 01 §10).
+       peek 밴드는 viewport 진짜 하단(bottom:0)에서 측정되며 시트가 하단 safe-area를 자체 흡수하므로,
+       지도 인셋에 --safe-bottom을 추가로 더하지 않는다(이중 가산 금지). */
+  --tabbar-h: 72px;
+  --sheet-peek-h: 18dvh;
+
   /* 모션 토큰(§5 Reduce Motion에서 0으로 덮어씀) */
   --motion-fast: 140ms;
   --motion-base: 240ms;
