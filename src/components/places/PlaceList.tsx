@@ -22,6 +22,8 @@ export function PlaceList({
   setPriority,
   priorityPending,
   markVisited,
+  onUnvisit,
+  unvisitPending,
   deletePlace,
   deletePending,
   onToast,
@@ -36,6 +38,8 @@ export function PlaceList({
   setPriority: (v: { wishId: string; expectedVersion: number; priority: number }) => void
   priorityPending: boolean
   markVisited: MarkVisited
+  onUnvisit: (placeId: string) => void
+  unvisitPending: boolean
   deletePlace: (
     v: { id: string; expectedVersion: number },
     opts?: { onSuccess?: () => void },
@@ -103,7 +107,16 @@ export function PlaceList({
                     />
                   ) : null}
                   {visited ? (
-                    <span className={styles.visitedBadge}>✅ 가봤어요</span>
+                    // 방문 토글(spec §3.3): 다시 누르면 가봤음 취소(soft-delete). 색+텍스트 이중화(§8).
+                    <button
+                      type="button"
+                      className={styles.visitedBadge}
+                      onClick={() => onUnvisit(p.id)}
+                      disabled={unvisitPending}
+                      aria-label={`${p.name} 가봤음 기록 취소`}
+                    >
+                      ✅ 가봤음 (취소)
+                    </button>
                   ) : (
                     <button
                       type="button"
@@ -115,6 +128,7 @@ export function PlaceList({
                         )
                       }
                       disabled={markVisited.isPending}
+                      aria-label={`${p.name} 다녀왔어요`}
                     >
                       다녀왔어요
                     </button>

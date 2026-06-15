@@ -22,6 +22,8 @@ const baseProps = {
   setPriority: noop,
   priorityPending: false,
   markVisited: { mutate: noop, isPending: false } as never,
+  onUnvisit: noop,
+  unvisitPending: false,
   deletePlace: noop,
   deletePending: false,
   onToast: noop,
@@ -51,5 +53,19 @@ describe('PlaceList (카드 리스트 추출)', () => {
   it('빈 목록이면 빈 상태 카피를 보여준다', () => {
     render(<PlaceList {...baseProps} visible={[]} />)
     expect(screen.getByText('첫 가고싶은 장소를 추가해보세요')).toBeInTheDocument()
+  })
+
+  it('가봤음이면 "가봤음 (취소)" 토글 버튼을 렌더하고 클릭 시 onUnvisit(placeId)', () => {
+    const onUnvisit = vi.fn()
+    render(<PlaceList {...baseProps} visitedIds={new Set(['p1'])} onUnvisit={onUnvisit} />)
+    const btn = screen.getByRole('button', { name: /가봤음 기록 취소/ })
+    fireEvent.click(btn)
+    expect(onUnvisit).toHaveBeenCalledWith('p1')
+  })
+
+  it('미방문이면 "다녀왔어요" 버튼(가봤음 취소 버튼 없음)', () => {
+    render(<PlaceList {...baseProps} visitedIds={new Set<string>()} />)
+    expect(screen.getByRole('button', { name: /다녀왔어요/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /가봤음 기록 취소/ })).not.toBeInTheDocument()
   })
 })
