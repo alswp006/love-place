@@ -116,3 +116,21 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   z-index: 41;
 }
+
+/* 클러스터 마커 — 색(브랜드)+개수 텍스트 이중화(§8). 원형 배지. */
+.cluster {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--c-brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+}

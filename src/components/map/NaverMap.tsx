@@ -6,6 +6,7 @@ import { deriveWishStatus } from '@/lib/places/wishStatus'
 import type { ProfileMap } from '@/hooks/useProfiles'
 import type { ReactionMap } from '@/hooks/useReactions'
 import { markerVisual } from '@/lib/places/markerVisual'
+import { clusterPlaces, type ClusterPoint } from '@/lib/places/clusterPlaces'
 import { markerIconHtml, BASE_ZINDEX, SELECTED_ZINDEX } from '@/lib/places/selectedMarker'
 import { infoWindowHtml, previewWindowHtml, escapeHtml } from '@/lib/places/infoWindowHtml'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
@@ -48,7 +49,9 @@ export function NaverMap({
   const mapRef = useRef<naver.maps.Map | null>(null)
   const markersRef = useRef<naver.maps.Marker[]>([])
   const markerMapRef = useRef<Map<string, naver.maps.Marker>>(new Map())
+  const clusterMarkersRef = useRef<naver.maps.Marker[]>([])
   const listenersRef = useRef<naver.maps.MapEventListener[]>([])
+  const mapMoveRef = useRef<naver.maps.MapEventListener[]>([])
   const infoRef = useRef<naver.maps.InfoWindow | null>(null)
   const infoHandlerRef = useRef<((e: MouseEvent) => void) | null>(null)
   const mapClickRef = useRef<naver.maps.MapEventListener | null>(null)
@@ -128,6 +131,10 @@ export function NaverMap({
       markersRef.current.forEach((m) => m.setMap(null))
       markersRef.current = []
       markerMapRef.current.clear()
+      clusterMarkersRef.current.forEach((m) => m.setMap(null))
+      clusterMarkersRef.current = []
+      window.naver?.maps.Event.removeListener(mapMoveRef.current)
+      mapMoveRef.current = []
       previewMarkerRef.current?.setMap(null)
       previewMarkerRef.current = null
       if (previewHandlerRef.current && previewInfoRef.current) {
@@ -140,59 +147,102 @@ export function NaverMap({
     }
   }, [])
 
-  // 장소 변경 시 마커 다시 그림
+  // 장소/줌 변경 시 마커를 클러스터 인지 방식으로 다시 그림(spec §3.7).
+  // 단일(single)은 기존처럼 markerMapRef에 등록(highlight/InfoWindow 효과가 이를 사용).
+  // 클러스터는 별도 clusterMarkersRef에 — 클릭 시 줌인(개별 강조/onSelect는 단일 마커에서만).
   useEffect(() => {
     const nv = window.naver
     const map = mapRef.current
     if (!ready || !nv || !map) return
 
-    // 이전 마커/리스너 정리(리스너 누락 금지).
-    nv.maps.Event.removeListener(listenersRef.current)
-    listenersRef.current = []
-    markersRef.current.forEach((m) => m.setMap(null))
-    markersRef.current = []
-    markerMapRef.current.clear()
+    const render = () => {
+      const m = mapRef.current
+      if (!nv || !m) return
+      // 이전 마커/리스너 정리(리스너 누락 금지).
+      nv.maps.Event.removeListener(listenersRef.current)
+      listenersRef.current = []
+      markersRef.current.forEach((mk) => mk.setMap(null))
+      markersRef.current = []
+      markerMapRef.current.clear()
+      clusterMarkersRef.current.forEach((mk) => mk.setMap(null))
+      clusterMarkersRef.current = []
 
-    const pts = places.filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number')
-    if (pts.length === 0) return
+      const pts: ClusterPoint[] = places
+        .filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number')
+        .map((p) => ({ id: p.id, lat: p.lat!, lng: p.lng! }))
+      if (pts.length === 0) return
 
-    const bounds = new nv.maps.LatLngBounds(
-      new nv.maps.LatLng(pts[0]!.lat!, pts[0]!.lng!),
-      new nv.maps.LatLng(pts[0]!.lat!, pts[0]!.lng!),
-    )
-
-    for (const p of pts) {
-      const pos = new nv.maps.LatLng(p.lat!, p.lng!)
-      const visual = markerVisual({
-        visited: visitedIds?.has(p.id) ?? false,
-        bothWished: p.wish?.bothWished ?? false,
-        name: p.name,
-      })
-      const modifier =
-        visual.kind === 'visited' ? styles.pinVisited : visual.kind === 'both' ? styles.pinBoth : ''
-      const pinClass = `${styles.pin} ${modifier}`.trim()
-      const marker = new nv.maps.Marker({
-        position: pos,
-        map,
-        title: visual.label,
-        zIndex: BASE_ZINDEX,
-        icon: {
-          content: markerIconHtml({ glyph: visual.glyph, pinClass, label: visual.label, selected: false }),
-          anchor: new nv.maps.Point(12, 24),
-        },
-      })
-      const handle = nv.maps.Event.addListener(marker, 'click', () => onSelect?.(p.id))
-      listenersRef.current.push(handle)
-      markersRef.current.push(marker)
-      markerMapRef.current.set(p.id, marker)
-      bounds.extend(pos)
+      const groups = clusterPlaces(pts, m.getZoom())
+      for (const g of groups) {
+        if (g.kind === 'single') {
+          const p = places.find((pl) => pl.id === g.id)
+          if (!p) continue
+          const visual = markerVisual({
+            visited: visitedIds?.has(p.id) ?? false,
+            bothWished: p.wish?.bothWished ?? false,
+            name: p.name,
+          })
+          const modifier =
+            visual.kind === 'visited'
+              ? styles.pinVisited
+              : visual.kind === 'both'
+                ? styles.pinBoth
+                : ''
+          const pinClass = `${styles.pin} ${modifier}`.trim()
+          const marker = new nv.maps.Marker({
+            position: new nv.maps.LatLng(g.lat, g.lng),
+            map: m,
+            title: visual.label,
+            zIndex: BASE_ZINDEX,
+            icon: {
+              content: markerIconHtml({
+                glyph: visual.glyph,
+                pinClass,
+                label: visual.label,
+                selected: p.id === selectedId,
+              }),
+              anchor: new nv.maps.Point(12, 24),
+            },
+          })
+          const handle = nv.maps.Event.addListener(marker, 'click', () => onSelect?.(p.id))
+          listenersRef.current.push(handle)
+          markersRef.current.push(marker)
+          markerMapRef.current.set(p.id, marker)
+        } else {
+          // 클러스터 마커 — 색+개수 텍스트 이중화(§8). 클릭 시 그 위치로 줌인.
+          const label = `장소 ${g.count}곳 묶음`
+          const cluster = new nv.maps.Marker({
+            position: new nv.maps.LatLng(g.lat, g.lng),
+            map: m,
+            title: label,
+            zIndex: BASE_ZINDEX,
+            icon: {
+              content: `<div class="${styles.cluster}" aria-label="${escapeHtml(label)}">${g.count}</div>`,
+              anchor: new nv.maps.Point(18, 18),
+            },
+          })
+          const pos = new nv.maps.LatLng(g.lat, g.lng)
+          const handle = nv.maps.Event.addListener(cluster, 'click', () => {
+            m.setCenter(pos)
+            m.setZoom(Math.min(m.getZoom() + 3, 19))
+          })
+          listenersRef.current.push(handle)
+          clusterMarkersRef.current.push(cluster)
+        }
+      }
     }
-    // 자동 센터링은 마커 변경마다 하지 않는다(지도 튐 방지, spec §3.5). 초기 센터링은 별도 1회 효과가 담당.
-    // bounds는 geolocation 실패 시 폴백 fitBounds에서만 쓰이므로 여기선 계산만 하고 적용하지 않는다.
-    void bounds
-    // visitedIds는 deps에서 제외: 방문 토글로 마커를 통째로 재생성하면 fitBounds가 재실행돼
-    // 지도가 튄다. 방문 상태에 따른 아이콘 갱신은 아래 "선택 강조" 효과(setIcon)가 담당한다.
-    // 초기 아이콘은 이 효과 실행 시점의 visitedIds(클로저)로 정확히 그려진다.
+
+    render()
+    // 줌/이동 정착 시 재계산(과도한 fitBounds 금지 — 센터/줌만 사용자가 바꿈, research 02 §4).
+    mapMoveRef.current = [
+      nv.maps.Event.addListener(map, 'idle', render),
+      nv.maps.Event.addListener(map, 'zoom_changed', render),
+    ]
+    return () => {
+      nv.maps.Event.removeListener(mapMoveRef.current)
+      mapMoveRef.current = []
+    }
+    // selectedId/visitedIds는 강조 효과가 setIcon으로 갱신하므로 deps 제외(지도 튐/재구독 방지).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, ready, onSelect])
 
