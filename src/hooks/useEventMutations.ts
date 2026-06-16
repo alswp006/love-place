@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 import { versionedUpdate, softDelete, ConflictError } from '@/lib/sync/versionedUpdate'
 import { DISPLAY_TZ } from '@/lib/calendar/eventDays'
+import { courseKey } from '@/lib/route/courseKey'
 import type { CourseStop } from '@/lib/route/coursePlan'
 
 // 이벤트 생성/수정/삭제. 수정·삭제는 낙관적 락(version 조건부, §4.3) — 충돌이면 onConflict.
@@ -90,21 +91,42 @@ export function useEventMutations(coupleId: string | null, myId: string | null, 
 
   // 추천 코스 → 일정 일괄 추가(§5.6 루프 닫기). itinerary(출처) 1건 생성 후 events를 단일 INSERT로
   // 한꺼번에(=원자적, 부분 생성 방지). 각 event에 itinerary_id(출처)·place_id(장소 연결) 보존.
-  const addCourse = useMutation<void, Error, { stops: CourseStop[] }>({
-    mutationFn: async ({ stops }) => {
+  // 멱등(R1.1): 결정론 course_key로 upsert(중복 itinerary 안 만듦) + 이미 이벤트 있으면 재삽입 안 함.
+  const addCourse = useMutation<
+    { status: 'created' | 'exists'; itineraryId: string },
+    Error,
+    { stops: CourseStop[]; dayKeyStr: string; startMin: number }
+  >({
+    mutationFn: async ({ stops, dayKeyStr, startMin }) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
       if (stops.length === 0) throw new Error('코스가 비어 있어요.')
+      const key = courseKey(coupleId, dayKeyStr, stops.map((s) => s.placeId), startMin)
+      // 멱등: 같은 course_key면 기존 itinerary 재사용(중복 생성 안 함).
       const { data: itin, error: itErr } = await supabase
         .from('itineraries')
-        .insert({
-          couple_id: coupleId,
-          days: stops.map((s) => ({ placeId: s.placeId, start: s.start, end: s.end })),
-          created_by: myId,
-          updated_by: myId,
-        })
+        .upsert(
+          {
+            couple_id: coupleId,
+            course_key: key,
+            days: stops.map((s) => ({ placeId: s.placeId, start: s.start, end: s.end })),
+            created_by: myId,
+            updated_by: myId,
+          },
+          { onConflict: 'couple_id,course_key', ignoreDuplicates: false },
+        )
         .select('id')
         .single()
       if (itErr || !itin) throw new Error(itErr?.message ?? '코스 저장에 실패했어요.')
+
+      // 이 itinerary에 이미 이벤트가 있으면(동시/재시도) 재삽입하지 않는다.
+      const { data: existing, error: exErr } = await supabase
+        .from('events')
+        .select('id')
+        .eq('itinerary_id', itin.id)
+        .is('deleted_at', null)
+        .limit(1)
+      if (exErr) throw new Error(exErr.message)
+      if (existing && existing.length > 0) return { status: 'exists', itineraryId: itin.id }
 
       const rows = stops.map((s) => ({
         couple_id: coupleId,
@@ -123,6 +145,7 @@ export function useEventMutations(coupleId: string | null, myId: string | null, 
       }))
       const { error: evErr } = await supabase.from('events').insert(rows)
       if (evErr) throw new Error(evErr.message)
+      return { status: 'created', itineraryId: itin.id }
     },
     onSuccess: invalidate,
   })

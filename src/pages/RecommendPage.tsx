@@ -1,8 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
 import { CtaLink } from '@/components/common/CtaLink'
 import { Toast } from '@/components/common/Toast'
+import { CourseSheet } from '@/components/discover/CourseSheet'
 import { useToast } from '@/hooks/useToast'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
@@ -10,7 +12,7 @@ import { usePlaces } from '@/hooks/usePlaces'
 import { useVisits } from '@/hooks/useVisits'
 import { useEventMutations } from '@/hooks/useEventMutations'
 import { regionClusters, RECO_THRESHOLD, type RegionCluster } from '@/lib/recommend/regionClusters'
-import { buildCoursePlan } from '@/lib/route/coursePlan'
+import type { CoursePlace, CourseStop } from '@/lib/route/coursePlan'
 import { dayKey } from '@/lib/calendar/eventDays'
 import { tabByPath } from '@/app/tabs'
 import styles from './RecommendPage.module.css'
@@ -32,7 +34,11 @@ export default function RecommendPage() {
   const { data: places } = usePlaces(coupleId)
   const { data: visits } = useVisits(coupleId)
   const toast = useToast()
-  const { addCourse } = useEventMutations(coupleId, myId, () => {}) // 코스 일괄 추가(생성은 충돌 없음)
+  const navigate = useNavigate()
+  const { addCourse } = useEventMutations(coupleId, myId, () => {}) // 코스 일괄 추가(멱등)
+  const [sheet, setSheet] = useState<{ regionLabel: string; places: CoursePlace[] } | null>(null)
+  // 다음날 기본(코스 미리보기 기본 날짜). 확인 시에만 캘린더에 쓴다.
+  const defaultDate = dayKey(new Date(Date.now() + 86_400_000).toISOString())
 
   const visitedIds = useMemo(() => new Set((visits ?? []).map((v) => v.place_id)), [visits])
   const wantClusters = useMemo(
@@ -53,8 +59,8 @@ export default function RecommendPage() {
   const building = wantClusters.filter((c) => !c.ready)
   const hasAnyPlace = (places ?? []).length > 0
 
-  // 클러스터 → 내일 SHARED 일정으로(거리순 동선 + 도착시각 재계산). 좌표 있는 곳 ≤6.
-  const onAddCourse = async (cluster: RegionCluster) => {
+  // 클러스터 → 코스 미리보기 시트 열기(즉시 쓰기 안 함). 좌표 있는 곳 ≤6.
+  const openCourse = (cluster: RegionCluster) => {
     if (!coupleId || !myId) return
     const coursePlaces = cluster.placeIds
       .map((id) => placeById.get(id))
@@ -65,11 +71,17 @@ export default function RecommendPage() {
       toast.show('좌표가 있는 장소가 2곳 이상 필요해요')
       return
     }
-    const tomorrowKey = dayKey(new Date(Date.now() + 86_400_000).toISOString())
-    const plan = buildCoursePlan(coursePlaces, tomorrowKey)
+    setSheet({ regionLabel: cluster.regionLabel, places: coursePlaces })
+  }
+
+  // 확인 시에만 캘린더에 추가(멱등) → 그 날짜로 점프. exists면 안내만.
+  const onConfirmCourse = async (v: { stops: CourseStop[]; dayKeyStr: string; startMin: number }) => {
     try {
-      await addCourse.mutateAsync({ stops: plan }) // 원자적 일괄 추가(부분 생성 방지) + 출처/장소 연결
-      toast.show(`내일 '${cluster.regionLabel}' 코스를 함께 캘린더에 추가했어요! 일정 탭에서 시간을 조정하세요`)
+      const r = await addCourse.mutateAsync(v)
+      setSheet(null)
+      if (r.status === 'exists') toast.show('이미 추가된 코스예요 · 캘린더에서 볼게요')
+      else toast.show('함께 캘린더에 추가했어요!')
+      navigate(`/calendar?date=${v.dayKeyStr}`)
     } catch (e) {
       toast.show(e instanceof Error ? e.message : '추가에 실패했어요')
     }
@@ -100,7 +112,7 @@ export default function RecommendPage() {
                 cluster={c}
                 nameById={nameById}
                 busy={addCourse.isPending}
-                onAddCourse={onAddCourse}
+                onAddCourse={openCourse}
               />
             ))}
           </section>
@@ -143,6 +155,17 @@ export default function RecommendPage() {
               </p>
             ))}
           </section>
+        ) : null}
+
+        {sheet ? (
+          <CourseSheet
+            regionLabel={sheet.regionLabel}
+            places={sheet.places}
+            defaultDate={defaultDate}
+            busy={addCourse.isPending}
+            onCancel={() => setSheet(null)}
+            onConfirm={onConfirmCourse}
+          />
         ) : null}
       </div>
     </ScreenScaffold>

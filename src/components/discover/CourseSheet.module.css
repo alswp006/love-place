@@ -1,0 +1,144 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+  padding-bottom: var(--safe-bottom);
+}
+
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--c-surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: var(--sp-4);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
+  animation: rise var(--motion-base) var(--ease);
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--c-text);
+  margin: 0 0 var(--sp-3);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.field input {
+  font-size: var(--fs-body);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2);
+  background: var(--c-surface);
+}
+
+.timeRow {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.timeRow .field {
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.stop {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+  min-height: 44px;
+}
+
+.order {
+  flex: 0 0 auto;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--c-brand);
+  color: #fff;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stopTime {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.stopTitle {
+  flex: 1;
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.cancel {
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+}
+
+.save {
+  border: none;
+  background: var(--c-brand);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
