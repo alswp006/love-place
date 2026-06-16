@@ -90,7 +90,8 @@ export function useMarkVisited(coupleId: string | null, myId: string | null) {
 // "가봤음 취소"(토글) — 해당 place의 활성 방문행(들)을 soft-delete(deleted_at). 낙관적 락(§4.3):
 // version 조건부 softDelete가 0행이면 충돌 → onConflict(무음 덮어쓰기 금지). 여러 행이면 모두 처리해야
 // "가봤음"(visits 존재) 도출이 해제된다. realtime visits:${coupleId}가 양측에 전파.
-// 결과로 { conflicted }를 돌려줘 호출 측이 !conflicted일 때만 성공 토스트를 띄우게 한다.
+// stale-cache race 회피로 mutationFn에서 살아있는 행을 직접 재조회(useReactions 패턴) → {status}를 돌려줘
+// 호출 측이 removed/noop/conflict별로 다른 토스트를 띄우게 한다(무동작 성공 제거, R1.2). 방문은 공유라 user_id 필터 없음.
 export function useUnmarkVisited(
   coupleId: string | null,
   myId: string | null,
@@ -98,29 +99,55 @@ export function useUnmarkVisited(
 ) {
   const queryClient = useQueryClient()
   const { enqueue } = useOfflineQueue()
-  return useMutation<{ conflicted: boolean }, Error, { placeId: string; visits: VisitRow[] }>({
-    mutationFn: async ({ placeId, visits }) => {
+  return useMutation<
+    { status: 'removed' | 'noop' | 'conflict' },
+    Error,
+    { placeId: string },
+    { prev: VisitRow[] | undefined }
+  >({
+    mutationFn: async ({ placeId }) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
-      const active = visits.filter((v) => v.place_id === placeId)
-      if (active.length === 0) return { conflicted: false }
-      // 오프라인: 활성 행 스냅샷을 큐에 적재(version 보존) → 재연결 시 version 조건부 softDelete로 충돌 감지.
+      // 오프라인: 살아있는 행을 재조회할 수 없으므로 placeId+coupleId만 큐잉(재연결 시 flush가 재조회).
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        await enqueue(
-          'visit.remove',
-          { visits: active.map((v) => ({ id: v.id, version: v.version })), myId },
-          `visit.remove:${placeId}`,
-        )
-        return { conflicted: false }
+        await enqueue('visit.remove', { placeId, myId, coupleId }, `visit.remove:${placeId}`)
+        return { status: 'removed' }
       }
+      // stale-cache race 회피 — mutationFn에서 살아있는 방문행을 직접 조회(id+version).
+      const { data: live, error: selErr } = await supabase
+        .from('visits')
+        .select('id, version')
+        .eq('couple_id', coupleId)
+        .eq('place_id', placeId)
+        .is('deleted_at', null)
+      if (selErr) throw new Error(selErr.message)
+      const rows = (live ?? []) as { id: string; version: number }[]
+      if (rows.length === 0) return { status: 'noop' }
       let conflicted = false
-      for (const v of active) {
-        const res = await softDelete('visits', v.id, v.version, myId)
+      for (const r of rows) {
+        const res = await softDelete('visits', r.id, r.version, myId)
         if (res.status === 'conflict') conflicted = true
       }
-      if (conflicted) onConflict()
-      return { conflicted }
+      if (conflicted) {
+        onConflict()
+        return { status: 'conflict' }
+      }
+      return { status: 'removed' }
     },
-    onSuccess: () => {
+    // 낙관적 마커 토글(spec R1.2): 캐시에서 해당 place의 활성 방문행을 즉시 제거 → 마커가 '가고싶음'으로.
+    onMutate: async ({ placeId }) => {
+      await queryClient.cancelQueries({ queryKey: ['visits', coupleId] })
+      const prev = queryClient.getQueryData<VisitRow[]>(['visits', coupleId])
+      queryClient.setQueryData<VisitRow[]>(
+        ['visits', coupleId],
+        (old) => (old ?? []).filter((v) => v.place_id !== placeId),
+      )
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      // 롤백: 스냅샷 복원(무음 덮어쓰기 금지).
+      if (ctx?.prev !== undefined) queryClient.setQueryData(['visits', coupleId], ctx.prev)
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['visits', coupleId] })
     },
   })

@@ -1,12 +1,35 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { SnapStop } from '@/lib/places/sheetSnap'
 
 // PlaceSheet는 데이터 훅(useWishes/useVisits 등)을 직접 호출하지 않고 props로 받는 표현형 컴포넌트.
 // 검색(PlaceSearch)은 시트가 아니라 지도 위 상단 오버레이(MapPage)로 옮겨졌으므로 여기서 mock하지 않는다.
+
+// 가봤음 취소(useUnmarkVisited)는 mutationFn에서 살아있는 방문행을 supabase로 재조회한 뒤 softDelete한다.
+// 상태별 토스트(removed/noop/conflict)를 검증하려고 그 두 의존만 모킹해 status를 제어한다.
+// (PlaceSheet는 props로 데이터를 받으므로 다른 테스트의 렌더에는 영향이 없다 — 마운트 시 supabase 쿼리 없음.)
+const h = vi.hoisted(() => {
+  const state: { selectResult: { data: unknown[] | null; error: { message: string } | null } } = {
+    selectResult: { data: [], error: null },
+  }
+  const softDelete = vi.fn(async () => ({ status: 'ok' }) as { status: 'ok' | 'conflict' })
+  const q: Record<string, unknown> = {}
+  q.select = vi.fn(() => q)
+  q.eq = vi.fn(() => q)
+  q.is = vi.fn(() => Promise.resolve(state.selectResult))
+  return { state, softDelete, q }
+})
+vi.mock('@/lib/supabase/client', () => ({
+  supabase: { from: vi.fn(() => h.q), channel: vi.fn(() => ({ on: () => ({ subscribe: () => ({}) }) })), removeChannel: vi.fn() },
+  isSupabaseConfigured: true,
+}))
+vi.mock('@/lib/sync/versionedUpdate', async (orig) => {
+  const real = await orig<typeof import('@/lib/sync/versionedUpdate')>()
+  return { ...real, softDelete: h.softDelete }
+})
 
 import { OfflineQueueProvider } from '@/state/OfflineQueueProvider'
 import { PlaceSheet } from '@/components/places/PlaceSheet'
@@ -45,7 +68,6 @@ function renderSheet(over: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
     coupleActive: true,
     places: [],
     wishes: { byPlace: {}, mine: {} },
-    visits: [],
     visitedIds: new Set<string>(),
     placesLoading: false,
     selectedId: null,
@@ -120,7 +142,6 @@ describe('PlaceSheet (드래그 시트)', () => {
               // 장소가 있어야 auto-half(T14)가 발화하지 않아 selectedId→half 효과를 단독 검증할 수 있다.
               places={[aPlace]}
               wishes={{ byPlace: {}, mine: {} }}
-              visits={[]}
               visitedIds={new Set<string>()}
               placesLoading={false}
               selectedId={selectedId}
@@ -210,5 +231,56 @@ describe('PlaceSheet (드래그 시트)', () => {
     renderSheet({ places: [], placesLoading: true })
     expect(screen.getByText(/불러오는 중…/)).toBeInTheDocument()
     expect(screen.queryByText('우리 장소 0곳')).toBeNull()
+  })
+})
+
+describe('PlaceSheet — 가봤음 취소 상태별 토스트(R1.2: 무동작 성공 제거)', () => {
+  beforeEach(() => {
+    h.state.selectResult = { data: [], error: null }
+    h.softDelete.mockClear()
+    h.softDelete.mockResolvedValue({ status: 'ok' })
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true, writable: true })
+  })
+
+  // 상세에서 가봤음 취소 버튼을 눌렀을 때(visited=true) status에 따른 토스트를 검증.
+  function renderVisited() {
+    return renderSheet({
+      places: [aPlace],
+      selectedId: 'p1',
+      visitedIds: new Set(['p1']),
+    })
+  }
+
+  // 상세(상단)와 목록 카드 양쪽에 같은 라벨의 취소 버튼이 있으므로 상세 영역으로 한정해 클릭.
+  function clickDetailUnvisit() {
+    const detail = screen.getByLabelText('장소 상세')
+    fireEvent.click(within(detail).getByRole('button', { name: '칠성조선소 가봤음 기록 취소' }))
+  }
+
+  it('removed → "가봤음 기록을 취소했어요" 토스트', async () => {
+    h.state.selectResult = { data: [{ id: 'v1', version: 1 }], error: null }
+    h.softDelete.mockResolvedValue({ status: 'ok' })
+    renderVisited()
+    clickDetailUnvisit()
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('가봤음 기록을 취소했어요'))
+  })
+
+  it('noop → "이미 취소된 기록이에요" 토스트(가짜 성공 메시지 금지)', async () => {
+    h.state.selectResult = { data: [], error: null } // 살아있는 행 없음 → noop
+    renderVisited()
+    clickDetailUnvisit()
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('이미 취소된 기록이에요'))
+    expect(screen.queryByText('가봤음 기록을 취소했어요')).toBeNull()
+  })
+
+  it('conflict → 성공 토스트를 띄우지 않는다(ConflictBanner 경로)', async () => {
+    h.state.selectResult = { data: [{ id: 'v1', version: 1 }], error: null }
+    h.softDelete.mockResolvedValue({ status: 'conflict' })
+    renderVisited()
+    clickDetailUnvisit()
+    // onConflict → ConflictBanner. 성공/무동작 토스트는 뜨면 안 된다.
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
+    expect(screen.queryByText('가봤음 기록을 취소했어요')).toBeNull()
+    expect(screen.queryByText('이미 취소된 기록이에요')).toBeNull()
   })
 })

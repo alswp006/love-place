@@ -16,7 +16,7 @@ type SetPriorityPayload = { wishId: string; expectedVersion: number; priority: n
 type VersionedTargetPayload = { id: string; expectedVersion: number; myId: string }
 type SavePayload = { coupleId: string; hit: KakaoPlaceHit; uid: string }
 type VisitAddPayload = { coupleId: string; placeId: string; visitDate: string; myId: string }
-type VisitRemovePayload = { visits: { id: string; version: number }[]; myId: string }
+type VisitRemovePayload = { placeId: string; myId: string; coupleId: string }
 type ReactionTogglePayload = { coupleId: string; placeId: string; myId: string }
 
 export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
@@ -56,10 +56,19 @@ export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
     }
     case 'visit.remove': {
       const p = entry.payload as VisitRemovePayload
+      // flush 시점에 살아있는 방문행을 재조회(스냅샷 의존 제거) → 각각 version 조건부 softDelete.
+      const { data: live } = await supabase
+        .from('visits')
+        .select('id, version')
+        .eq('couple_id', p.coupleId)
+        .eq('place_id', p.placeId)
+        .is('deleted_at', null)
+      const rows = (live ?? []) as { id: string; version: number }[]
+      if (rows.length === 0) return 'ok' // 이미 취소됨 — 재생 안전(no-op)
       let conflicted = false
-      for (const v of p.visits) {
-        const r = await softDelete('visits', v.id, v.version, p.myId)
-        if (r.status === 'conflict') conflicted = true
+      for (const r of rows) {
+        const res = await softDelete('visits', r.id, r.version, p.myId)
+        if (res.status === 'conflict') conflicted = true
       }
       return conflicted ? 'conflict' : 'ok'
     }

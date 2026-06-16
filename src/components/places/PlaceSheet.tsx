@@ -9,7 +9,7 @@ import { PlaceDetail } from '@/components/places/PlaceDetail'
 import { PlacePreviewDetail } from '@/components/places/PlacePreviewDetail'
 import { useToggleReaction, type ReactionMap } from '@/hooks/useReactions'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
-import { useMarkVisited, useUnmarkVisited, type VisitRow } from '@/hooks/useVisits'
+import { useMarkVisited, useUnmarkVisited } from '@/hooks/useVisits'
 import { useSetWishPriority } from '@/hooks/useSetWishPriority'
 import { useDeletePlace } from '@/hooks/usePlaceTrash'
 import { useConflict } from '@/lib/sync/useConflict'
@@ -28,7 +28,6 @@ export function PlaceSheet({
   coupleActive,
   places,
   wishes,
-  visits,
   visitedIds,
   placesLoading,
   selectedId,
@@ -45,7 +44,6 @@ export function PlaceSheet({
   coupleActive: boolean
   places: WithWish<PlaceRow>[]
   wishes: WishData | undefined
-  visits: VisitRow[]
   visitedIds: Set<string>
   placesLoading: boolean
   selectedId: string | null
@@ -252,8 +250,14 @@ export function PlaceSheet({
               }}
               onUnvisit={() =>
                 unmarkVisited.mutate(
-                  { placeId: selectedPlace.id, visits },
-                  { onSuccess: (r) => { if (!r.conflicted) toast.show('가봤음 기록을 취소했어요') } },
+                  { placeId: selectedPlace.id },
+                  {
+                    onSuccess: (r) => {
+                      if (r.status === 'removed') toast.show('가봤음 기록을 취소했어요')
+                      else if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
+                      // conflict → ConflictBanner는 onConflict가 이미 띄움
+                    },
+                  },
                 )
               }
               onReact={() => toggleReaction.mutate({ placeId: selectedPlace.id })}
@@ -276,8 +280,13 @@ export function PlaceSheet({
             markVisited={markVisited}
             onUnvisit={(placeId) =>
               unmarkVisited.mutate(
-                { placeId, visits },
-                { onSuccess: (r) => { if (!r.conflicted) toast.show('가봤음 기록을 취소했어요') } },
+                { placeId },
+                {
+                  onSuccess: (r) => {
+                    if (r.status === 'removed') toast.show('가봤음 기록을 취소했어요')
+                    else if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
+                  },
+                },
               )
             }
             unvisitPending={unmarkVisited.isPending}

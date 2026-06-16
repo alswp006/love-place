@@ -144,7 +144,6 @@ export default function MapPage() {
           coupleActive={coupleActive}
           places={enriched}
           wishes={wishes}
-          visits={visits ?? []}
           visitedIds={visitedIds}
           placesLoading={placesLoading}
           selectedId={selectedId}
