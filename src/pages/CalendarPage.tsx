@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
@@ -32,11 +33,24 @@ export default function CalendarPage() {
   const { create, update, remove } = useEventMutations(coupleId, myId, conflict.flag)
 
   const todayKey = dayKey(new Date().toISOString())
+  // ?date=YYYY-MM-DD 딥링크(R1.1) — 코스 추가 후 그 날로 점프. 형식 검증 후 시드, 아니면 오늘.
+  const [searchParams] = useSearchParams()
+  const dateParam = searchParams.get('date')
+  const initialKey = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : todayKey
+
+  // view(월 그리드)·selected(선택일) 둘 다 initialKey로 시드 — 다른 달 딥링크 시 엉뚱한 달 착지 방지.
   const [view, setView] = useState(() => {
-    const parts = todayKey.split('-')
+    const parts = initialKey.split('-')
     return { year: Number(parts[0]), month0: Number(parts[1]) - 1 }
   })
-  const [selected, setSelected] = useState(todayKey)
+  const [selected, setSelected] = useState(initialKey)
+  // 마운트 후 딥링크가 바뀌면(예: RecommendPage에서 추가 후 navigate) 선택일/뷰를 재시드.
+  useEffect(() => {
+    if (!(dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam))) return
+    setSelected(dateParam)
+    const parts = dateParam.split('-')
+    setView({ year: Number(parts[0]), month0: Number(parts[1]) - 1 })
+  }, [dateParam])
   const [filter, setFilter] = useState<Set<Track>>(() => new Set(ALL_TRACKS))
   const [sheet, setSheet] = useState<{ open: boolean; editing: EventRow | null }>({ open: false, editing: null })
 
