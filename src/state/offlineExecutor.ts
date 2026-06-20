@@ -10,7 +10,7 @@ import type { FlushOutcome } from './offlineQueue'
 
 export type OutboxKind =
   | 'wish.setPriority' | 'place.delete' | 'place.restore' | 'place.save'
-  | 'visit.add' | 'visit.remove' | 'reaction.toggle'
+  | 'visit.add' | 'visit.remove' | 'reaction.toggle' | 'event.restore'
 
 type SetPriorityPayload = { wishId: string; expectedVersion: number; priority: number; myId: string }
 type VersionedTargetPayload = { id: string; expectedVersion: number; myId: string }
@@ -36,6 +36,10 @@ export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
     case 'place.restore': {
       const p = entry.payload as VersionedTargetPayload
       return (await restore('places', p.id, p.expectedVersion, p.myId)).status
+    }
+    case 'event.restore': {
+      const p = entry.payload as VersionedTargetPayload
+      return (await restore('events', p.id, p.expectedVersion, p.myId)).status
     }
     case 'place.save': {
       const p = entry.payload as SavePayload
