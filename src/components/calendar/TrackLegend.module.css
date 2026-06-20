@@ -1,0 +1,30 @@
+/* Task 14(R2.3): 트랙 범례 — 비인터랙티브 색+이름칩. 토큰 기반, 다크모드 대비(§4 ux-rule). */
+.legend {
+  list-style: none;
+  margin: 0 0 var(--sp-2);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  flex: none;
+  /* 다크 표면 위에서도 색 경계 가시(저채도 swatch 대비 확보) */
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.label {
+  color: var(--c-text);
+}

@@ -9,6 +9,7 @@ import { EventSheet } from '@/components/calendar/EventSheet'
 import { ScopeSheet, type Scope } from '@/components/calendar/ScopeSheet'
 import { DayTimeline } from '@/components/calendar/DayTimeline'
 import { WeekStrip } from '@/components/calendar/WeekStrip'
+import { TrackLegend } from '@/components/calendar/TrackLegend'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useProfiles, type ProfileMap } from '@/hooks/useProfiles'
@@ -371,6 +372,7 @@ export default function CalendarPage() {
               </div>
             ) : null}
 
+            <TrackLegend />
             <TrackChips filter={filter} onToggle={toggleTrack} />
 
             {mode === 'month' ? (
