@@ -11,6 +11,7 @@ export type SeedTables = {
   visits?: unknown[]
   reactions?: unknown[]
   profiles?: unknown[]
+  events?: unknown[]
 }
 
 function jsonRoute(body: unknown) {
@@ -40,5 +41,7 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
   await page.route('**/e2e.supabase.co/rest/v1/wishes**', jsonRoute(tables.wishes ?? []))
   await page.route('**/e2e.supabase.co/rest/v1/visits**', jsonRoute(tables.visits ?? []))
   await page.route('**/e2e.supabase.co/rest/v1/reactions**', jsonRoute(tables.reactions ?? []))
+  // 캘린더(§5.1) — events REST. 미시드 시 빈 배열(연결됨-빈 CTA 경로). Realtime은 abort로 폴백.
+  await page.route('**/e2e.supabase.co/rest/v1/events**', jsonRoute(tables.events ?? []))
   await page.route('**/realtime/v1/websocket**', (route) => route.abort())
 }
