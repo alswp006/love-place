@@ -46,3 +46,17 @@ export function snapForOffset(translateY: number, travelHeight: number, peekPx: 
   }
   return best
 }
+
+/** 플릭 속도(px/ms; 아래로 +, 위로 -)를 반영한 스냅. |v|<임계는 위치 기반과 동일. */
+export function snapForFlick(
+  translateY: number,
+  velocity: number,
+  travelHeight: number,
+  peekPx: number,
+  threshold = 0.5,
+): SnapStop {
+  const nearest = snapForOffset(translateY, travelHeight, peekPx)
+  if (Math.abs(velocity) < threshold) return nearest
+  // 아래로 빠르게 = 접기(prev), 위로 빠르게 = 펼치기(next).
+  return velocity > 0 ? prevSnap(nearest) : nextSnap(nearest)
+}
