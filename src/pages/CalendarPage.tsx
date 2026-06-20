@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
+import { Skeleton } from '@/components/common/Skeleton'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { EventSheet } from '@/components/calendar/EventSheet'
@@ -12,7 +13,7 @@ import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useProfiles, type ProfileMap } from '@/hooks/useProfiles'
 import { useEvents, type EventRow } from '@/hooks/useEvents'
-import { usePlaces } from '@/hooks/usePlaces'
+import { usePlaces, type PlaceRow } from '@/hooks/usePlaces'
 import { useEventMutations, type NewEvent, type EventPatch } from '@/hooks/useEventMutations'
 import { useRestoreEvent } from '@/hooks/useRestoreEvent'
 import { useToast } from '@/hooks/useToast'
@@ -35,9 +36,10 @@ export default function CalendarPage() {
   const myId = user?.id ?? null
   const { data: couple, isLoading: coupleLoading } = useCouple()
   const coupleId = couple?.coupleId ?? null
-  const { data: events } = useEvents(coupleId)
+  const { data: events, isLoading: eventsLoading } = useEvents(coupleId)
   const { data: profiles } = useProfiles(coupleId)
   // 저장된 장소(place_id 연결 피커, Task 8) — EventSheet에 props로 주입(focus-trap 안).
+  // Task 13: 아젠다 장소 칩(place_id→이름·지도 링크)에도 같은 목록을 id로 인덱싱해 쓴다.
   const { data: places, isLoading: placesLoading } = usePlaces(coupleId)
   const conflict = useConflict()
   // 권한거부(상대 PERSONAL 수정 시도) — 버전충돌과 분리해 별도 배너로 안내(Task 7). 시트는 유지.
@@ -125,6 +127,12 @@ export default function CalendarPage() {
   }, [visibleEvents, cells])
   const grouped = useMemo(() => groupByDay(expanded), [expanded])
   const dayEvents = grouped[selected] ?? []
+  // 아젠다 장소 칩용 id→장소 인덱스(Task 13). place_id가 가리키는 장소 이름·지도 링크를 O(1) 조회.
+  const placeById = useMemo(() => {
+    const map: Record<string, PlaceRow> = {}
+    for (const p of places ?? []) map[p.id] = p
+    return map
+  }, [places])
 
   if (!coupleLoading && couple?.status !== 'ACTIVE') {
     return (
@@ -134,6 +142,15 @@ export default function CalendarPage() {
           title="먼저 상대와 연결해요"
           hint="'우리' 탭에서 초대 코드로 연결하면, 둘이 함께 일정을 겹쳐 봐요."
         />
+      </ScreenScaffold>
+    )
+  }
+
+  // 연결됨이지만 일정 로딩 중 → 죽은 빈 캘린더 대신 스켈레톤(§7). 그리드 모양 placeholder.
+  if (eventsLoading) {
+    return (
+      <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+        <Skeleton count={6} label="일정 불러오는 중" />
       </ScreenScaffold>
     )
   }
@@ -379,7 +396,9 @@ export default function CalendarPage() {
               events={dayEvents}
               myId={myId}
               profiles={profiles ?? {}}
+              placeById={placeById}
               onEdit={openEdit}
+              onAdd={openCreate}
             />
           </>
         )}
@@ -543,24 +562,40 @@ function DayAgenda({
   events,
   myId,
   profiles,
+  placeById,
   onEdit,
+  onAdd,
 }: {
   dateKey: string
   events: Occurrence<EventRow>[]
   myId: string | null
   profiles: ProfileMap
+  placeById: Record<string, PlaceRow>
   onEdit: (ev: Occurrence<EventRow>) => void
+  onAdd: () => void
 }) {
   return (
     <section className={styles.agenda} aria-label={`${dateKey} 일정`}>
       <h2 className={styles.agendaTitle}>{dateKey}</h2>
       {events.length === 0 ? (
-        <p className={styles.agendaEmpty}>이 날 일정이 없어요. ＋ 로 추가해보세요.</p>
+        // 연결됨-빈: 죽은 <p> 대신 친근한 EmptyState + add-event CTA(§7).
+        <EmptyState
+          emoji="🗓️"
+          title="이 날 일정이 없어요"
+          action={
+            <button type="button" className={styles.agendaAddBtn} onClick={onAdd}>
+              ＋ 일정 추가
+            </button>
+          }
+        />
       ) : (
         <ul className={styles.eventList}>
           {events.map((ev) => {
             const t = deriveTrack(ev, myId)
             const meta = TRACK_META[t]
+            // place_id가 가리키는 장소가 우리 목록에 있으면 칩+지도 딥링크(?place=)를 함께 표시.
+            // (지도쪽 ?place= 포커스 수신은 후속 패킷 — 여기선 딥링크 발신만, 조사 04 §3.)
+            const place = ev.place_id ? placeById[ev.place_id] : undefined
             return (
               <li key={ev.id}>
                 <button type="button" className={styles.eventItem} onClick={() => onEdit(ev)}>
@@ -576,6 +611,12 @@ function DayAgenda({
                     {meta.symbol} {meta.label}
                   </span>
                 </button>
+                {place ? (
+                  // 칩은 항목 버튼 밖(중첩 인터랙티브 회피) — 지도로 가는 별도 링크.
+                  <a className={styles.placeChip} href={`/?place=${ev.place_id}`} aria-label={`지도에서 ${place.name} 보기`}>
+                    📍 {place.name}
+                  </a>
+                ) : null}
               </li>
             )
           })}

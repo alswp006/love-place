@@ -149,10 +149,32 @@
   margin: 0;
 }
 
-.agendaEmpty {
+/* 빈 아젠다 add-event CTA(Task 13) — 44px 터치타깃, 색+텍스트 라벨. */
+.agendaAddBtn {
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--c-brand);
+  background: var(--c-surface);
+  color: var(--c-brand);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* 아젠다 장소 칩(Task 13) — 항목 아래 지도 딥링크. 📍 아이콘 + 이름(색 단독 아님). */
+.placeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: var(--sp-1) 0 0 calc(4px + var(--sp-2) + 3rem + var(--sp-2));
+  padding: 2px var(--sp-2);
   font-size: var(--fs-caption);
-  color: var(--c-text-weak);
-  padding: var(--sp-2) 0;
+  color: var(--c-brand);
+  text-decoration: none;
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  min-height: 28px;
 }
 
 .eventList {
