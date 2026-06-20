@@ -28,6 +28,33 @@
   }
 }
 
+/* 스와이프 다운 닫기 핸들(§1) — 손가락 끌기 영역. touch-action:none으로 스크롤 가로채 제스처 안정. */
+.handle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 28px;
+  margin: calc(-1 * var(--sp-2)) 0 var(--sp-1);
+  cursor: grab;
+  touch-action: none;
+}
+
+.grip {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c-border);
+}
+
+/* Reduce Motion(§5): 시트 슬라이드/스프링 제거 — 즉시 등장(fade는 토큰에 위임). */
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}
+
 .form {
   display: flex;
   flex-direction: column;

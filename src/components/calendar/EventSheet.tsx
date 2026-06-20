@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type TouchEvent as ReactTouchEvent } from 'react'
 import type { EventRow } from '@/hooks/useEvents'
 import type { ProfileMap } from '@/hooks/useProfiles'
 import type { NewEvent, EventPatch } from '@/hooks/useEventMutations'
@@ -56,10 +56,30 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, places,
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
+  // 스와이프 다운 닫기(§1/§5): 핸들에서 아래로 끌어 임계(120px) 초과 시 onClose. 미만은 스냅백.
+  // 버튼(취소/닫기)·Esc 대체 경로는 그대로 유지(제스처 단독 금지 — 발견성).
+  const dragStartY = useRef<number | null>(null)
+  const dragY = useRef(0)
 
   useEffect(() => {
     titleRef.current?.focus()
   }, [])
+
+  const onHandleTouchStart = (e: ReactTouchEvent) => {
+    dragStartY.current = e.touches[0]?.clientY ?? null
+    dragY.current = 0
+  }
+  const onHandleTouchMove = (e: ReactTouchEvent) => {
+    if (dragStartY.current == null) return
+    const y = e.touches[0]?.clientY ?? dragStartY.current
+    dragY.current = Math.max(0, y - dragStartY.current)
+  }
+  const onHandleTouchEnd = () => {
+    const moved = dragY.current
+    dragStartY.current = null
+    dragY.current = 0
+    if (moved > 120) onClose()
+  }
 
   // 버전충돌 후 부모가 내려준 최신 서버 행으로 재시드(Task 7, §4.3 LWW 금지):
   //  (1) expectedVersion을 서버 version으로 갱신 → 다음 저장이 같은 충돌을 반복하지 않음.
@@ -164,6 +184,16 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, places,
         onClick={(e) => e.stopPropagation()}
         onKeyDown={trapTab}
       >
+        <div
+          className={styles.handle}
+          data-testid="sheet-handle"
+          onTouchStart={onHandleTouchStart}
+          onTouchMove={onHandleTouchMove}
+          onTouchEnd={onHandleTouchEnd}
+          aria-hidden="true"
+        >
+          <span className={styles.grip} />
+        </div>
         <form onSubmit={onSubmit} className={styles.form}>
           {isPartnerPersonal ? (
             <p className={styles.readonlyLabel}>상대 일정 · {ownerName}</p>
