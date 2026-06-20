@@ -68,6 +68,10 @@ export function NaverMap({
   // onSelect도 ref로 읽어 마커 재드로우 효과의 deps에서 제외(매 렌더 재구축 방지).
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+  // selectedId도 ref로 읽는다 — render 효과(deps [places, ready])가 idle/zoom_changed에서
+  // 마커를 재구축할 때 stale 클로저의 선택값을 쓰지 않게(선택 강조가 pan/zoom에서 깜빡 사라짐 방지, R1.6).
+  const selectedIdRef = useRef<string | null>(selectedId ?? null)
+  selectedIdRef.current = selectedId ?? null
 
   // 지도 초기화(loadKey 재시도 시 재실행). loadNaverMaps()는 promise를 메모이즈하므로
   // 1차 실패가 캐시되면 재시도가 같은 거부 promise를 다시 받는다 → window.naver.maps가
@@ -175,17 +179,18 @@ export function NaverMap({
                 ? styles.pinBoth
                 : ''
           const pinClass = `${styles.pin} ${modifier}`.trim()
+          const isSelected = p.id === selectedIdRef.current
           const marker = new nv.maps.Marker({
             position: new nv.maps.LatLng(g.lat, g.lng),
             map: m,
             title: visual.label,
-            zIndex: BASE_ZINDEX,
+            zIndex: isSelected ? SELECTED_ZINDEX : BASE_ZINDEX,
             icon: {
               content: markerIconHtml({
                 glyph: visual.glyph,
                 pinClass,
                 label: visual.label,
-                selected: p.id === selectedId,
+                selected: isSelected,
                 badge: visual.badge,
               }),
               anchor: new nv.maps.Point(12, 24),

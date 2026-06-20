@@ -1,0 +1,182 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, waitFor, cleanup } from '@testing-library/react'
+import type { PlaceRow } from '@/hooks/usePlaces'
+import { markerIconHtml, SELECTED_ZINDEX } from '@/lib/places/selectedMarker'
+import { markerVisual } from '@/lib/places/markerVisual'
+import styles from '@/components/map/NaverMap.module.css'
+
+// loadNaverMaps를 모킹. window.naver를 먼저 세팅하면 NaverMap이 existing 분기로 즉시 build().
+const loadNaverMaps = vi.fn()
+vi.mock('@/lib/naver/loadNaverMaps', () => ({
+  loadNaverMaps: () => loadNaverMaps(),
+  isNaverMapConfigured: () => true,
+}))
+
+// 자동 locate가 끼어들지 않게(geo는 이 테스트와 무관) — granted 아님으로 폴백 경로만.
+vi.mock('@/lib/geo/currentPosition', () => ({
+  getPermissionState: () => Promise.resolve('prompt'),
+  shouldAutoLocate: () => false,
+  getCurrentPosition: () => Promise.resolve({ ok: false, reason: 'denied' }),
+}))
+
+import { NaverMap } from '@/components/map/NaverMap'
+
+// 생성된 마커들과 지도 이벤트 리스너를 캡처하는 스텁.
+type CapturedMarker = {
+  opts: Record<string, unknown>
+  zIndex: number
+  setZIndex: (z: number) => void
+  setIcon: (icon: unknown) => void
+}
+const markers: CapturedMarker[] = []
+// 지도(map) 객체에 등록된 idle/zoom_changed 리스너를 모은다(재렌더 시뮬레이션용).
+const mapListeners: Record<string, Array<() => void>> = {}
+let mapObj: unknown
+
+function makeNaverStub() {
+  return {
+    maps: {
+      Map: class {
+        constructor() {
+          mapObj = this
+        }
+        getZoom() {
+          return 11
+        }
+        getCenter() {
+          return new (window.naver.maps.LatLng as unknown as { new (a: number, b: number): unknown })(0, 0)
+        }
+        setCenter() {}
+        setZoom() {}
+        panTo() {}
+        fitBounds() {}
+      },
+      Marker: class {
+        zIndex: number
+        opts: Record<string, unknown>
+        constructor(opts: Record<string, unknown>) {
+          this.opts = opts
+          this.zIndex = (opts.zIndex as number) ?? 0
+          const rec: CapturedMarker = {
+            opts,
+            zIndex: this.zIndex,
+            setZIndex: (z: number) => {
+              this.zIndex = z
+              rec.zIndex = z
+            },
+            setIcon: (icon: unknown) => {
+              this.opts.icon = icon
+              rec.opts.icon = icon
+            },
+          }
+          markers.push(rec)
+        }
+        setMap() {}
+        setPosition() {}
+        getPosition() {
+          return new (window.naver.maps.LatLng as unknown as { new (a: number, b: number): unknown })(0, 0)
+        }
+        setIcon(icon: unknown) {
+          this.opts.icon = icon
+        }
+        setZIndex(z: number) {
+          this.zIndex = z
+        }
+      },
+      Circle: class {
+        setCenter() {}
+        setRadius() {}
+        setMap() {}
+      },
+      LatLng: class {
+        constructor(
+          public lat: number,
+          public lng: number,
+        ) {}
+      },
+      LatLngBounds: class {
+        extend() {}
+      },
+      Point: class {
+        constructor(
+          public x: number,
+          public y: number,
+        ) {}
+      },
+      Position: { TOP_LEFT: 1, TOP_RIGHT: 3 },
+      Event: {
+        addListener: (target: unknown, ev: string, fn: () => void) => {
+          if (target === mapObj) {
+            ;(mapListeners[ev] ??= []).push(fn)
+          }
+          return { target, ev, fn }
+        },
+        removeListener: () => {},
+      },
+    },
+  } as unknown as typeof naver
+}
+
+function place(id: string, lat: number, lng: number): PlaceRow & { wish?: undefined } {
+  return {
+    id,
+    name: id,
+    address: null,
+    region_label: null,
+    lat,
+    lng,
+    category: null,
+    kakao_place_id: null,
+    added_by: 'u1',
+    version: 1,
+  }
+}
+
+describe('NaverMap 선택 강조가 pan/zoom 재렌더에서 유지(R1.6)', () => {
+  beforeEach(() => {
+    markers.length = 0
+    for (const k of Object.keys(mapListeners)) delete mapListeners[k]
+    mapObj = undefined
+    loadNaverMaps.mockReset()
+    window.naver = makeNaverStub()
+  })
+  afterEach(() => {
+    cleanup()
+    // @ts-expect-error 테스트 정리
+    delete window.naver
+  })
+
+  it('selectedId 변경 후 idle 재렌더에서도 선택 마커가 강조 아이콘/zIndex로 다시 그려진다', async () => {
+    // 멀리 떨어진 두 장소(클러스터 안 됨 → 각각 single 마커).
+    const places = [place('p1', 35.0, 127.0), place('p2', 37.5, 126.9)]
+    // 컴포넌트와 동일한 도출로 기대 콘텐츠 계산(CSS 모듈 해석은 vitest env에 맡김).
+    const visual = markerVisual({ visited: false, bothWished: false, name: 'p1' })
+    const pinClass = `${styles.pin} `.trim()
+    const expected = markerIconHtml({
+      glyph: visual.glyph,
+      pinClass,
+      label: visual.label,
+      selected: true,
+      badge: visual.badge,
+    })
+
+    // 처음엔 선택 없음으로 마운트(render 효과는 selectedId=null로 클로저를 캡처).
+    const { rerender } = render(<NaverMap places={places} snap="peek" selectedId={null} />)
+    await waitFor(() => expect(markers.length).toBeGreaterThanOrEqual(2))
+    await waitFor(() => expect(mapListeners.idle?.length ?? 0).toBeGreaterThan(0))
+
+    // 선택을 p1로 변경 — render 효과 deps([places, ready])는 안 바뀌므로 클로저 selectedId는 stale.
+    rerender(<NaverMap places={places} snap="peek" selectedId="p1" />)
+
+    // pan/zoom 정착(idle) 시뮬레이션 — 캡처된 idle 리스너를 호출해 마커를 통째로 재구축.
+    markers.length = 0
+    for (const fn of mapListeners.idle ?? []) fn()
+
+    // 재구축된 마커 중 p1(첫 장소)이 선택 강조 아이콘 + SELECTED_ZINDEX로 그려져야 한다.
+    expect(markers.length).toBeGreaterThanOrEqual(2)
+    const p1 = markers[0]!
+    const content = (p1.opts.icon as { content: string }).content
+    expect(content).toBe(expected)
+    expect(p1.opts.zIndex).toBe(SELECTED_ZINDEX)
+  })
+})
