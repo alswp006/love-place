@@ -17,3 +17,23 @@
   padding-top: var(--safe-top);
   -webkit-overflow-scrolling: touch;
 }
+
+/* 라우트 전환 크로스페이드 래퍼(R4) — .content의 flex 자식으로 동작해야 풀블리드(지도) 자식이
+   flex:1로 높이를 얻는다(absolute-stack 금지). key=pathname 리마운트 시 페이드 인.
+   reduce-motion은 tokens.css 전역 캡(animation-duration 0.001ms)으로 무력화 — JS 게이트 불필요. */
+.routeFade {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: route-in var(--motion-base) var(--ease);
+}
+
+@keyframes route-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

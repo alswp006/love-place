@@ -12,6 +12,7 @@ export function TabBar() {
           key={path}
           to={path}
           end={index}
+          viewTransition
           className={({ isActive }) => (isActive ? `${styles.tab} ${styles.active}` : styles.tab)}
         >
           {({ isActive }) => (

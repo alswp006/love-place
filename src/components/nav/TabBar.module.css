@@ -21,7 +21,15 @@
   padding: var(--sp-2) 0 calc(var(--sp-2) + 2px);
   text-decoration: none;
   color: var(--c-text-weak);
-  transition: color var(--motion-fast) var(--ease);
+  transition:
+    color var(--motion-fast) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+
+/* 활성 탭 누름 피드백(R4) — transform만 사용해 reduce-motion에서도 안전
+   (장식 모션이 아닌 직접 조작 피드백이며, 전역 transition 캡이 지속시간을 0.001ms로 무력화). */
+.tab:active {
+  transform: scale(0.96);
 }
 
 .tab.active {

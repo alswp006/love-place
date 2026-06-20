@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { TabBar } from '@/components/nav/TabBar'
 import { OfflineQueueProvider } from '@/state/OfflineQueueProvider'
 import { OfflineQueueBadge } from '@/components/common/OfflineQueueBadge'
@@ -8,6 +8,7 @@ import styles from './AppLayout.module.css'
 // 오프라인 큐(D2)는 셸 전역에 제공 — 모든 탭의 쓰기가 오프라인이면 큐에 적재, 재연결 시 동기화.
 // 토스트(R1.5)는 상위 RequireAuth 셸에서 제공(온보딩 포함 전역) — 여기선 중첩하지 않는다.
 export function AppLayout() {
+  const { pathname } = useLocation()
   return (
     <OfflineQueueProvider>
       <div className={styles.shell}>
@@ -16,7 +17,12 @@ export function AppLayout() {
           본문 바로가기
         </a>
         <main className={styles.content} id="main">
-          <Outlet />
+          {/* 라우트 전환 크로스페이드(R4): key=pathname으로 리마운트해 페이드 인.
+              absolute-stack 금지 — 단일 keyed 노드의 opacity로만(.content flex/scroll 보존).
+              reduce-motion은 tokens.css 전역 캡(애니메이션 0.001ms)으로 자동 무력화(CSS 경로). */}
+          <div key={pathname} data-route-key={pathname} className={styles.routeFade}>
+            <Outlet />
+          </div>
         </main>
         <OfflineQueueBadge />
         <TabBar />

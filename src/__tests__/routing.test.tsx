@@ -138,3 +138,34 @@ describe('4탭 라우팅 (설계서 §3 IA — 장소→지도 통합)', () => {
     expect(placesIdx).toBeLessThan(splatIdx)
   })
 })
+
+// Task 5(R4): 탭/라우트 전환 크로스페이드 + 활성 탭 누름 피드백.
+// AppLayout이 <Outlet/>을 key={pathname}로 감싼 크로스페이드 래퍼를 두고, 그 래퍼가
+// data-route-key=현재 pathname을 가져 경로 변경 시 key가 바뀜(React 리마운트 → 페이드 재생)을 단언.
+describe('R4 라우트 전환 크로스페이드 + 활성 탭 피드백', () => {
+  it('<main id="main"> 안의 Outlet 래퍼가 현재 pathname을 data-route-key로 갖는다', async () => {
+    renderAt('/')
+    await screen.findByTestId('page-map')
+    const main = document.getElementById('main')
+    expect(main).not.toBeNull()
+    const wrapper = main!.querySelector('[data-route-key]')
+    expect(wrapper).not.toBeNull()
+    expect(wrapper).toHaveAttribute('data-route-key', '/')
+  })
+
+  it('경로가 다르면 래퍼의 data-route-key도 그 경로로 바뀐다(크로스페이드 리마운트 키)', async () => {
+    renderAt('/calendar')
+    await screen.findByTestId('page-calendar')
+    const wrapper = document.getElementById('main')!.querySelector('[data-route-key]')
+    expect(wrapper).toHaveAttribute('data-route-key', '/calendar')
+  })
+
+  it('활성 탭 NavLink가 aria-current=page로 활성 상태를 유지한다(viewTransition 적용 후에도)', async () => {
+    renderAt('/')
+    await screen.findByTestId('page-map')
+    const nav = screen.getByRole('navigation', { name: '주요 메뉴' })
+    // 활성 링크는 react-router NavLink가 aria-current=page를 부여(active 클래스와 함께 유지).
+    const active = nav.querySelector('a[aria-current="page"]')
+    expect(active).not.toBeNull()
+  })
+})
