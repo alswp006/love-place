@@ -6,6 +6,8 @@ import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { EventSheet } from '@/components/calendar/EventSheet'
 import { ScopeSheet, type Scope } from '@/components/calendar/ScopeSheet'
+import { DayTimeline } from '@/components/calendar/DayTimeline'
+import { WeekStrip } from '@/components/calendar/WeekStrip'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useProfiles, type ProfileMap } from '@/hooks/useProfiles'
@@ -48,9 +50,13 @@ export default function CalendarPage() {
 
   const todayKey = dayKey(new Date().toISOString())
   // ?date=YYYY-MM-DD 딥링크(R1.1) — 코스 추가 후 그 날로 점프. 형식 검증 후 시드, 아니면 오늘.
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const dateParam = searchParams.get('date')
   const initialKey = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : todayKey
+  // ?view=month|week|day 딥링크(Task 12) — 뷰 전환 상태를 URL과 동기화(뒤로가기/공유 가능).
+  const viewParam = searchParams.get('view')
+  const initialMode: 'month' | 'week' | 'day' =
+    viewParam === 'week' || viewParam === 'day' ? viewParam : 'month'
 
   // view(월 그리드)·selected(선택일) 둘 다 initialKey로 시드 — 다른 달 딥링크 시 엉뚱한 달 착지 방지.
   const [view, setView] = useState(() => {
@@ -65,6 +71,32 @@ export default function CalendarPage() {
     const parts = dateParam.split('-')
     setView({ year: Number(parts[0]), month0: Number(parts[1]) - 1 })
   }, [dateParam])
+  // 주/일 뷰에서 WeekStrip 주 이동·점프로 selected가 보이는 달 윈도우 밖으로 나가면 전개 윈도우가
+  // 그 날을 안 덮어 일정이 비어 보인다 → selected의 달로 view를 맞춰 전개 윈도우가 항상 포함하게.
+  useEffect(() => {
+    const parts = selected.split('-')
+    const y = Number(parts[0])
+    const m0 = Number(parts[1]) - 1
+    setView((prev) => (prev.year === y && prev.month0 === m0 ? prev : { year: y, month0: m0 }))
+  }, [selected])
+  // 뷰 모드(월/주/일). ?view= 와 양방향 동기화 — setMode가 URL을 갱신(딥링크/뒤로가기).
+  const [mode, setMode] = useState<'month' | 'week' | 'day'>(initialMode)
+  useEffect(() => {
+    if (viewParam === 'week' || viewParam === 'day') setMode(viewParam)
+    else setMode('month')
+  }, [viewParam])
+  const changeMode = (next: 'month' | 'week' | 'day') => {
+    setMode(next)
+    setSearchParams(
+      (prev) => {
+        const sp = new URLSearchParams(prev)
+        if (next === 'month') sp.delete('view')
+        else sp.set('view', next)
+        return sp
+      },
+      { replace: true },
+    )
+  }
   const [filter, setFilter] = useState<Set<Track>>(() => new Set(ALL_TRACKS))
   // 편집 시트는 시리즈 행(editing)을 보여주되, 클릭한 occurrence의 시작 ISO/dayKey도 함께 보존한다
   // (조사 01 §3 — 현재는 시리즈로 덮어써 occurrence가 소실 → 범위 분기에 occurrence 시각이 필요).
@@ -115,6 +147,16 @@ export default function CalendarPage() {
     })
 
   const busy = create.isPending || update.isPending || remove.isPending
+  // occurrence 클릭 → 편집 시트. 폼은 시리즈 기준(start/end를 _seriesStart/End로 복원)이되,
+  // 범위 분기를 위해 클릭한 occurrence의 시작 ISO/dayKey를 별도 보존(DayAgenda·DayTimeline 공통).
+  const openEdit = (ev: Occurrence<EventRow>) =>
+    setSheet({
+      open: true,
+      editing: { ...ev, start: ev._seriesStart, end: ev._seriesEnd },
+      occStartIso: ev.start,
+      occDayKey: dayKey(ev.start),
+    })
+  const openCreate = () => setSheet({ open: true, editing: null, occStartIso: null, occDayKey: null })
   const closeSheet = () => {
     setSheet({ open: false, editing: null, occStartIso: null, occDayKey: null })
     setConflictRefresh(null)
@@ -276,62 +318,73 @@ export default function CalendarPage() {
           <ConflictBanner message="이 일정은 상대만 수정할 수 있어요." onDismiss={permission.clear} />
         ) : null}
 
-        <div className={styles.monthNav}>
-          <button
-            type="button"
-            className={styles.navBtn}
-            onClick={() => setView(addMonths(view.year, view.month0, -1))}
-            aria-label="이전 달"
-          >
-            ‹
-          </button>
-          <span className={styles.monthLabel} aria-live="polite">
-            {view.year}년 {view.month0 + 1}월
-          </span>
-          <button
-            type="button"
-            className={styles.navBtn}
-            onClick={() => setView(addMonths(view.year, view.month0, 1))}
-            aria-label="다음 달"
-          >
-            ›
-          </button>
-        </div>
+        <ViewSegment mode={mode} onChange={changeMode} />
 
-        <TrackChips filter={filter} onToggle={toggleTrack} />
+        {mode === 'day' ? (
+          <DayTimeline
+            dateKey={selected}
+            occurrences={dayEvents}
+            myId={myId}
+            onEdit={openEdit}
+            onAdd={openCreate}
+          />
+        ) : (
+          <>
+            {mode === 'month' ? (
+              <div className={styles.monthNav}>
+                <button
+                  type="button"
+                  className={styles.navBtn}
+                  onClick={() => setView(addMonths(view.year, view.month0, -1))}
+                  aria-label="이전 달"
+                >
+                  ‹
+                </button>
+                <span className={styles.monthLabel} aria-live="polite">
+                  {view.year}년 {view.month0 + 1}월
+                </span>
+                <button
+                  type="button"
+                  className={styles.navBtn}
+                  onClick={() => setView(addMonths(view.year, view.month0, 1))}
+                  aria-label="다음 달"
+                >
+                  ›
+                </button>
+              </div>
+            ) : null}
 
-        <MonthGrid
-          cells={cells}
-          grouped={grouped}
-          selected={selected}
-          todayKey={todayKey}
-          myId={myId}
-          onSelect={setSelected}
-        />
+            <TrackChips filter={filter} onToggle={toggleTrack} />
 
-        <DayAgenda
-          dateKey={selected}
-          events={dayEvents}
-          myId={myId}
-          profiles={profiles ?? {}}
-          onEdit={(ev) =>
-            setSheet({
-              open: true,
-              // 편집 폼은 시리즈 기준(start/end를 _seriesStart/End로 복원)이되,
-              editing: { ...ev, start: ev._seriesStart, end: ev._seriesEnd },
-              // 범위 분기를 위해 클릭한 occurrence의 시작 ISO/dayKey를 별도로 보존(occurrence 소실 방지).
-              occStartIso: ev.start,
-              occDayKey: dayKey(ev.start),
-            })
-          }
-        />
+            {mode === 'month' ? (
+              <MonthGrid
+                cells={cells}
+                grouped={grouped}
+                selected={selected}
+                todayKey={todayKey}
+                myId={myId}
+                onSelect={setSelected}
+              />
+            ) : (
+              <WeekStrip
+                selected={selected}
+                todayKey={todayKey}
+                hasEventsByKey={(key) => (grouped[key]?.length ?? 0) > 0}
+                onSelect={setSelected}
+              />
+            )}
 
-        <button
-          type="button"
-          className={styles.fab}
-          onClick={() => setSheet({ open: true, editing: null, occStartIso: null, occDayKey: null })}
-          aria-label="일정 추가"
-        >
+            <DayAgenda
+              dateKey={selected}
+              events={dayEvents}
+              myId={myId}
+              profiles={profiles ?? {}}
+              onEdit={openEdit}
+            />
+          </>
+        )}
+
+        <button type="button" className={styles.fab} onClick={openCreate} aria-label="일정 추가">
           ＋
         </button>
       </div>
@@ -357,6 +410,40 @@ export default function CalendarPage() {
         <ScopeSheet mode={scope.mode} onPick={applyScope} onCancel={() => setScope(null)} />
       ) : null}
     </ScreenScaffold>
+  )
+}
+
+// 뷰 전환 세그먼트(월/주/일, Task 12) — aria-pressed로 현재 뷰. 색 단독 아님(텍스트 라벨).
+const VIEW_LABELS: { key: 'month' | 'week' | 'day'; label: string }[] = [
+  { key: 'month', label: '월' },
+  { key: 'week', label: '주' },
+  { key: 'day', label: '일' },
+]
+function ViewSegment({
+  mode,
+  onChange,
+}: {
+  mode: 'month' | 'week' | 'day'
+  onChange: (m: 'month' | 'week' | 'day') => void
+}) {
+  return (
+    <div className={styles.viewSeg} role="group" aria-label="달력 뷰 전환">
+      {VIEW_LABELS.map((v) => {
+        const on = mode === v.key
+        return (
+          <button
+            key={v.key}
+            type="button"
+            className={`${styles.viewSegBtn} ${on ? styles.viewSegBtnOn : ''}`}
+            aria-pressed={on}
+            aria-label={`${v.label} 뷰`}
+            onClick={() => onChange(v.key)}
+          >
+            {v.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 

@@ -205,6 +205,205 @@
   flex-shrink: 0;
 }
 
+/* Day 타임라인 뷰(Task 12) */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border-top: 1px solid var(--c-border);
+  padding-top: var(--sp-3);
+}
+
+.allDayLane {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+  padding: var(--sp-2);
+  background: var(--c-surface-2);
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+}
+
+.allDayEmpty {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.allDayItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--c-border);
+  border-left-width: 4px;
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.timeGrid {
+  position: relative;
+  display: flex;
+}
+
+.hourCol {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.hourRow {
+  height: 48px;
+  border-top: 1px solid var(--c-border);
+  box-sizing: border-box;
+}
+
+.hourLabel {
+  font-size: 0.62rem;
+  color: var(--c-text-weak);
+  padding: 0 var(--sp-2) 0 0;
+}
+
+.eventCol {
+  position: relative;
+  flex: 1;
+  /* 24시간 × 48px hour row = 1152px (hourCol과 높이 일치 → top % 정합). */
+  height: 1152px;
+  border-left: 1px solid var(--c-border);
+}
+
+.timelineItem {
+  position: absolute;
+  left: var(--sp-2);
+  right: var(--sp-2);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  border-left-width: 4px;
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font-size: var(--fs-caption);
+  text-align: left;
+  cursor: pointer;
+}
+
+.timelineTime {
+  font-size: 0.62rem;
+  color: var(--c-text-weak);
+  flex-shrink: 0;
+}
+
+.timelineTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timelineEmpty {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  text-align: center;
+  padding: var(--sp-3) 0;
+}
+
+.timelineAdd {
+  border: none;
+  background: var(--c-surface-2);
+  color: var(--c-brand);
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+/* 뷰 전환 세그먼트 컨트롤(월/주/일) */
+.viewSeg {
+  display: inline-flex;
+  align-self: center;
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.viewSegBtn {
+  border: none;
+  background: var(--c-surface);
+  color: var(--c-text-weak);
+  padding: 6px 16px;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.viewSegBtnOn {
+  background: var(--c-brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 주 네비 스트립(WeekStrip) */
+.weekStrip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.weekStripDays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  flex: 1;
+}
+
+.weekChip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: none;
+  background: transparent;
+  color: var(--c-text);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-1) 0;
+  cursor: pointer;
+  min-height: 48px;
+}
+
+.weekChipSel {
+  background: var(--c-surface-2);
+  outline: 2px solid var(--c-brand);
+}
+
+.weekChipToday .weekChipNum {
+  font-weight: 700;
+  color: var(--c-brand);
+}
+
+.weekChipDow {
+  font-size: 0.62rem;
+  color: var(--c-text-weak);
+}
+
+.weekChipNum {
+  font-size: 0.9rem;
+}
+
+.weekChipDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--c-brand);
+}
+
 /* 일정 추가 FAB */
 .fab {
   position: fixed;
