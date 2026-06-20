@@ -36,7 +36,28 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
   await page.route('**/e2e.supabase.co/rest/v1/couples**', jsonRoute({
     id: 'c1', status: 'ACTIVE', user_a: USER_A, user_b: '00000000-0000-4000-8000-000000000a02', connected_at: '2020-01-01T00:00:00Z',
   }))
-  await page.route('**/e2e.supabase.co/rest/v1/profiles**', jsonRoute(tables.profiles ?? []))
+  // profiles: 동의 가드(RequireAuth)가 보는 self 프로필 쿼리(consent select)는 "동의 완료" 행으로 응답해
+  //   ACTIVE 시드 사용자가 /onboarding/steps로 튕기지 않게 한다. 그 외 profiles 쿼리는 시드값(기본 빈 배열).
+  await page.route('**/e2e.supabase.co/rest/v1/profiles**', (route) => {
+    const url = route.request().url()
+    if (url.includes('consent_at')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: USER_A,
+            display_name: '나',
+            color: '#3b6db5',
+            version: 1,
+            location_consent_at: '2020-01-01T00:00:00Z',
+            photo_consent_at: '2020-01-01T00:00:00Z',
+          },
+        ]),
+      })
+    }
+    return jsonRoute(tables.profiles ?? [])(route)
+  })
   await page.route('**/e2e.supabase.co/rest/v1/places**', jsonRoute(tables.places ?? []))
   await page.route('**/e2e.supabase.co/rest/v1/wishes**', jsonRoute(tables.wishes ?? []))
   await page.route('**/e2e.supabase.co/rest/v1/visits**', jsonRoute(tables.visits ?? []))

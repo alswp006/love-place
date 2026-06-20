@@ -33,6 +33,11 @@ vi.mock('@/hooks/useCouple', () => ({
   }),
 }))
 
+// RequireAuth(T8a)는 ACTIVE에서 동의 게이트도 본다 — 탭 렌더 테스트에선 동의 완료로 모킹(앱 진입).
+vi.mock('@/hooks/useConsent', () => ({
+  useConsent: () => ({ consentRecorded: true, isLoading: false }),
+}))
+
 // 라우트는 모킹 후 import해야 가드가 모킹된 useAuth를 본다.
 const { routes } = await import('@/app/router')
 const { TABS } = await import('@/app/tabs')

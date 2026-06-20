@@ -1,13 +1,18 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
+import { useConsent } from '@/hooks/useConsent'
 import { RouteFallback } from '@/components/common/RouteFallback'
 
-// 보호 라우트 가드(web-stack.md §4.2) — 비로그인 → /auth, couple 미연결(ACTIVE 아님) → /onboarding.
+// 보호 라우트 가드(web-stack.md §4.2) — 비로그인 → /auth, 미연결 → /onboarding(①),
+// 연결됐으나 ②③ 동의 미기록 → /onboarding/steps(인비터·억셉터 둘 다 우회 불가, security-privacy §3.2).
 export function RequireAuth() {
   const { initializing, session } = useAuth()
   const { data: couple, isLoading: coupleLoading } = useCouple()
   const location = useLocation()
+  const active = couple?.status === 'ACTIVE'
+  // 동의 쿼리는 ACTIVE일 때만 발사(미연결 사용자에겐 불필요). 로딩 전엔 consentRecorded=false 취급.
+  const { consentRecorded, isLoading: consentLoading } = useConsent({ enabled: active })
 
   if (initializing) return <RouteFallback />
   if (!session) return <Navigate to="/auth" replace state={{ from: location.pathname }} />
@@ -16,12 +21,18 @@ export function RequireAuth() {
   if (coupleLoading) return <RouteFallback />
 
   const onboarding = location.pathname === '/onboarding'
-  const active = couple?.status === 'ACTIVE'
+  const onboardingSteps = location.pathname === '/onboarding/steps'
 
-  // 미연결인데 온보딩이 아니면 → 온보딩으로(연결 전엔 앱 못 들어감).
-  if (!active && !onboarding) return <Navigate to="/onboarding" replace />
-  // 이미 연결됐는데 온보딩에 있으면 → 앱으로.
-  if (active && onboarding) return <Navigate to="/" replace />
+  // 미연결 → 연결(①). 연결은 됐는데 ①만 있고 ②③ 동의 미기록 → steps 강제(인비터·억셉터 둘 다).
+  if (!active) {
+    return onboarding ? <Outlet /> : <Navigate to="/onboarding" replace />
+  }
+  if (consentLoading) return <RouteFallback />
+  if (!consentRecorded) {
+    return onboardingSteps ? <Outlet /> : <Navigate to="/onboarding/steps" replace />
+  }
+  // ACTIVE + 동의 완료인데 온보딩/스텝에 있으면 → 앱으로.
+  if (onboarding || onboardingSteps) return <Navigate to="/" replace />
 
   return <Outlet />
 }

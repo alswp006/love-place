@@ -73,7 +73,8 @@ export default function ConnectPage() {
     setAcceptError(null)
     acceptInvite.mutate(code, {
       onSuccess: (r) => {
-        if (r.ok) navigate('/', { replace: true })
+        // 연결 직후 ②③ 동의 위저드로(가드도 보내지만 / 플래시 방지). ConnectPage는 위저드를 호스팅하지 않음.
+        if (r.ok) navigate('/onboarding/steps', { replace: true })
         else setAcceptError(inviteReasonMessage(r.reason))
       },
       onError: () => setAcceptError('일시적인 오류예요. 잠시 후 다시 시도해 주세요.'),
