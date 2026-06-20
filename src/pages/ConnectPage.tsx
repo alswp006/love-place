@@ -14,6 +14,7 @@ import {
 } from '@/lib/inviteCode'
 import { useToast } from '@/components/common/ToastProvider'
 import { RouteFallback } from '@/components/common/RouteFallback'
+import { ValuePreview } from '@/components/onboarding/ValuePreview'
 import styles from './ConnectPage.module.css'
 
 // 💑 커플 연결(온보딩) — 내 코드 만들기/공유 + 상대 코드 입력. 둘 다 미연결(가드) 상태에서만 도달.
@@ -87,6 +88,9 @@ export default function ConnectPage() {
         </div>
         <h1 className={styles.title}>둘이 연결해요</h1>
         <p className={styles.subtitle}>한 명이 코드를 만들어 보내고, 다른 한 명이 입력하면 끝.</p>
+
+        {/* 브랜드뉴/PENDING(미연결) 사용자에게 둘이 쓰는 가치 미리보기(spec R3 line 51). ACTIVE면 가드가 /onboarding/steps로 보냄 → 숨김. */}
+        {couple?.status !== 'ACTIVE' && <ValuePreview />}
 
         {/* A. 내 코드 만들기 / 공유 */}
         <section className={styles.section} aria-label="내 초대 코드">

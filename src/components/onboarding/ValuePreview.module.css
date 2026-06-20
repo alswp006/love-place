@@ -1,0 +1,8 @@
+.wrap { margin: 0 0 20px; }
+.heading { font-size: 1rem; font-weight: 600; color: var(--c-text); margin: 0 0 12px; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.item { display: flex; align-items: flex-start; gap: 12px; }
+.icon { font-size: 1.4rem; line-height: 1; }
+.text { display: flex; flex-direction: column; gap: 2px; }
+.itemTitle { font-size: 0.95rem; font-weight: 600; color: var(--c-text); }
+.itemDesc { font-size: 0.85rem; color: var(--c-text-muted); }
