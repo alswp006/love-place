@@ -79,9 +79,11 @@ export function NaverMap({
       mapRef.current = new nv.maps.Map(elRef.current, {
         center: new nv.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
         zoom: 11,
-        // 로고는 ToS상 유지(필수), 축척 표시 명시(spec §3.1). 데이터 컨트롤은 숨김.
+        // 로고는 ToS상 유지(필수). 컨트롤을 상단으로 옮겨 하단 시트와 안 겹치게(spec R1.3).
         logoControl: true,
+        logoControlOptions: { position: nv.maps.Position.TOP_LEFT },
         scaleControl: true,
+        scaleControlOptions: { position: nv.maps.Position.TOP_RIGHT },
         mapDataControl: false,
       })
       setReady(true)

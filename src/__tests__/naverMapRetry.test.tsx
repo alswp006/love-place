@@ -31,6 +31,8 @@ function makeNaverStub() {
           public y: number,
         ) {}
       },
+      // 컨트롤 위치 열거형(@types/navermaps) — 지도 init 옵션에서 참조하므로 스텁에 포함.
+      Position: { TOP_LEFT: 1, TOP_RIGHT: 3 },
       Event: {
         addListener: () => ({}),
         removeListener: () => {},
