@@ -48,6 +48,9 @@ export const NAVER_STUB_JS = `
     addListener: function (t, name, fn) { var h = { target: t, name: name, fn: fn }; return h; },
     removeListener: function () {},
   };
-  window.naver = { maps: { Map: Map, LatLng: LatLng, LatLngBounds: LatLngBounds, Point: Point, Marker: Marker, Circle: Circle, Event: Event } };
+  // Position enum — NaverMap이 logoControlOptions/scaleControlOptions에 nv.maps.Position.TOP_LEFT/TOP_RIGHT를
+  // 참조하므로 스텁에도 제공해야 map init이 throw하지 않는다(R1.3).
+  var Position = { CENTER: 0, TOP_LEFT: 1, TOP_CENTER: 2, TOP_RIGHT: 3, LEFT_CENTER: 4, RIGHT_CENTER: 6, BOTTOM_LEFT: 7, BOTTOM_CENTER: 8, BOTTOM_RIGHT: 9 };
+  window.naver = { maps: { Map: Map, LatLng: LatLng, LatLngBounds: LatLngBounds, Point: Point, Marker: Marker, Circle: Circle, Event: Event, Position: Position } };
 })();
 `
