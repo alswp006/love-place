@@ -13,13 +13,15 @@ type Props = {
   myId: string | null // 사용자별 리마인더 소유자
   busy: boolean
   profiles: ProfileMap // 소유자 이름 표시(상대 PERSONAL 라벨)
+  // 버전충돌 후 부모가 재조회한 최신 서버 행(Task 7). version 재시드 + 메모 append-merge에 쓴다.
+  conflictRefresh?: { version: number; memo: string | null } | null
   onClose: () => void
   onCreate: (e: NewEvent) => void
   onUpdate: (id: string, expectedVersion: number, patch: EventPatch) => void
   onDelete: (id: string, expectedVersion: number) => void
 }
 
-export function EventSheet({ initial, defaultDate, myId, busy, profiles, onClose, onCreate, onUpdate, onDelete }: Props) {
+export function EventSheet({ initial, defaultDate, myId, busy, profiles, conflictRefresh, onClose, onCreate, onUpdate, onDelete }: Props) {
   const editing = initial != null
   // 상대 PERSONAL 일정은 읽기 전용(canEdit 가드, 조사03 §4 — RLS USING 미러).
   // canEdit = visibility==='SHARED' || owner_id===myId. 상대 PERSONAL이면 입력·저장·삭제 차단.
@@ -36,6 +38,8 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, onClose
   const [timeError, setTimeError] = useState<string | null>(null)
   const [visibility, setVisibility] = useState<'SHARED' | 'PERSONAL'>(initial?.visibility ?? 'SHARED')
   const [memo, setMemo] = useState(initial?.memo ?? '')
+  // 낙관적 락 기준 버전 — 기본은 원본 version, 버전충돌 후엔 재조회 버전으로 재시드(다음 저장이 같은 충돌 반복 방지).
+  const [expectedVersion, setExpectedVersion] = useState(initial?.version ?? 0)
   const initRule = parseRule(initial?.recurrence_rule)
   const [recurrence, setRecurrence] = useState<Freq | 'none'>(initRule?.freq ?? 'none')
   const [recurCount, setRecurCount] = useState(initRule?.count ?? 10)
@@ -50,6 +54,20 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, onClose
   useEffect(() => {
     titleRef.current?.focus()
   }, [])
+
+  // 버전충돌 후 부모가 내려준 최신 서버 행으로 재시드(Task 7, §4.3 LWW 금지):
+  //  (1) expectedVersion을 서버 version으로 갱신 → 다음 저장이 같은 충돌을 반복하지 않음.
+  //  (2) 메모 손실 방지(CLAUDE.md §4): 내 미저장 메모와 서버 메모가 다르면 `\n---\n`로 append-merge.
+  useEffect(() => {
+    if (!conflictRefresh) return
+    setExpectedVersion(conflictRefresh.version)
+    const server = conflictRefresh.memo ?? ''
+    setMemo((prev) => {
+      if (!server) return prev
+      if (!prev) return server
+      return prev !== server ? `${prev}\n---\n${server}` : prev
+    })
+  }, [conflictRefresh])
 
   // 포커스 트랩(§8) — Tab이 시트 밖으로 새지 않게 첫/마지막 포커서블을 순환.
   const trapTab = (e: ReactKeyboardEvent) => {
@@ -104,7 +122,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, onClose
     const others = (initial?.reminders ?? []).filter((r) => r.userId !== myId)
     const reminders = myReminder > 0 && myId ? [...others, { userId: myId, offsetMinutes: myReminder }] : others
     if (editing && initial) {
-      onUpdate(initial.id, initial.version, {
+      onUpdate(initial.id, expectedVersion, {
         title: t,
         start,
         end,
@@ -269,7 +287,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, onClose
                 <button
                   type="button"
                   className={styles.confirmDelete}
-                  onClick={() => onDelete(initial.id, initial.version)}
+                  onClick={() => onDelete(initial.id, expectedVersion)}
                   disabled={busy}
                 >
                   정말 삭제할까요?

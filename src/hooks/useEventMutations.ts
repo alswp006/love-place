@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
-import { versionedUpdate, softDelete, ConflictError } from '@/lib/sync/versionedUpdate'
+import { versionedUpdate, softDelete, ConflictError, PermissionError, refetchEventRow } from '@/lib/sync/versionedUpdate'
 import { DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import { courseKey } from '@/lib/route/courseKey'
 import type { CourseStop } from '@/lib/route/coursePlan'
@@ -36,7 +36,12 @@ export type EventPatch = Partial<{
   reminders: Reminder[]
 }>
 
-export function useEventMutations(coupleId: string | null, myId: string | null, onConflict: () => void) {
+export function useEventMutations(
+  coupleId: string | null,
+  myId: string | null,
+  onConflict: () => void,
+  onPermissionDenied?: () => void,
+) {
   const queryClient = useQueryClient()
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ['events', coupleId] })
 
@@ -69,10 +74,17 @@ export function useEventMutations(coupleId: string | null, myId: string | null, 
     mutationFn: async ({ id, expectedVersion, patch }) => {
       if (!myId) throw new Error('로그인이 필요해요.')
       const res = await versionedUpdate('events', id, expectedVersion, { ...patch, updated_by: myId })
-      if (res.status === 'conflict') throw new ConflictError()
+      if (res.status === 'conflict') {
+        const fresh = await refetchEventRow(id)
+        if (fresh && fresh.visibility === 'PERSONAL' && fresh.owner_id !== myId) {
+          throw new PermissionError() // 권한거부 — 메시지 분리(신규 클래스)
+        }
+        throw new ConflictError() // 진짜 버전충돌(기존 클래스 재사용)
+      }
     },
     onError: (err) => {
-      if (err instanceof ConflictError) onConflict()
+      if (err instanceof PermissionError) onPermissionDenied?.()
+      else if (err instanceof ConflictError) onConflict()
     },
     onSettled: invalidate,
   })

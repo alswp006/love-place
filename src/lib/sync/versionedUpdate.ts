@@ -11,6 +11,24 @@ export class ConflictError extends Error {
   }
 }
 
+// 권한거부(상대 PERSONAL을 수정 시도) — 버전충돌과 메시지·처리를 분리(조사03 §2/§3).
+// UI 가드(Task 6)가 보통 사전 차단하지만, 가드 누락/경합 시의 백스톱.
+export class PermissionError extends Error {
+  constructor(message = '이 일정은 상대만 수정할 수 있어요.') {
+    super(message)
+    this.name = 'PermissionError'
+  }
+}
+
+export type FreshRow = { version: number; memo: string | null; visibility: 'SHARED' | 'PERSONAL'; owner_id: string } | null
+/** 충돌(0행) 후 현재 서버 행을 id로 재조회. 권한거부 vs 버전충돌 판별·재시드용. */
+export async function refetchEventRow(id: string): Promise<FreshRow> {
+  const { data, error } = await supabase
+    .from('events').select('version, memo, visibility, owner_id').eq('id', id).is('deleted_at', null).maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data as FreshRow) ?? null
+}
+
 export type VersionedResult<T> = { status: 'ok'; row: T } | { status: 'conflict' }
 
 /** update().select() 결과 행 해석: 0행 = 충돌(또는 행 소멸), 1행 = 성공. 순수 함수(테스트로 못박음). */

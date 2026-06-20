@@ -13,6 +13,7 @@ import { useEventMutations, type NewEvent, type EventPatch } from '@/hooks/useEv
 import { useRestoreEvent } from '@/hooks/useRestoreEvent'
 import { useToast } from '@/hooks/useToast'
 import { useConflict } from '@/lib/sync/useConflict'
+import { refetchEventRow, ConflictError } from '@/lib/sync/versionedUpdate'
 import { deriveTrack, TRACK_META, ALL_TRACKS, type Track } from '@/lib/calendar/track'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
 import { expandEvents, type Occurrence } from '@/lib/calendar/rrule'
@@ -32,9 +33,13 @@ export default function CalendarPage() {
   const { data: events } = useEvents(coupleId)
   const { data: profiles } = useProfiles(coupleId)
   const conflict = useConflict()
-  const { create, update, remove } = useEventMutations(coupleId, myId, conflict.flag)
+  // 권한거부(상대 PERSONAL 수정 시도) — 버전충돌과 분리해 별도 배너로 안내(Task 7). 시트는 유지.
+  const permission = useConflict()
+  const { create, update, remove } = useEventMutations(coupleId, myId, conflict.flag, permission.flag)
   const { restoreEvent } = useRestoreEvent(coupleId, myId, conflict.flag)
   const toast = useToast()
+  // 충돌 후 시트로 내려보낼 최신 서버 행(version 재시드 + 메모 append-merge용, §4.3).
+  const [conflictRefresh, setConflictRefresh] = useState<{ version: number; memo: string | null } | null>(null)
 
   const todayKey = dayKey(new Date().toISOString())
   // ?date=YYYY-MM-DD 딥링크(R1.1) — 코스 추가 후 그 날로 점프. 형식 검증 후 시드, 아니면 오늘.
@@ -96,10 +101,27 @@ export default function CalendarPage() {
     })
 
   const busy = create.isPending || update.isPending || remove.isPending
-  const closeSheet = () => setSheet({ open: false, editing: null })
+  const closeSheet = () => {
+    setSheet({ open: false, editing: null })
+    setConflictRefresh(null)
+  }
   const onCreate = (e: NewEvent) => create.mutate(e, { onSuccess: closeSheet })
+  // 성공이면 닫고, 버전충돌이면 시트 유지 + 최신 서버 행을 시트로 내려 version 재시드·메모 머지(§4.3).
+  // 권한거부는 시트 유지(배너로 안내) — onError에서 콜백이 갈리므로 여기선 충돌만 재시드한다.
   const onUpdate = (id: string, v: number, patch: EventPatch) =>
-    update.mutate({ id, expectedVersion: v, patch }, { onSuccess: closeSheet })
+    update.mutate(
+      { id, expectedVersion: v, patch },
+      {
+        onSuccess: closeSheet,
+        onError: (err) => {
+          if (err instanceof ConflictError) {
+            void refetchEventRow(id).then((fresh) => {
+              if (fresh) setConflictRefresh({ version: fresh.version, memo: fresh.memo })
+            })
+          }
+        },
+      },
+    )
   // 삭제 성공 → 시트 닫고 Undo 토스트. 되돌리기는 삭제로 +1된 버전(v+1)으로 복구(낙관적 락, §4.3).
   const onDelete = (id: string, v: number) =>
     remove.mutate(
@@ -119,6 +141,9 @@ export default function CalendarPage() {
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
       <div className={styles.container}>
         {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
+        {permission.conflict ? (
+          <ConflictBanner message="이 일정은 상대만 수정할 수 있어요." onDismiss={permission.clear} />
+        ) : null}
 
         <div className={styles.monthNav}>
           <button
@@ -178,6 +203,7 @@ export default function CalendarPage() {
           myId={myId}
           busy={busy}
           profiles={profiles ?? {}}
+          conflictRefresh={conflictRefresh}
           onClose={closeSheet}
           onCreate={onCreate}
           onUpdate={onUpdate}
