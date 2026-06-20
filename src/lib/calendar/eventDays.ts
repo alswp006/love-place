@@ -58,6 +58,26 @@ export function monthMatrix(year: number, month0: number): DayCell[] {
   return cells
 }
 
+/** anchorKey('YYYY-MM-DD')가 속한 주(일요일 시작) 7칸. UTC 산술. */
+export function weekMatrix(anchorKey: string): DayCell[] {
+  const [y, m, d] = anchorKey.split('-').map(Number)
+  const base = new Date(Date.UTC(y!, (m ?? 1) - 1, d!))
+  const dow = base.getUTCDay() // 0=일
+  const cells: DayCell[] = []
+  for (let i = 0; i < 7; i++) {
+    const cur = new Date(Date.UTC(y!, (m ?? 1) - 1, d! - dow + i))
+    cells.push({ key: ymdKey(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate()), day: cur.getUTCDate(), inMonth: true })
+  }
+  return cells
+}
+
+/** ISO → 표시 tz 기준 자정으로부터의 분(타임라인 세로 위치용). 0..1439. */
+export function minuteOfDay(iso: string, tz: string = DISPLAY_TZ): number {
+  const hm = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso))
+  const [h, mi] = hm.split(':').map(Number)
+  return (h ?? 0) * 60 + (mi ?? 0)
+}
+
 export function addMonths(year: number, month0: number, delta: number): { year: number; month0: number } {
   const total = year * 12 + month0 + delta
   return { year: Math.floor(total / 12), month0: ((total % 12) + 12) % 12 }

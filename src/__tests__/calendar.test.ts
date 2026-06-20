@@ -8,6 +8,8 @@ import {
   diffDays,
   dDayLabel,
   upcomingEvents,
+  weekMatrix,
+  minuteOfDay,
 } from '@/lib/calendar/eventDays'
 
 const ME = 'me-uuid'
@@ -87,6 +89,26 @@ describe('diffDays / dDayLabel', () => {
     expect(dDayLabel('2026-06-11', '2026-06-10')).toBe('내일')
     expect(dDayLabel('2026-06-13', '2026-06-10')).toBe('D-3')
     expect(dDayLabel('2026-06-08', '2026-06-10')).toBe('2일 전')
+  })
+})
+
+describe('weekMatrix (주 7일 — 일요일 시작)', () => {
+  it('화요일 앵커 → 일요일 시작 7칸', () => {
+    const cells = weekMatrix('2026-06-16') // 화요일
+    expect(cells).toHaveLength(7)
+    expect(cells[0]?.key).toBe('2026-06-14') // 일요일 시작
+    expect(cells[6]?.key).toBe('2026-06-20')
+    expect(cells[0]).toEqual({ key: '2026-06-14', day: 14, inMonth: true })
+    expect(cells.every((c) => c.inMonth)).toBe(true) // DayCell 재사용 — inMonth 무의미 → true
+  })
+})
+
+describe('minuteOfDay (타임라인 세로 위치)', () => {
+  it('UTC 01:30 → KST 10:30 = 630분', () => {
+    expect(minuteOfDay('2026-06-16T01:30:00Z')).toBe(630)
+  })
+  it('UTC 15:00 → KST 익일 00:00 = 0분', () => {
+    expect(minuteOfDay('2026-06-15T15:00:00Z')).toBe(0)
   })
 })
 
