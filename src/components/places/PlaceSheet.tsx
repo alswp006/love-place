@@ -16,7 +16,7 @@ import { useConflict } from '@/lib/sync/useConflict'
 import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WithWish } from '@/lib/places/wishStatus'
-import { nextSnap, prevSnap, snapForOffset, translateYFor, type SnapStop } from '@/lib/places/sheetSnap'
+import { nextSnap, prevSnap, snapForFlick, translateYFor, type SnapStop } from '@/lib/places/sheetSnap'
 import { sheetTravelHeight, setAppVh } from '@/lib/layout/appViewport'
 import styles from './PlaceSheet.module.css'
 
@@ -78,7 +78,20 @@ export function PlaceSheet({
   const setSnap = onSnapChange
   const [dragY, setDragY] = useState<number | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
-  const dragStart = useRef<{ pointerY: number; baseY: number } | null>(null)
+  const DRAG_THRESHOLD = 6 // px — 탭 vs 드래그
+  const dragInfo = useRef<{
+    pointerY: number
+    baseY: number
+    lastY: number
+    lastT: number
+    velocity: number
+    moved: boolean
+  } | null>(null)
+  // 드래그 직후 발생하는 synthetic click(handleBtn onClick)이 cycleSnap을 또 호출해 한 단계 더
+  // 튀는 것을 막는 가드. pointerup이 click보다 먼저 오므로 여기서 true로 세팅하고, 다음 tick에 해제한다.
+  const justDraggedRef = useRef(false)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const bodyDrag = useRef<{ y: number } | null>(null)
   // 뷰포트 높이는 상태로 추적 — iOS Safari 주소창 show/hide·회전 시 window.innerHeight가 바뀌므로
   // 리스너로 갱신해야 시트 위치(translateY)가 어긋나지 않는다(모바일 Safari 1차 대상).
   const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 800))
@@ -126,28 +139,86 @@ export function PlaceSheet({
     }
   }, [coupleActive, placesLoading, places.length, snap])
 
-  const onPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
-    sheetRef.current?.style.setProperty('transition', 'none')
-    dragStart.current = { pointerY: e.clientY, baseY: restY }
-    ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
-  }
-  const onPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!dragStart.current) return
-    const dy = e.clientY - dragStart.current.pointerY
-    // travel(탭바 제외)로 클램프 — 시트가 탭바 뒤로 내려가지 못하게.
-    const next = Math.max(0, Math.min(travel, dragStart.current.baseY + dy))
-    setDragY(next)
-  }
-  const endDrag = () => {
-    sheetRef.current?.style.removeProperty('transition')
-    if (dragY != null) setSnap(snapForOffset(dragY, travel, peekPx))
-    setDragY(null)
-    dragStart.current = null
-  }
-
   // 탭 대체(제스처 발견성↓ 보완, ux §1): full이면 한 단계 접고, 아니면 한 단계 펼친다.
   // snap은 controlled(prop) — 함수형 updater 대신 현재 값으로 다음 스냅을 계산해 onSnapChange로 올린다.
   const cycleSnap = () => setSnap(snap === 'full' ? prevSnap(snap) : nextSnap(snap))
+
+  // peekHeader 전체가 드래그 핸들 — pointerdown에서 시작점/기준 translateY를 저장하고,
+  // 6px 임계를 넘기 전까지는 탭으로 본다(탭=cycleSnap). 임계 초과 시 dragY 갱신 + 속도 샘플링.
+  // 단, 필터 칩 행(role=group)은 헤더의 자식이라 칩 탭의 pointerdown→pointerup이 헤더로 버블한다 —
+  // 가드 없으면 no-move 분기가 cycleSnap을 불러 '필터 선택'이 시트 단계까지 바꾼다. 칩에서 시작한
+  // 포인터는 드래그/탭 어느 쪽도 트리거하지 않게 dragInfo를 비우고 무시한다(드래그 표면에서 칩 제외).
+  const onHeaderPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('[data-no-sheet-drag]')) {
+      dragInfo.current = null
+      return
+    }
+    dragInfo.current = {
+      pointerY: e.clientY,
+      baseY: restY,
+      lastY: e.clientY,
+      lastT: e.timeStamp,
+      velocity: 0,
+      moved: false,
+    }
+    ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+  }
+  const onHeaderPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const d = dragInfo.current
+    if (!d) return
+    const dy = e.clientY - d.pointerY
+    if (!d.moved && Math.abs(dy) < DRAG_THRESHOLD) return // 임계 미만 = 아직 탭
+    if (!d.moved) {
+      d.moved = true
+      sheetRef.current?.style.setProperty('transition', 'none')
+    }
+    const dt = Math.max(1, e.timeStamp - d.lastT)
+    d.velocity = (e.clientY - d.lastY) / dt
+    d.lastY = e.clientY
+    d.lastT = e.timeStamp
+    const next = Math.max(0, Math.min(travel, d.baseY + dy))
+    setDragY(next)
+  }
+  const onHeaderPointerUp = () => {
+    const d = dragInfo.current
+    sheetRef.current?.style.removeProperty('transition')
+    if (d && d.moved && dragY != null) {
+      setSnap(snapForFlick(dragY, d.velocity, travel, peekPx))
+      // 드래그였음을 표시 → 뒤이어 오는 synthetic click(cycleSnap)을 1회 무시.
+      justDraggedRef.current = true
+      // dragInfo.current는 여기서 null이 되지만, justDraggedRef는 click이 발화한 뒤 해제한다.
+      setTimeout(() => {
+        justDraggedRef.current = false
+      }, 0)
+    } else if (d && !d.moved) {
+      cycleSnap() // 임계 미만 = 탭(헤더에서 직접 처리)
+      // 핸들 버튼 직접 탭도 pointerup이 헤더로 버블 → 여기서 cycleSnap이 먼저 돈다. 뒤이어 오는
+      // 버튼 onClick(또 cycleSnap)을 1회 삼키지 않으면 한 단계 더 튄다(이중 cycle). 드래그 경로와
+      // 동일하게 justDraggedRef로 가드한다(pointerup → click 순서, 다음 tick에 해제).
+      justDraggedRef.current = true
+      setTimeout(() => {
+        justDraggedRef.current = false
+      }, 0)
+    }
+    setDragY(null)
+    dragInfo.current = null
+  }
+
+  // body 당겨 접기 — scrollTop===0에서 아래로 끌면 한 단계 접는다(네이티브 시트 제스처 근사).
+  const onBodyPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if ((bodyRef.current?.scrollTop ?? 0) <= 0) bodyDrag.current = { y: e.clientY }
+  }
+  const onBodyPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const b = bodyDrag.current
+    if (!b) return
+    if (e.clientY - b.y > DRAG_THRESHOLD && (bodyRef.current?.scrollTop ?? 0) <= 0) {
+      setSnap(prevSnap(snap)) // scrollTop===0에서 아래로 끌면 한 단계 접기
+      bodyDrag.current = null
+    }
+  }
+  const onBodyPointerUp = () => {
+    bodyDrag.current = null
+  }
   const handleLabel = snap === 'full' ? '시트 단계 전환(접기)' : '시트 펼치기'
 
   return (
@@ -168,18 +239,26 @@ export function PlaceSheet({
         aria-label="장소 시트"
         style={{ transform: `translateY(${translateY}px)` }}
       >
-      {/* peek-pinned 헤더 — peek 비율에서도 항상 보임: 핸들 + 요약 + 필터 칩(§5 peek 콘텐츠). */}
-      <div ref={peekRef} className={styles.peekHeader} data-peek-pinned="true">
+      {/* peek-pinned 헤더 — peek 비율에서도 항상 보임: 핸들 + 요약 + 필터 칩(§5 peek 콘텐츠).
+          헤더 전체가 드래그 핸들(6px 임계로 탭/드래그 구분). 버튼은 키보드/접근성 탭 대체. */}
+      <div
+        ref={peekRef}
+        className={styles.peekHeader}
+        data-peek-pinned="true"
+        onPointerDown={onHeaderPointerDown}
+        onPointerMove={onHeaderPointerMove}
+        onPointerUp={onHeaderPointerUp}
+        onPointerCancel={onHeaderPointerUp}
+      >
         <div className={styles.handleRow}>
           <span className={styles.handle} aria-hidden />
           <button
             type="button"
             className={styles.handleBtn}
-            onClick={cycleSnap}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={endDrag}
-            onPointerCancel={endDrag}
+            onClick={() => {
+              if (justDraggedRef.current) return // 방금 드래그 → cycleSnap 중복 방지
+              cycleSnap()
+            }}
             aria-expanded={snap !== 'peek'}
             aria-label={handleLabel}
           >
@@ -190,7 +269,8 @@ export function PlaceSheet({
         </div>
 
         {coupleActive ? (
-          <div className={styles.filterRow} role="group" aria-label="장소 필터">
+          // data-no-sheet-drag: 칩 탭/가로 스크롤이 헤더 드래그/cycleSnap을 트리거하지 않게 표시(위 가드).
+          <div className={styles.filterRow} role="group" aria-label="장소 필터" data-no-sheet-drag>
             {(
               [
                 ['all', '전체'],
@@ -213,7 +293,14 @@ export function PlaceSheet({
       </div>
 
       {!coupleActive ? (
-        <div className={styles.body}>
+        <div
+          ref={bodyRef}
+          className={styles.body}
+          data-sheet-body
+          onPointerDown={onBodyPointerDown}
+          onPointerMove={onBodyPointerMove}
+          onPointerUp={onBodyPointerUp}
+        >
           <EmptyState
             emoji="💑"
             title="먼저 상대와 연결해요"
@@ -226,7 +313,14 @@ export function PlaceSheet({
           />
         </div>
       ) : (
-        <div className={styles.body}>
+        <div
+          ref={bodyRef}
+          className={styles.body}
+          data-sheet-body
+          onPointerDown={onBodyPointerDown}
+          onPointerMove={onBodyPointerMove}
+          onPointerUp={onBodyPointerUp}
+        >
           {previewHit ? (
             <PlacePreviewDetail
               hit={previewHit}

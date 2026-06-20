@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, createEvent, within, waitFor } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { SnapStop } from '@/lib/places/sheetSnap'
@@ -231,6 +231,187 @@ describe('PlaceSheet (드래그 시트)', () => {
     renderSheet({ places: [], placesLoading: true })
     expect(screen.getByText(/불러오는 중…/)).toBeInTheDocument()
     expect(screen.queryByText('우리 장소 0곳')).toBeNull()
+  })
+})
+
+// jsdom에는 네이티브 PointerEvent가 없어 fireEvent.pointer*가 clientY를 실어주지 않는다 →
+// createEvent로 만든 뒤 clientY를 명시적으로 정의해 핸들러가 실제 좌표를 읽게 한다(드래그 임계 검증).
+type PtrKind = 'pointerDown' | 'pointerMove' | 'pointerUp'
+function firePointer(el: Element, kind: PtrKind, clientY: number) {
+  const ev = createEvent[kind](el, { pointerId: 1 })
+  Object.defineProperty(ev, 'clientY', { value: clientY, configurable: true })
+  fireEvent(el, ev)
+}
+
+describe('PlaceSheet — peekHeader 전체 드래그 + 6px 임계 + 당겨 접기(R1.4, T10)', () => {
+  // onSnapChange 호출 횟수/인자를 정밀 검증하려고 controlled snap을 spy로 감싼다.
+  // (Harness 대신 직접 spy를 넘겨 드래그-정착 vs 탭-cycle vs 합성 click 가드를 구분.)
+  function renderWithSpy(snap: SnapStop = 'peek') {
+    const onSnapChange = vi.fn()
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { container } = render(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <OfflineQueueProvider>
+            <PlaceSheet
+              coupleId="c1"
+              myId="u1"
+              coupleActive
+              places={[aPlace]}
+              wishes={{ byPlace: {}, mine: {} }}
+              visitedIds={new Set<string>()}
+              placesLoading={false}
+              selectedId={null}
+              onSelect={() => {}}
+              previewHit={null}
+              reactions={{}}
+              onSave={() => {}}
+              onCloseDetail={() => {}}
+              snap={snap}
+              onSnapChange={onSnapChange}
+            />
+          </OfflineQueueProvider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    const peekHeader = container.querySelector('[data-peek-pinned="true"]') as HTMLElement
+    const body = container.querySelector('[data-sheet-body]') as HTMLElement
+    // 핸들 버튼만(백드롭 ' 시트 접기'와 구별 — 핸들 라벨은 '시트 펼치기' 또는 '시트 단계 전환(접기)').
+    const handleBtn = screen.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
+    return { onSnapChange, peekHeader, body, handleBtn }
+  }
+
+  // 합성-click 이중 cycle은 controlled snap이 실제로 갱신돼 다음 cycleSnap이 '새 snap'에서 계산될 때만
+  // 최종 상태로 드러난다(static spy는 같은 stale snap에서 같은 값을 두 번 내므로 end-state가 안 변함).
+  // 따라서 useState로 snap을 실제 보유하는 '현실적 부모' 하베스로 end-state를 검증한다.
+  function renderRealisticParent(initial: SnapStop = 'peek') {
+    const onSnapChange = vi.fn()
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const RealisticHarness = () => {
+      const [snap, setSnap] = useState<SnapStop>(initial)
+      return (
+        <PlaceSheet
+          coupleId="c1"
+          myId="u1"
+          coupleActive
+          places={[aPlace]}
+          wishes={{ byPlace: {}, mine: {} }}
+          visitedIds={new Set<string>()}
+          placesLoading={false}
+          selectedId={null}
+          onSelect={() => {}}
+          previewHit={null}
+          reactions={{}}
+          onSave={() => {}}
+          onCloseDetail={() => {}}
+          snap={snap}
+          onSnapChange={(s) => {
+            onSnapChange(s)
+            setSnap(s)
+          }}
+        />
+      )
+    }
+    const { container } = render(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <OfflineQueueProvider>
+            <RealisticHarness />
+          </OfflineQueueProvider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    const peekHeader = container.querySelector('[data-peek-pinned="true"]') as HTMLElement
+    const handleBtn = screen.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
+    return { onSnapChange, peekHeader, handleBtn }
+  }
+
+  // 핵심 회귀: 핸들 버튼 '직접 탭'은 pointerdown(무이동)+pointerup+click 순서로 발생한다.
+  // pointerup이 헤더로 버블 → no-move 분기 cycleSnap, 이어 버튼 onClick → cycleSnap. 가드 없으면 이중 cycle.
+  it('핸들 버튼 직접 탭(pointerdown 무이동+pointerup+click)은 cycleSnap을 정확히 1회만 부른다(이중 cycle 방지)', () => {
+    const { onSnapChange, peekHeader, handleBtn } = renderRealisticParent('peek')
+    // 실제 탭: 헤더에서 pointerdown→(이동 없음)→pointerup, 그 뒤 버튼으로 합성 click.
+    firePointer(peekHeader, 'pointerDown', 600)
+    firePointer(peekHeader, 'pointerUp', 600) // 0px 이동 = 탭
+    fireEvent.click(handleBtn)
+    // no-move 탭 1회만 효력 — 합성 click의 두 번째 cycle은 justDraggedRef로 삼켜진다.
+    expect(onSnapChange).toHaveBeenCalledTimes(1)
+    // peek → nextSnap = half. (이중 cycle이면 half를 건너뛰고 full로 튄다.)
+    expect(onSnapChange).toHaveBeenCalledWith('half')
+  })
+
+  it('half에서 핸들 버튼 직접 탭은 full로 한 단계만 올린다(이중 cycle 시 half→full→half로 무동작)', () => {
+    const { onSnapChange, peekHeader, handleBtn } = renderRealisticParent('half')
+    firePointer(peekHeader, 'pointerDown', 600)
+    firePointer(peekHeader, 'pointerUp', 600)
+    fireEvent.click(handleBtn)
+    expect(onSnapChange).toHaveBeenCalledTimes(1)
+    expect(onSnapChange).toHaveBeenLastCalledWith('full')
+  })
+
+  it('peekHeader 위에서 6px 초과 드래그 → onSnapChange가 새 스냅으로 호출된다', () => {
+    const { onSnapChange, peekHeader } = renderWithSpy('peek')
+    // 위로 끌어올림(아래→위 = 펼치기) — clientY 감소, 임계(6px) 초과.
+    firePointer(peekHeader, 'pointerDown', 600)
+    firePointer(peekHeader, 'pointerMove', 580)
+    firePointer(peekHeader, 'pointerMove', 400)
+    firePointer(peekHeader, 'pointerUp', 400)
+    expect(onSnapChange).toHaveBeenCalled()
+  })
+
+  it('peekHeader 탭(6px 미만 이동) → cycleSnap(스냅 1단계)만, 드래그-정착 아님', () => {
+    const { onSnapChange, peekHeader } = renderWithSpy('peek')
+    firePointer(peekHeader, 'pointerDown', 600)
+    firePointer(peekHeader, 'pointerMove', 603) // 3px < 6px = 탭
+    firePointer(peekHeader, 'pointerUp', 603)
+    // peek에서 탭 = nextSnap → half.
+    expect(onSnapChange).toHaveBeenCalledTimes(1)
+    expect(onSnapChange).toHaveBeenCalledWith('half')
+  })
+
+  it('드래그-릴리즈 직후 합성 click이 cycleSnap을 또 호출하지 않는다(justDraggedRef 가드)', () => {
+    const { onSnapChange, peekHeader, handleBtn } = renderWithSpy('peek')
+    firePointer(peekHeader, 'pointerDown', 600)
+    firePointer(peekHeader, 'pointerMove', 560) // 40px > 6px = 드래그
+    firePointer(peekHeader, 'pointerUp', 560)
+    // pointerup이 click보다 먼저 → justDraggedRef=true → 뒤이은 click은 무시되어야 한다.
+    fireEvent.click(handleBtn)
+    // 드래그 정착 1회만, 합성 click의 cycle은 삼켜짐.
+    expect(onSnapChange).toHaveBeenCalledTimes(1)
+  })
+
+  it('body가 scrollTop=0일 때 아래로 끌면 한 단계 접힌다(pull-down collapse)', () => {
+    const { onSnapChange, body } = renderWithSpy('half')
+    // scrollTop은 jsdom 기본 0 — 아래로(=clientY 증가) 임계 초과 드래그.
+    firePointer(body, 'pointerDown', 100)
+    firePointer(body, 'pointerMove', 140) // +40px > 6px, 아래로
+    firePointer(body, 'pointerUp', 140)
+    // half → prevSnap → peek.
+    expect(onSnapChange).toHaveBeenCalledWith('peek')
+  })
+
+  // 회귀: 필터 칩은 peekHeader의 자식이므로 칩 탭의 pointerdown→pointerup이 헤더로 버블한다.
+  // no-move 분기가 cycleSnap을 부르면 '필터 선택'이 시트 단계까지 바꾸는 부작용이 생긴다(잡혀야 함).
+  it('필터 칩 탭은 aria-pressed만 토글하고 시트 스냅을 바꾸지 않는다(헤더 드래그 부작용 방지)', () => {
+    const { onSnapChange, peekHeader } = renderWithSpy('peek')
+    const wishChip = within(peekHeader).getByRole('button', { name: '가고싶은' })
+    // 실제 칩 탭: 칩 위에서 pointerdown→(이동 없음)→pointerup, 그 뒤 합성 click.
+    firePointer(wishChip, 'pointerDown', 600)
+    firePointer(wishChip, 'pointerUp', 600)
+    fireEvent.click(wishChip)
+    // 필터는 선택되지만(aria-pressed=true), 시트 스냅은 절대 바뀌면 안 된다.
+    expect(wishChip).toHaveAttribute('aria-pressed', 'true')
+    expect(onSnapChange).not.toHaveBeenCalled()
+  })
+
+  // 칩에서 시작한 6px 초과 이동(가로 스크롤 등)도 시트를 드래그하지 않는다(드래그 표면에서 칩 제외).
+  it('필터 칩 위에서 시작한 포인터 이동은 시트를 드래그하지 않는다', () => {
+    const { onSnapChange, peekHeader } = renderWithSpy('peek')
+    const allChip = within(peekHeader).getByRole('button', { name: '전체' })
+    firePointer(allChip, 'pointerDown', 600)
+    firePointer(allChip, 'pointerMove', 560) // 40px > 6px
+    firePointer(allChip, 'pointerUp', 560)
+    expect(onSnapChange).not.toHaveBeenCalled()
   })
 })
 
