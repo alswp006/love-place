@@ -1,0 +1,58 @@
+.card {
+  display: block;
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.head {
+  font-weight: 600;
+  font-size: var(--fs-caption);
+  color: var(--c-brand);
+  margin: 0 0 var(--sp-2);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-caption);
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.badge {
+  flex: none;
+}
+
+.label {
+  flex: none;
+  font-weight: 600;
+  color: var(--c-brand);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 카운트다운/하이라이트 펄스는 장식 모션 — Reduce Motion에서 즉시 최종값(생략). */
+@media (prefers-reduced-motion: reduce) {
+  .label {
+    transition: none;
+    animation: none;
+  }
+}

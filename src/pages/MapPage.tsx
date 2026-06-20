@@ -12,6 +12,7 @@ import { useWishes } from '@/hooks/useWishes'
 import { useVisits } from '@/hooks/useVisits'
 import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
+import { UpcomingFeed } from '@/components/common/UpcomingFeed'
 import { useReactions } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
 import { attachAndSortWishes } from '@/lib/places/wishStatus'
@@ -108,6 +109,10 @@ export default function MapPage() {
               <ConflictBanner onDismiss={conflict.clear} />
             </div>
           ) : null}
+          {/* 다가오는 일정 인앱 피드(Task 15) — 배너와 지도 사이 상단 오버레이. 항목 0이면 self-hide. */}
+          <div className={styles.feedOverlay}>
+            <UpcomingFeed coupleId={coupleId} myId={myId} />
+          </div>
           {/* 검색바는 시트가 아니라 지도 위 상단 오버레이(spec §5) — peek에서도 도달, ≤3탭 보존. */}
           {coupleActive ? (
             <MapSearchOverlay coupleId={coupleId} savedKakaoIds={savedKakaoIds} onPick={onPick} snap={snap} />

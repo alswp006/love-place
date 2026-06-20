@@ -20,3 +20,20 @@
   margin: 0 auto;
   z-index: 50;
 }
+
+/* 다가오는 일정 피드 오버레이(Task 15) — 검색바 한 줄 아래, 시트(45)보다 위. 항목 0이면 카드가
+   스스로 숨어 빈 div만 남으므로 레이아웃을 침범하지 않는다(pointer-events는 카드에만). */
+.feedOverlay {
+  position: absolute;
+  top: calc(var(--safe-top) + var(--sp-2) + 48px);
+  left: var(--sp-3);
+  right: var(--sp-3);
+  max-width: 480px;
+  margin: 0 auto;
+  z-index: 48;
+  pointer-events: none;
+}
+
+.feedOverlay > * {
+  pointer-events: auto;
+}
