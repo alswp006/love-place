@@ -18,6 +18,7 @@ import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
 import { attachAndSortWishes } from '@/lib/places/wishStatus'
 import { useSavePlace } from '@/hooks/useSavePlace'
 import { useToast } from '@/components/common/ToastProvider'
+import { haptic } from '@/lib/haptics'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import { type SnapStop } from '@/lib/places/sheetSnap'
 import { tabByPath } from '@/app/tabs'
@@ -83,6 +84,7 @@ export default function MapPage() {
         if (r.jumped) toast.show('이미 담아둔 곳이에요 — 지도에서 보여줄게요')
         else toast.show('저장했어요')
         setSelectedId(r.placeId)
+        haptic() // 온라인 저장 성공(r 진실)에만 — 토스트 시각 피드백 병행, 오프라인 큐(r===null)엔 미발화(ux §1).
       },
       onError: (e) => toast.show(e.message, 3000),
     })

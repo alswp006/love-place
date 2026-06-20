@@ -17,6 +17,7 @@ import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WithWish } from '@/lib/places/wishStatus'
 import { nextSnap, prevSnap, snapForFlick, translateYFor, type SnapStop } from '@/lib/places/sheetSnap'
 import { sheetTravelHeight, setAppVh } from '@/lib/layout/appViewport'
+import { haptic } from '@/lib/haptics'
 import styles from './PlaceSheet.module.css'
 
 // 통합 화면 하단 드래그 시트 — 검색 + 필터 + PlaceList + Trips + 휴지통. peek/half/full 스냅.
@@ -349,7 +350,12 @@ export function PlaceSheet({
                           placeId: selectedPlace.id,
                           alreadyVisited: visitedIds.has(selectedPlace.id),
                         },
-                        { onSuccess: () => toast.show('가봤어요로 기록했어요 ✅') },
+                        {
+                          onSuccess: () => {
+                            toast.show('가봤어요로 기록했어요 ✅')
+                            haptic() // 기록 성공 피드백 — 토스트 시각 피드백 병행(ux §1).
+                          },
+                        },
                       )
                   }}
                   onUnvisit={() =>
@@ -358,6 +364,7 @@ export function PlaceSheet({
                       {
                         onSuccess: (r) => {
                           // removed → 훅이 '되돌리기' Undo 토스트를 띄움(Task 18, 중복 토스트 방지).
+                          if (r.status === 'removed') haptic() // 제거 성공에만 — noop/conflict엔 미발화(ux §1).
                           if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
                           // conflict → ConflictBanner는 onConflict가 이미 띄움
                         },

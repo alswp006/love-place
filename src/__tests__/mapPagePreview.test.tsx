@@ -38,6 +38,8 @@ vi.mock('@/hooks/useReactions', () => ({
 }))
 vi.mock('@/hooks/useRealtimePlaces', () => ({ useRealtimePlaces: () => {} }))
 vi.mock('@/hooks/useSavePlace', () => ({ useSavePlace: () => ({ mutate: saveMutate }) }))
+// 햅틱은 온라인 저장 성공(r 진실)에만 — 오프라인 큐(r===null)엔 미발화. vibrate 자체를 모킹해 호출 단언(ux §1).
+vi.mock('@/lib/haptics', () => ({ haptic: vi.fn() }))
 vi.mock('@/lib/naver/loadNaverMaps', () => ({ isNaverMapConfigured: () => true }))
 vi.mock('@/hooks/useKakaoSearch', () => ({
   useKakaoSearch: () => ({ query: '카', setQuery: () => {}, clear: () => {}, status: 'done', hits, error: null }),
@@ -67,6 +69,7 @@ vi.mock('@/components/map/NaverMap', () => ({
 
 import { ToastProvider } from '@/components/common/ToastProvider'
 import MapPage from '@/pages/MapPage'
+import { haptic } from '@/lib/haptics'
 
 function renderMap() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -84,6 +87,7 @@ function renderMap() {
 describe('MapPage 검색→프리뷰→저장 오케스트레이션(spec §3.6)', () => {
   beforeEach(() => {
     saveMutate.mockReset()
+    vi.mocked(haptic).mockClear()
     placesData = [{ id: 'p1', name: '저장된 카페', kakao_place_id: 'saved1', lat: 38, lng: 128, added_by: 'u1' }]
   })
 
@@ -118,6 +122,8 @@ describe('MapPage 검색→프리뷰→저장 오케스트레이션(spec §3.6)'
     expect(saveMutate.mock.calls[0]![0]).toMatchObject({ kakaoPlaceId: 'new1' })
     expect(screen.getByTestId('preview')).toHaveTextContent('none')
     expect(screen.getByTestId('selected')).toHaveTextContent('p2')
+    // 온라인 저장 성공(r 진실) → 햅틱 1회(시각 토스트 병행, ux §1).
+    expect(haptic).toHaveBeenCalledTimes(1)
   })
 
   it('오프라인(r===null)이면 선택 없이 큐 토스트를 보여준다(spec §3.6)', () => {
@@ -128,6 +134,8 @@ describe('MapPage 검색→프리뷰→저장 오케스트레이션(spec §3.6)'
     fireEvent.click(screen.getByText('sheet-save'))
     expect(screen.getByTestId('selected')).toHaveTextContent('none')
     expect(screen.getByText(/오프라인이라 큐에 담았어요/)).toBeInTheDocument()
+    // 오프라인 큐(r===null) → 햅틱 미발화(성공 진실에만).
+    expect(haptic).not.toHaveBeenCalled()
   })
 
   it('새로 저장(jumped=false) 시 "저장했어요" 토스트', () => {
