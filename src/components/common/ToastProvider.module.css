@@ -1,7 +1,7 @@
 .viewport {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--safe-bottom) + 88px);
+  bottom: calc(var(--tabbar-h) + var(--sp-4) + var(--safe-bottom));
   transform: translateX(-50%);
   z-index: 60;
   display: flex;

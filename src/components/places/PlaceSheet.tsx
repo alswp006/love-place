@@ -17,6 +17,7 @@ import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WithWish } from '@/lib/places/wishStatus'
 import { nextSnap, prevSnap, snapForFlick, translateYFor, type SnapStop } from '@/lib/places/sheetSnap'
 import { sheetTravelHeight, setAppVh } from '@/lib/layout/appViewport'
+import { readPxVar } from '@/lib/layout/cssOffsets'
 import { haptic } from '@/lib/haptics'
 import styles from './PlaceSheet.module.css'
 
@@ -99,9 +100,10 @@ export function PlaceSheet({
   // 리스너로 갱신해야 시트 위치(translateY)가 어긋나지 않는다(모바일 Safari 1차 대상).
   const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 800))
   // 시트는 탭바 위에 앵커 — translate 계산에서 탭바·safe-area를 제외한다(탭바 가림 방지).
-  const TABBAR_H = 72 // = --tabbar-h(tokens.css). 시트는 탭바 위에 앵커.
+  const tabbarH = readPxVar('--tabbar-h', 72) // 토큰 --tabbar-h(tokens.css) 단일출처. 시트는 탭바 위에 앵커.
   const peekRef = useRef<HTMLDivElement>(null)
-  const [peekPx, setPeekPx] = useState(128)
+  // 토큰 --sheet-peek-h(=112+safe)를 읽되 fallback은 기존 리터럴 128로 무회귀 보존. 런타임 peekRef 실측이 즉시 덮어씀.
+  const [peekPx, setPeekPx] = useState(() => readPxVar('--sheet-peek-h', 128))
   const [safeBottom, setSafeBottom] = useState(0)
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -121,7 +123,7 @@ export function PlaceSheet({
       window.visualViewport?.removeEventListener('resize', measure)
     }
   }, [])
-  const travel = sheetTravelHeight(vh, TABBAR_H, safeBottom)
+  const travel = sheetTravelHeight(vh, tabbarH, safeBottom)
   const restY = translateYFor(snap, travel, peekPx)
   const translateY = dragY ?? restY
 

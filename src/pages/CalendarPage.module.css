@@ -430,7 +430,7 @@
 .fab {
   position: fixed;
   right: var(--sp-4);
-  bottom: calc(var(--safe-bottom) + 76px);
+  bottom: calc(var(--tabbar-h) + var(--sp-1) + var(--safe-bottom));
   width: 56px;
   height: 56px;
   border-radius: 999px;

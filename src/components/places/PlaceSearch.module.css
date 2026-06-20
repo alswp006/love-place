@@ -109,7 +109,7 @@
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(72px + var(--safe-bottom));
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom));
   transform: translateX(-50%);
   background: var(--c-text);
   color: var(--c-bg);
