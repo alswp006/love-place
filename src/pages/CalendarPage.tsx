@@ -10,6 +10,8 @@ import { useCouple } from '@/hooks/useCouple'
 import { useProfiles, type ProfileMap } from '@/hooks/useProfiles'
 import { useEvents, type EventRow } from '@/hooks/useEvents'
 import { useEventMutations, type NewEvent, type EventPatch } from '@/hooks/useEventMutations'
+import { useRestoreEvent } from '@/hooks/useRestoreEvent'
+import { useToast } from '@/hooks/useToast'
 import { useConflict } from '@/lib/sync/useConflict'
 import { deriveTrack, TRACK_META, ALL_TRACKS, type Track } from '@/lib/calendar/track'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
@@ -31,6 +33,8 @@ export default function CalendarPage() {
   const { data: profiles } = useProfiles(coupleId)
   const conflict = useConflict()
   const { create, update, remove } = useEventMutations(coupleId, myId, conflict.flag)
+  const { restoreEvent } = useRestoreEvent(coupleId, myId, conflict.flag)
+  const toast = useToast()
 
   const todayKey = dayKey(new Date().toISOString())
   // ?date=YYYY-MM-DD 딥링크(R1.1) — 코스 추가 후 그 날로 점프. 형식 검증 후 시드, 아니면 오늘.
@@ -96,8 +100,20 @@ export default function CalendarPage() {
   const onCreate = (e: NewEvent) => create.mutate(e, { onSuccess: closeSheet })
   const onUpdate = (id: string, v: number, patch: EventPatch) =>
     update.mutate({ id, expectedVersion: v, patch }, { onSuccess: closeSheet })
+  // 삭제 성공 → 시트 닫고 Undo 토스트. 되돌리기는 삭제로 +1된 버전(v+1)으로 복구(낙관적 락, §4.3).
   const onDelete = (id: string, v: number) =>
-    remove.mutate({ id, expectedVersion: v }, { onSuccess: closeSheet })
+    remove.mutate(
+      { id, expectedVersion: v },
+      {
+        onSuccess: () => {
+          closeSheet()
+          toast.show({
+            message: '일정을 삭제했어요',
+            action: { label: '되돌리기', onClick: () => restoreEvent({ id, expectedVersion: v + 1 }) },
+          })
+        },
+      },
+    )
 
   return (
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>

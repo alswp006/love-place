@@ -24,17 +24,24 @@ vi.mock('@/hooks/useEventMutations', () => ({
     remove: { mutate: () => {}, isPending: false },
   }),
 }))
+// Task 15(R1.5): CalendarPage가 useRestoreEvent(Undo 복구)를 소비 — 데이터 훅과 동일하게 mock(여기선 딥링크만 검증).
+vi.mock('@/hooks/useRestoreEvent', () => ({
+  useRestoreEvent: () => ({ restoreEvent: () => {}, isPending: false }),
+}))
 
 import CalendarPage from '@/pages/CalendarPage'
+import { ToastProvider } from '@/components/common/ToastProvider'
 import { dayKey } from '@/lib/calendar/eventDays'
 
 function renderCalendar(entry: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[entry]}>
-        <CalendarPage />
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[entry]}>
+          <CalendarPage />
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>,
   )
 }

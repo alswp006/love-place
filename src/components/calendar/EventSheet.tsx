@@ -36,6 +36,8 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
   const [myReminder, setMyReminder] = useState(
     initial?.reminders?.find((r) => r.userId === myId)?.offsetMinutes ?? 0,
   )
+  // 삭제는 1탭으로 바로 지우지 않고 인라인 확인을 거친다(실수 삭제 방지, R1.5). 확인 시 onDelete → Undo 토스트.
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
 
@@ -221,14 +223,25 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
 
           <div className={styles.actions}>
             {editing && initial ? (
-              <button
-                type="button"
-                className={styles.delete}
-                onClick={() => onDelete(initial.id, initial.version)}
-                disabled={busy}
-              >
-                삭제
-              </button>
+              confirmingDelete ? (
+                <button
+                  type="button"
+                  className={styles.confirmDelete}
+                  onClick={() => onDelete(initial.id, initial.version)}
+                  disabled={busy}
+                >
+                  정말 삭제할까요?
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.delete}
+                  onClick={() => setConfirmingDelete(true)}
+                  disabled={busy}
+                >
+                  삭제
+                </button>
+              )
             ) : null}
             <span className={styles.spacer} />
             <button type="button" className={styles.cancel} onClick={onClose}>

@@ -133,6 +133,23 @@
   padding: 0 var(--sp-2);
 }
 
+/* 인라인 삭제 확인 — 파괴적 의도를 강조(채운 danger 배경 + 텍스트 라벨, 색만 의존 금지 §8). */
+.confirmDelete {
+  border: none;
+  background: var(--c-danger);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  font-weight: 600;
+}
+
+.confirmDelete:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .cancel {
   border: 1px solid var(--c-border);
   background: transparent;
