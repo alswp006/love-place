@@ -23,6 +23,10 @@ describe('parseRule / buildRule', () => {
     const s = buildRule('MONTHLY', 1, 3, ['2026-02-15'])
     expect(parseRule(s)).toMatchObject({ freq: 'MONTHLY', interval: 1, count: 3, exdates: ['2026-02-15'] })
   })
+  it('buildRule UNTIL 방출 round-trip', () => {
+    const s = buildRule('WEEKLY', 1, undefined, undefined, '2026-08-01T00:00:00Z')
+    expect(parseRule(s)).toMatchObject({ freq: 'WEEKLY', interval: 1, until: '2026-08-01T00:00:00Z' })
+  })
 })
 
 describe('expandOccurrences', () => {

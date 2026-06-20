@@ -28,9 +28,10 @@ export function parseRule(text: string | null | undefined): ParsedRule | null {
   return rule
 }
 
-export function buildRule(freq: Freq, interval: number, count?: number, exdates?: string[]): string {
+export function buildRule(freq: Freq, interval: number, count?: number, exdates?: string[], until?: string): string {
   let s = `FREQ=${freq};INTERVAL=${Math.max(1, interval)}`
   if (count && count > 0) s += `;COUNT=${count}`
+  if (until) s += `;UNTIL=${until}`
   if (exdates && exdates.length > 0) s += `;EXDATE=${exdates.join(',')}`
   return s
 }
