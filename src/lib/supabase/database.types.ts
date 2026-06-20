@@ -51,6 +51,8 @@ export type Database = {
           display_name: string
           avatar_url: string | null
           color: string
+          location_consent_at: string | null
+          photo_consent_at: string | null
           created_at: string
           updated_at: string
           version: number
@@ -61,6 +63,8 @@ export type Database = {
           display_name: string
           avatar_url: string | null
           color: string
+          location_consent_at: string | null
+          photo_consent_at: string | null
           version: number
         }>
         Relationships: []
