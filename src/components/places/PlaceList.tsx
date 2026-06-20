@@ -27,6 +27,8 @@ export function PlaceList({
   deletePlace,
   deletePending,
   onToast,
+  onToastAction,
+  restorePlace,
 }: {
   visible: WithWish<PlaceRow>[]
   wishes: WishData | undefined
@@ -46,6 +48,8 @@ export function PlaceList({
   ) => void
   deletePending: boolean
   onToast: (m: string) => void
+  onToastAction: (arg: { message: string; action: { label: string; onClick: () => void } }) => void
+  restorePlace: (v: { id: string; expectedVersion: number }) => void
 }) {
   const listRef = useRef<HTMLUListElement>(null)
   useEffect(() => {
@@ -141,7 +145,16 @@ export function PlaceList({
                     onClick={() =>
                       deletePlace(
                         { id: p.id, expectedVersion: p.version },
-                        { onSuccess: () => onToast('휴지통으로 옮겼어요 — 아래 휴지통에서 복구할 수 있어요') },
+                        {
+                          onSuccess: () =>
+                            onToastAction({
+                              message: '휴지통으로 옮겼어요',
+                              action: {
+                                label: '실행취소',
+                                onClick: () => restorePlace({ id: p.id, expectedVersion: p.version + 1 }),
+                              },
+                            }),
+                        },
                       )
                     }
                     disabled={deletePending}

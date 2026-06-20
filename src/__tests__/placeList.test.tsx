@@ -27,6 +27,8 @@ const baseProps = {
   deletePlace: noop,
   deletePending: false,
   onToast: noop,
+  onToastAction: noop,
+  restorePlace: noop,
 }
 
 describe('PlaceList (카드 리스트 추출)', () => {
@@ -67,5 +69,36 @@ describe('PlaceList (카드 리스트 추출)', () => {
     render(<PlaceList {...baseProps} visitedIds={new Set<string>()} />)
     expect(screen.getByRole('button', { name: /다녀왔어요/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /가봤음 기록 취소/ })).not.toBeInTheDocument()
+  })
+
+  it('삭제 시 실행취소 토스트를 띄우고, 실행취소 클릭은 restorePlace(version+1)을 호출한다', () => {
+    // deletePlace는 onSuccess 콜백을 즉시 부르는 가짜(낙관적 성공 경로 시뮬레이션).
+    const deletePlace = vi.fn((_v, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.())
+    const onToastAction = vi.fn()
+    const restorePlace = vi.fn()
+    render(
+      <PlaceList
+        {...baseProps}
+        deletePlace={deletePlace}
+        onToastAction={onToastAction}
+        restorePlace={restorePlace}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /휴지통으로 보내기/ }))
+    expect(deletePlace).toHaveBeenCalledWith(
+      { id: 'p1', expectedVersion: 1 },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    )
+    // onSuccess가 실행취소 액션 토스트를 띄웠는지 검증.
+    expect(onToastAction).toHaveBeenCalledTimes(1)
+    const arg = onToastAction.mock.calls[0]![0] as {
+      message: string
+      action: { label: string; onClick: () => void }
+    }
+    expect(arg.message).toBe('휴지통으로 옮겼어요')
+    expect(arg.action.label).toBe('실행취소')
+    // 실행취소 클릭 → softDelete가 version을 v+1로 올리므로 restore는 expectedVersion: v+1.
+    arg.action.onClick()
+    expect(restorePlace).toHaveBeenCalledWith({ id: 'p1', expectedVersion: 2 })
   })
 })

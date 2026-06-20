@@ -10,7 +10,7 @@ import { useToggleReaction, type ReactionMap } from '@/hooks/useReactions'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import { useMarkVisited, useUnmarkVisited } from '@/hooks/useVisits'
 import { useSetWishPriority } from '@/hooks/useSetWishPriority'
-import { useDeletePlace } from '@/hooks/usePlaceTrash'
+import { useDeletePlace, useRestorePlace } from '@/hooks/usePlaceTrash'
 import { useConflict } from '@/lib/sync/useConflict'
 import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
@@ -60,6 +60,7 @@ export function PlaceSheet({
   const unmarkVisited = useUnmarkVisited(coupleId, myId, conflict.flag)
   const { setPriority, isPending: priorityPending } = useSetWishPriority(coupleId, myId, conflict.flag)
   const { deletePlace, isPending: deletePending } = useDeletePlace(coupleId, myId, conflict.flag)
+  const { restorePlace } = useRestorePlace(coupleId, myId, conflict.flag)
   // 시트 소유 리액션 토글(말풍선 폐지). 끄기는 version 조건부 softDelete — 충돌 시 conflict.flag로 배너.
   const toggleReaction = useToggleReaction(coupleId, myId, conflict.flag)
   const selectedPlace = selectedId ? places.find((p) => p.id === selectedId) ?? null : null
@@ -386,6 +387,8 @@ export function PlaceSheet({
             deletePlace={deletePlace}
             deletePending={deletePending}
             onToast={toast.show}
+            onToastAction={toast.show}
+            restorePlace={restorePlace}
           />
 
           {/* 여행 섹션은 코드 보존하되 시트에서 숨김(spec §3.4). 휴지통은 '우리' 탭으로 이동(Task 12). */}
