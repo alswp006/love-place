@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCouple } from '@/hooks/useCouple'
 import {
@@ -6,29 +6,50 @@ import {
   useAcceptInvite,
   inviteReasonMessage,
 } from '@/hooks/useCoupleInvite'
-import { formatInviteCode, isValidInviteCode, inviteShareText } from '@/lib/inviteCode'
+import {
+  extractInviteCode,
+  formatInviteCode,
+  isValidInviteCode,
+  inviteShareText,
+} from '@/lib/inviteCode'
+import { useToast } from '@/components/common/ToastProvider'
 import { RouteFallback } from '@/components/common/RouteFallback'
 import styles from './ConnectPage.module.css'
 
 // 💑 커플 연결(온보딩) — 내 코드 만들기/공유 + 상대 코드 입력. 둘 다 미연결(가드) 상태에서만 도달.
 export default function ConnectPage() {
   const navigate = useNavigate()
+  const toast = useToast()
   const { data: couple, isLoading } = useCouple()
   const createInvite = useCreateInvite()
   const acceptInvite = useAcceptInvite()
 
   const [myCode, setMyCode] = useState<string | null>(null)
   const [input, setInput] = useState('')
+  const [createError, setCreateError] = useState<string | null>(null)
   const [acceptError, setAcceptError] = useState<string | null>(null)
+
+  // PENDING이면 마운트 시 idempotent create_invite로 활성 코드 재표시(로컬 state 유실 복구, dossier 01 §1).
+  useEffect(() => {
+    if (couple?.status === 'PENDING' && !myCode && !createInvite.isPending) {
+      createInvite.mutate(undefined, {
+        onSuccess: (r) => {
+          if (r.ok) setMyCode(r.code)
+        },
+      })
+    }
+  }, [couple?.status, myCode, createInvite])
 
   if (isLoading) return <RouteFallback />
 
   const onCreate = () => {
+    setCreateError(null)
     createInvite.mutate(undefined, {
       onSuccess: (r) => {
         if (r.ok) setMyCode(r.code)
-        else setAcceptError(inviteReasonMessage(r.reason))
+        else setCreateError(inviteReasonMessage(r.reason))
       },
+      onError: () => setCreateError('일시적인 오류예요. 잠시 후 다시 시도해 주세요.'),
     })
   }
 
@@ -43,13 +64,13 @@ export default function ConnectPage() {
       }
     } else {
       await navigator.clipboard.writeText(text)
-      alert('초대 문구를 복사했어요. 상대에게 붙여넣어 보내주세요.')
+      toast.show('초대 문구를 복사했어요. 상대에게 붙여넣어 보내주세요.')
     }
   }
 
-  const onAccept = () => {
+  const onAccept = (code: string) => {
     setAcceptError(null)
-    acceptInvite.mutate(input, {
+    acceptInvite.mutate(code, {
       onSuccess: (r) => {
         if (r.ok) navigate('/', { replace: true })
         else setAcceptError(inviteReasonMessage(r.reason))
@@ -89,6 +110,11 @@ export default function ConnectPage() {
               {createInvite.isPending ? '만드는 중…' : '초대 코드 만들기'}
             </button>
           )}
+          {createError ? (
+            <p id="create-error" className={styles.error} role="alert">
+              {createError}
+            </p>
+          ) : null}
         </section>
 
         <div className={styles.divider}>
@@ -106,8 +132,15 @@ export default function ConnectPage() {
             placeholder="ABCD-2345"
             value={formatInviteCode(input)}
             onChange={(e) => {
-              setInput(e.target.value)
+              const raw = e.target.value
               setAcceptError(null)
+              const found = extractInviteCode(raw)
+              if (found) {
+                setInput(found)
+                onAccept(found)
+              } else {
+                setInput(raw)
+              }
             }}
             aria-label="초대 코드 입력"
             aria-describedby={acceptError ? 'accept-error' : undefined}
@@ -119,7 +152,7 @@ export default function ConnectPage() {
           ) : null}
           <button
             className={styles.primaryBtn}
-            onClick={onAccept}
+            onClick={() => onAccept(input)}
             disabled={!isValidInviteCode(input) || acceptInvite.isPending}
           >
             {acceptInvite.isPending ? '연결 중…' : '연결하기'}
