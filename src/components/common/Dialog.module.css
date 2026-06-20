@@ -1,0 +1,25 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 60;
+  padding-bottom: var(--safe-bottom);
+}
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--c-surface);
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+  animation: rise var(--motion-base) var(--ease);
+}
+@keyframes rise {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
+}
