@@ -51,6 +51,17 @@
   color: var(--c-danger, #d33);
 }
 
+/* 상대 PERSONAL 일정 읽기 전용 라벨(§4.2 — 색 외 텍스트로 출처 명시). */
+.readonlyLabel {
+  margin: 0;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--c-text-weak);
+  background: var(--c-surface-2, rgba(0, 0, 0, 0.04));
+  border-radius: var(--radius-sm, 8px);
+  padding: var(--sp-2);
+}
+
 .field {
   display: flex;
   align-items: center;

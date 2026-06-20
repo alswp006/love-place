@@ -177,6 +177,7 @@ export default function CalendarPage() {
           defaultDate={selected}
           myId={myId}
           busy={busy}
+          profiles={profiles ?? {}}
           onClose={closeSheet}
           onCreate={onCreate}
           onUpdate={onUpdate}

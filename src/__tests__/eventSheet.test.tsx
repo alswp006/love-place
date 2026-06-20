@@ -17,6 +17,7 @@ function setup(overrides: Partial<Parameters<typeof EventSheet>[0]> = {}) {
       defaultDate="2026-06-20"
       myId="u1"
       busy={false}
+      profiles={{}}
       onClose={onClose}
       onCreate={onCreate}
       onUpdate={onUpdate}

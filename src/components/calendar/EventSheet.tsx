@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { EventRow } from '@/hooks/useEvents'
+import type { ProfileMap } from '@/hooks/useProfiles'
 import type { NewEvent, EventPatch } from '@/hooks/useEventMutations'
 import { dayKey, formatTime, DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import { parseRule, buildRule, type Freq } from '@/lib/calendar/rrule'
@@ -11,14 +12,21 @@ type Props = {
   defaultDate: string // 생성 시 기본 날짜(선택된 날)
   myId: string | null // 사용자별 리마인더 소유자
   busy: boolean
+  profiles: ProfileMap // 소유자 이름 표시(상대 PERSONAL 라벨)
   onClose: () => void
   onCreate: (e: NewEvent) => void
   onUpdate: (id: string, expectedVersion: number, patch: EventPatch) => void
   onDelete: (id: string, expectedVersion: number) => void
 }
 
-export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate, onUpdate, onDelete }: Props) {
+export function EventSheet({ initial, defaultDate, myId, busy, profiles, onClose, onCreate, onUpdate, onDelete }: Props) {
   const editing = initial != null
+  // 상대 PERSONAL 일정은 읽기 전용(canEdit 가드, 조사03 §4 — RLS USING 미러).
+  // canEdit = visibility==='SHARED' || owner_id===myId. 상대 PERSONAL이면 입력·저장·삭제 차단.
+  const isPartnerPersonal =
+    editing && initial != null && initial.visibility === 'PERSONAL' && myId != null && initial.owner_id !== myId
+  const canEdit = !isPartnerPersonal
+  const ownerName = initial ? (profiles[initial.owner_id]?.displayName ?? '상대') : ''
   const [title, setTitle] = useState(initial?.title ?? '')
   const [date, setDate] = useState(initial ? dayKey(initial.start) : defaultDate)
   const [allDay, setAllDay] = useState(initial?.is_all_day ?? false)
@@ -135,6 +143,9 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
         onKeyDown={trapTab}
       >
         <form onSubmit={onSubmit} className={styles.form}>
+          {isPartnerPersonal ? (
+            <p className={styles.readonlyLabel}>상대 일정 · {ownerName}</p>
+          ) : null}
           <input
             ref={titleRef}
             className={styles.input}
@@ -142,15 +153,16 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             aria-label="일정 제목"
+            disabled={!canEdit}
           />
 
           <label className={styles.field}>
             <span>날짜</span>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="날짜" />
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="날짜" disabled={!canEdit} />
           </label>
 
           <label className={styles.checkRow}>
-            <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+            <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} disabled={!canEdit} />
             <span>종일</span>
           </label>
 
@@ -158,17 +170,17 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
             <div className={styles.timeRow}>
               <label className={styles.field}>
                 <span>시작</span>
-                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} aria-label="시작 시각" />
+                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} aria-label="시작 시각" disabled={!canEdit} />
               </label>
               <label className={styles.field}>
                 <span>종료</span>
-                <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} aria-label="종료 시각" />
+                <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} aria-label="종료 시각" disabled={!canEdit} />
               </label>
             </div>
           ) : (
             <label className={styles.field}>
               <span>종료일</span>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} aria-label="종료일" />
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} aria-label="종료일" disabled={!canEdit} />
             </label>
           )}
 
@@ -180,6 +192,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
                 name="visibility"
                 checked={visibility === 'SHARED'}
                 onChange={() => setVisibility('SHARED')}
+                disabled={!canEdit}
               />
               <span>● 함께</span>
             </label>
@@ -189,6 +202,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
                 name="visibility"
                 checked={visibility === 'PERSONAL'}
                 onChange={() => setVisibility('PERSONAL')}
+                disabled={!canEdit}
               />
               <span>▲ 나만</span>
             </label>
@@ -200,6 +214,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
               value={recurrence}
               onChange={(e) => setRecurrence(e.target.value as Freq | 'none')}
               aria-label="반복"
+              disabled={!canEdit}
             >
               <option value="none">안 함</option>
               <option value="DAILY">매일</option>
@@ -217,13 +232,14 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
                 value={recurCount}
                 onChange={(e) => setRecurCount(Number(e.target.value) || 0)}
                 aria-label="반복 횟수"
+                disabled={!canEdit}
               />
             </label>
           ) : null}
 
           <label className={styles.field}>
             <span>내 리마인더</span>
-            <select value={myReminder} onChange={(e) => setMyReminder(Number(e.target.value))} aria-label="내 리마인더">
+            <select value={myReminder} onChange={(e) => setMyReminder(Number(e.target.value))} aria-label="내 리마인더" disabled={!canEdit}>
               <option value={0}>없음</option>
               <option value={10}>10분 전</option>
               <option value={60}>1시간 전</option>
@@ -238,6 +254,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
             onChange={(e) => setMemo(e.target.value)}
             aria-label="메모"
             rows={2}
+            disabled={!canEdit}
           />
 
           {timeError ? (
@@ -247,7 +264,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
           ) : null}
 
           <div className={styles.actions}>
-            {editing && initial ? (
+            {canEdit && editing && initial ? (
               confirmingDelete ? (
                 <button
                   type="button"
@@ -270,11 +287,13 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
             ) : null}
             <span className={styles.spacer} />
             <button type="button" className={styles.cancel} onClick={onClose}>
-              취소
+              {canEdit ? '취소' : '닫기'}
             </button>
-            <button type="submit" className={styles.save} disabled={busy || !title.trim()}>
-              {editing ? '수정' : '저장'}
-            </button>
+            {canEdit ? (
+              <button type="submit" className={styles.save} disabled={busy || !title.trim()}>
+                {editing ? '수정' : '저장'}
+              </button>
+            ) : null}
           </div>
         </form>
       </div>
