@@ -137,6 +137,15 @@ img.avatar {
   line-height: 1.6;
 }
 
+.ack {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-caption);
+  color: var(--c-text);
+  cursor: pointer;
+}
+
 .confirmActions {
   display: flex;
   gap: var(--sp-2);

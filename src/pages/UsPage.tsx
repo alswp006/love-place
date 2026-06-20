@@ -7,7 +7,8 @@ import { useAuth } from '@/state/auth'
 import { useSignOut } from '@/hooks/useSignOut'
 import { useCouple } from '@/hooks/useCouple'
 import { useDisconnectCouple } from '@/hooks/useCoupleInvite'
-import { fetchCoupleExport, downloadJson } from '@/lib/export/dumpSchema'
+import { fetchCoupleExport, fetchPhotoBlobs, downloadJson, downloadBlob } from '@/lib/export/dumpSchema'
+import { buildExportZip } from '@/lib/export/buildZip'
 import { dayKey } from '@/lib/calendar/eventDays'
 import { tabByPath } from '@/app/tabs'
 import { TrashSection } from '@/components/places/TrashSection'
@@ -15,6 +16,7 @@ import { useTrashPlaces, useRestorePlace } from '@/hooks/usePlaceTrash'
 import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { ProfileEditor } from '@/components/profile/ProfileEditor'
+import { DisconnectConfirm } from '@/components/profile/DisconnectConfirm'
 import styles from './UsPage.module.css'
 
 // 💑 우리 — 프로필·연결·내보내기(§3, §10). 연결 후 상대 표시 + 연결 해제.
@@ -27,6 +29,7 @@ export default function UsPage() {
   const [confirming, setConfirming] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [exported, setExported] = useState(false)
   const cancelRef = useRef<HTMLButtonElement>(null)
   const myId = user?.id ?? null
   const conflict = useConflict()
@@ -46,6 +49,26 @@ export default function UsPage() {
     try {
       const data = await fetchCoupleExport(couple.coupleId)
       downloadJson(`love_place_${dayKey(new Date().toISOString())}.json`, data)
+      setExported(true)
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : '내보내기에 실패했어요.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // ZIP 내보내기(§10.4 회수권) — JSON 봉투 + 원본 사진 blob을 묶어 다운로드. 양측 동등(RLS 대칭).
+  const onExportZip = async () => {
+    if (!couple?.coupleId) return
+    setExporting(true)
+    setExportError(null)
+    try {
+      const data = await fetchCoupleExport(couple.coupleId)
+      const photoRows = (data.tables.photos as { id: string; storage_url: string }[]) ?? []
+      const blobs = await fetchPhotoBlobs(couple.coupleId, photoRows)
+      const zip = buildExportZip(data, blobs)
+      downloadBlob(`love_place_${dayKey(new Date().toISOString())}.zip`, zip)
+      setExported(true)
     } catch (e) {
       setExportError(e instanceof Error ? e.message : '내보내기에 실패했어요.')
     } finally {
@@ -151,10 +174,14 @@ export default function UsPage() {
           <section className={styles.card} aria-label="데이터 내보내기">
             <div className={styles.row}>
               <span className={styles.label}>내보내기</span>
-              <span className={styles.value}>우리 데이터 전체(JSON)</span>
+              <span className={styles.value}>우리 데이터 전체(JSON·사진 ZIP)</span>
             </div>
             <button className={styles.ghostBtn} type="button" onClick={() => void onExport()} disabled={exporting}>
               {exporting ? '내보내는 중…' : '내 데이터 내보내기'}
+            </button>
+            {/* 관계종료 회수용(§10.4) — 원본 사진 blob 포함 ZIP, 양측 동등 */}
+            <button className={styles.ghostBtn} type="button" onClick={() => void onExportZip()} disabled={exporting}>
+              {exporting ? '내보내는 중…' : '사진·데이터 ZIP 내보내기'}
             </button>
             {exportError ? (
               <p className={styles.exportError} role="alert">
@@ -190,18 +217,16 @@ export default function UsPage() {
               ariaLabel="연결 해제 확인"
               initialFocusRef={cancelRef}
             >
-              {/* 본문은 Task 8에서 정직한 카피 + 내보내기 게이트로 교체 */}
-              <p className={styles.confirmText}>
-                연결을 해제하면 새 공유 기록 추가가 중단돼요. 기존 기록은 남습니다.
-              </p>
-              <div className={styles.confirmActions}>
-                <button ref={cancelRef} type="button" className={styles.ghostBtn} onClick={() => setConfirming(false)}>
-                  취소
-                </button>
-                <button className={styles.dangerBtn} onClick={onDisconnect} disabled={disconnect.isPending}>
-                  {disconnect.isPending ? '해제 중…' : '연결 해제'}
-                </button>
-              </div>
+              {/* 정직 카피 + 해제 전 내보내기 필수 게이트(§10.4, security-privacy §5.1) */}
+              <DisconnectConfirm
+                exporting={exporting}
+                exported={exported}
+                onExportZip={() => void onExportZip()}
+                onDisconnect={onDisconnect}
+                onCancel={() => setConfirming(false)}
+                disconnectPending={disconnect.isPending}
+                cancelRef={cancelRef}
+              />
             </Dialog>
           </section>
         ) : null}
