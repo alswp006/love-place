@@ -1,20 +1,34 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/state/auth'
 import { useSignInWithOtp } from '@/hooks/useSignInWithOtp'
 import { useSignInWithGoogle } from '@/hooks/useSignInWithGoogle'
 import { useSignInWithPassword } from '@/hooks/useSignInWithPassword'
+import { useResendCooldown } from '@/hooks/useResendCooldown'
 import { GoogleIcon } from '@/components/auth/GoogleIcon'
 import styles from './LoginPage.module.css'
 
 // 로그인 화면(§10.3). 구글(권장, 메일 한도 없음) + 이메일 매직링크.
 export default function LoginPage() {
   const { initializing, session, configured } = useAuth()
-  const { status, error, sendMagicLink, reset } = useSignInWithOtp()
+  const { status, error, sendMagicLink, verifyCode, reset } = useSignInWithOtp()
   const google = useSignInWithGoogle()
   const pw = useSignInWithPassword()
+  const cooldown = useResendCooldown()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [code, setCode] = useState('')
+  const [verifying, setVerifying] = useState(false)
+
+  // 메일 발송 성공(sent) 진입 시 재전송 쿨다운 30초 시작(R3.6). 한 번만 발사.
+  const wasSent = useRef(false)
+  useEffect(() => {
+    if (status === 'sent' && !wasSent.current) {
+      wasSent.current = true
+      cooldown.start(30)
+    }
+    if (status !== 'sent') wasSent.current = false
+  }, [status, cooldown])
 
   // 이미 로그인돼 있으면 앱으로.
   if (!initializing && session) return <Navigate to="/" replace />
@@ -22,6 +36,18 @@ export default function LoginPage() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     void sendMagicLink(email)
+  }
+
+  const onResend = () => {
+    if (!cooldown.canResend) return
+    void sendMagicLink(email)
+    cooldown.start(30)
+  }
+
+  const onVerify = (e: FormEvent) => {
+    e.preventDefault()
+    setVerifying(true)
+    void Promise.resolve(verifyCode(email, code)).finally(() => setVerifying(false))
   }
 
   const onPwSubmit = (e: FormEvent) => {
@@ -50,6 +76,43 @@ export default function LoginPage() {
               <br />
               메일의 링크를 누르면 로그인됩니다.
             </p>
+
+            {/* 6자리 코드 폴백 — 메일이 다른 브라우저에서 열렸을 때 같은 화면에서 로그인(PKCE 교차컨텍스트 완화, dossier 01 §6) */}
+            <form className={styles.form} onSubmit={onVerify}>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="\d{6}"
+                maxLength={6}
+                className={styles.input}
+                placeholder="123456"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                aria-label="6자리 코드"
+              />
+              {error ? (
+                <p className={styles.error} role="alert">
+                  {error}
+                </p>
+              ) : null}
+              <button type="submit" className={styles.submit} disabled={verifying}>
+                {verifying ? '로그인 중…' : '코드로 로그인'}
+              </button>
+            </form>
+            <p className={styles.sentHint}>
+              메일이 다른 브라우저에서 열렸다면, 이 화면에 6자리 코드를 입력해 같은 곳에서
+              로그인하세요.
+            </p>
+
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={onResend}
+              disabled={!cooldown.canResend}
+            >
+              {cooldown.canResend ? '다시 보내기' : `다시 보내기 (${cooldown.remaining}초)`}
+            </button>
             <button type="button" className={styles.linkBtn} onClick={reset}>
               다른 이메일로 다시 보내기
             </button>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/state/auth'
+import { supabase } from '@/lib/supabase/client'
 import { RouteFallback } from '@/components/common/RouteFallback'
 import { EmptyState } from '@/components/common/EmptyState'
 
@@ -12,7 +13,10 @@ export default function AuthCallbackPage() {
   const [timedOut, setTimedOut] = useState(false)
 
   useEffect(() => {
-    // 토큰 교환이 지나치게 오래 걸리면(잘못된/만료된 링크) 안내로 전환.
+    // 토큰 교환이 늦게 잡히는 경우를 대비해 마운트 시 한 번 명시적으로 세션을 끌어온다(R3.6).
+    // onAuthStateChange를 통해 useAuth가 갱신되므로 여기선 호출만 하면 된다.
+    void supabase.auth.getSession()
+    // 토큰 교환이 지나치게 오래 걸리면(잘못된/만료된 링크, 교차 브라우저) 안내로 전환.
     const t = setTimeout(() => setTimedOut(true), 8000)
     return () => clearTimeout(t)
   }, [])
@@ -25,7 +29,7 @@ export default function AuthCallbackPage() {
       <EmptyState
         emoji="⏳"
         title="로그인 링크가 만료됐거나 잘못됐어요"
-        hint="로그인 화면에서 새 링크를 받아주세요."
+        hint="이 링크를 처음 요청한 브라우저에서 열어주세요. 또는 로그인 화면에서 6자리 코드로 로그인하세요."
         action={
           <button type="button" onClick={() => navigate('/auth', { replace: true })}>
             로그인으로 돌아가기
