@@ -11,8 +11,8 @@ import { fetchCoupleExport, fetchPhotoBlobs, downloadJson, downloadBlob } from '
 import { buildExportZip } from '@/lib/export/buildZip'
 import { dayKey } from '@/lib/calendar/eventDays'
 import { tabByPath } from '@/app/tabs'
-import { TrashSection } from '@/components/places/TrashSection'
-import { useTrashPlaces, useRestorePlace } from '@/hooks/usePlaceTrash'
+import { TrashSection } from '@/components/trash/TrashSection'
+import { useTrash, useRestore, type TrashRow, type TrashKind } from '@/hooks/useTrash'
 import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { ProfileEditor } from '@/components/profile/ProfileEditor'
@@ -34,12 +34,35 @@ export default function UsPage() {
   const myId = user?.id ?? null
   const conflict = useConflict()
   const [trashOpen, setTrashOpen] = useState(false)
-  const { data: trash } = useTrashPlaces(couple?.coupleId ?? null, trashOpen)
-  const { restorePlace, isPending: restorePending } = useRestorePlace(
-    couple?.coupleId ?? null,
-    myId,
-    conflict.flag,
-  )
+  const coupleId = couple?.coupleId ?? null
+  // 통합 휴지통(R3 T17) — 전 엔티티의 soft-delete 행을 한 섹션에서. kind별 조회를 합쳐 삭제일 desc로 정렬.
+  const trashPlaces = useTrash('places', coupleId, trashOpen)
+  const trashEvents = useTrash('events', coupleId, trashOpen)
+  const trashVisits = useTrash('visits', coupleId, trashOpen)
+  const trashPhotos = useTrash('photos', coupleId, trashOpen)
+  const trashTrips = useTrash('trips', coupleId, trashOpen)
+  const trashItineraries = useTrash('itineraries', coupleId, trashOpen)
+  const trashItems: TrashRow[] = [
+    ...(trashPlaces.data ?? []),
+    ...(trashEvents.data ?? []),
+    ...(trashVisits.data ?? []),
+    ...(trashPhotos.data ?? []),
+    ...(trashTrips.data ?? []),
+    ...(trashItineraries.data ?? []),
+  ].sort((a, b) => b.deleted_at.localeCompare(a.deleted_at))
+
+  // kind별 복구 훅 — row.kind로 디스패치(낙관적 락 + 오프라인 큐는 useRestore 내부).
+  const restorers: Record<TrashKind, ReturnType<typeof useRestore>> = {
+    places: useRestore('places', coupleId, myId, conflict.flag),
+    events: useRestore('events', coupleId, myId, conflict.flag),
+    visits: useRestore('visits', coupleId, myId, conflict.flag),
+    photos: useRestore('photos', coupleId, myId, conflict.flag),
+    trips: useRestore('trips', coupleId, myId, conflict.flag),
+    itineraries: useRestore('itineraries', coupleId, myId, conflict.flag),
+  }
+  const restorePending = Object.values(restorers).some((r) => r.isPending)
+  const onRestoreTrash = (row: TrashRow) =>
+    restorers[row.kind].restore({ id: row.id, expectedVersion: row.version })
 
   // 내보내기 v0(§10.4 회수권) — 내 커플 데이터 전체를 JSON으로 다운로드.
   const onExport = async () => {
@@ -198,9 +221,9 @@ export default function UsPage() {
             <TrashSection
               open={trashOpen}
               onToggle={() => setTrashOpen((v) => !v)}
-              items={trash ?? []}
+              items={trashItems}
               busy={restorePending}
-              onRestore={(t) => restorePlace({ id: t.id, expectedVersion: t.version })}
+              onRestore={onRestoreTrash}
             />
           </section>
         ) : null}

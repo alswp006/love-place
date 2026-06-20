@@ -15,10 +15,20 @@ vi.mock('@/hooks/useCouple', () => ({
 }))
 vi.mock('@/hooks/useSignOut', () => ({ useSignOut: () => () => {} }))
 vi.mock('@/hooks/useCoupleInvite', () => ({ useDisconnectCouple: () => ({ mutate: () => {}, isPending: false }) }))
-vi.mock('@/hooks/usePlaceTrash', () => ({
-  useTrashPlaces: () => ({ data: [{ id: 't1', name: '삭제한 카페', address: null, region_label: null, deleted_at: '2026-06-01', version: 1 }] }),
-  useRestorePlace: () => ({ restorePlace: vi.fn(), isPending: false }),
-}))
+// 통합 휴지통(R3 T17) — kind별 useTrash를 합산. places만 한 건, 나머지는 빈 결과로 스텁.
+vi.mock('@/hooks/useTrash', async (orig) => {
+  const real = await orig<typeof import('@/hooks/useTrash')>()
+  return {
+    ...real,
+    useTrash: (kind: string) => ({
+      data:
+        kind === 'places'
+          ? [{ id: 't1', label: '삭제한 카페', kind: 'places', deleted_at: '2026-06-01T00:00:00Z', version: 1 }]
+          : [],
+    }),
+    useRestore: () => ({ restore: vi.fn(), isPending: false }),
+  }
+})
 // ProfileEditor는 별도 테스트(profileEditor.test.tsx)에서 검증 — 여기선 스텁으로 격리.
 vi.mock('@/components/profile/ProfileEditor', () => ({ ProfileEditor: () => null }))
 
@@ -38,8 +48,8 @@ function renderUs() {
   )
 }
 
-describe('UsPage 휴지통 섹션(P4 — 시트에서 우리 탭으로 이동)', () => {
-  it('휴지통 토글을 열면 삭제된 장소와 복구 버튼이 보인다', () => {
+describe('UsPage 통합 휴지통 섹션(R3 T17 — 전 엔티티)', () => {
+  it('휴지통 토글을 열면 삭제된 항목과 복구 버튼이 보인다', () => {
     renderUs()
     const toggle = screen.getByRole('button', { name: /휴지통/ })
     fireEvent.click(toggle)

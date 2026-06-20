@@ -1,0 +1,97 @@
+.trash {
+  margin-top: var(--sp-2);
+  border-top: 1px solid var(--c-border);
+  padding-top: var(--sp-2);
+}
+
+.trashToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--c-text-weak);
+  cursor: pointer;
+  padding: var(--sp-2);
+  font-size: var(--fs-caption);
+  min-height: 44px;
+}
+
+.trashEmpty {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  text-align: center;
+  padding: var(--sp-3);
+}
+
+.trashList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.trashItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px dashed var(--c-border);
+  border-radius: var(--radius-sm);
+  color: var(--c-text-weak);
+}
+
+/* kind 배지 — 색 + 라벨 + 심볼 이중화(§4, 색각 이상 대응). 색만으로 구분 금지. */
+.kindBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--fs-caption);
+  background: var(--badge-bg, var(--c-surface-2));
+  color: var(--badge-fg, var(--c-text));
+  border: 1px solid var(--badge-fg, var(--c-border));
+}
+
+.itemBody {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trashName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--c-text);
+}
+
+.trashDates {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.restoreBtn {
+  flex-shrink: 0;
+  border: 1px solid var(--c-brand);
+  background: transparent;
+  color: var(--c-brand);
+  cursor: pointer;
+  font-size: var(--fs-caption);
+  padding: 4px 12px;
+  border-radius: 999px;
+  min-height: 44px;
+}
+
+.restoreBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
