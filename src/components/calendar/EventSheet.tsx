@@ -3,12 +3,8 @@ import type { EventRow } from '@/hooks/useEvents'
 import type { NewEvent, EventPatch } from '@/hooks/useEventMutations'
 import { dayKey, formatTime, DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import { parseRule, buildRule, type Freq } from '@/lib/calendar/rrule'
+import { buildEventTimes } from '@/lib/calendar/eventTimes'
 import styles from './EventSheet.module.css'
-
-// 한국(Asia/Seoul, DST 없음) 고정 오프셋으로 벽시계 시각 → ISO. 이벤트별 tz는 후속 정교화.
-function toIso(date: string, time: string): string {
-  return new Date(`${date}T${time}:00+09:00`).toISOString()
-}
 
 type Props = {
   initial: EventRow | null // 있으면 수정 모드
@@ -26,8 +22,10 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
   const [title, setTitle] = useState(initial?.title ?? '')
   const [date, setDate] = useState(initial ? dayKey(initial.start) : defaultDate)
   const [allDay, setAllDay] = useState(initial?.is_all_day ?? false)
+  const [endDate, setEndDate] = useState(initial ? dayKey(initial.end) : defaultDate)
   const [startTime, setStartTime] = useState(initial && !initial.is_all_day ? formatTime(initial.start) : '10:00')
   const [endTime, setEndTime] = useState(initial && !initial.is_all_day ? formatTime(initial.end) : '11:00')
+  const [timeError, setTimeError] = useState<string | null>(null)
   const [visibility, setVisibility] = useState<'SHARED' | 'PERSONAL'>(initial?.visibility ?? 'SHARED')
   const [memo, setMemo] = useState(initial?.memo ?? '')
   const initRule = parseRule(initial?.recurrence_rule)
@@ -75,8 +73,22 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
     e.preventDefault()
     const t = title.trim()
     if (!t) return
-    const start = allDay ? toIso(date, '00:00') : toIso(date, startTime)
-    const end = allDay ? toIso(date, '23:59') : toIso(date, endTime)
+    // 시간 검증(buildEventTimes, Task 1) — 동일/역전이면 인라인 에러 + 입력 보존, DB 도달 차단(§5.2).
+    const times = buildEventTimes({ date, allDay, startTime, endTime, endDate })
+    if (!times.ok) {
+      setTimeError(
+        times.reason === 'same'
+          ? '시작·종료 시간이 같아요. 종료를 더 늦게 잡아주세요.'
+          : times.reason === 'range'
+            ? '종료일이 시작일보다 빨라요.'
+            : '시작·종료 시간을 입력해주세요.',
+      )
+      return
+    }
+    setTimeError(null)
+    const { start, end } = times
+    // placeId는 Task 8에서 state로 승격. 현재는 수정 모드 원본값 유지(없으면 null).
+    const placeId = initial?.place_id ?? null
     const cleanMemo = memo.trim() || null
     const recurrenceRule =
       recurrence === 'none' ? null : buildRule(recurrence, 1, recurCount > 0 ? recurCount : undefined, initRule?.exdates)
@@ -91,6 +103,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
         is_all_day: allDay,
         visibility,
         memo: cleanMemo,
+        place_id: placeId,
         recurrence_rule: recurrenceRule,
         reminders,
       })
@@ -103,6 +116,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
         timeZone: DISPLAY_TZ,
         visibility,
         memo: cleanMemo,
+        placeId,
         recurrenceRule,
         reminders,
       })
@@ -151,7 +165,12 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
                 <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} aria-label="종료 시각" />
               </label>
             </div>
-          ) : null}
+          ) : (
+            <label className={styles.field}>
+              <span>종료일</span>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} aria-label="종료일" />
+            </label>
+          )}
 
           <fieldset className={styles.tracks}>
             <legend>트랙</legend>
@@ -220,6 +239,12 @@ export function EventSheet({ initial, defaultDate, myId, busy, onClose, onCreate
             aria-label="메모"
             rows={2}
           />
+
+          {timeError ? (
+            <p role="alert" className={styles.formError}>
+              {timeError}
+            </p>
+          ) : null}
 
           <div className={styles.actions}>
             {editing && initial ? (

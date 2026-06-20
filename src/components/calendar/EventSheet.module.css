@@ -44,6 +44,13 @@
   padding: var(--sp-2) 0;
 }
 
+/* 시간 검증 인라인 에러(§5.2 — 색+텍스트, 저장 버튼 위). 입력은 그대로 보존. */
+.formError {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-danger, #d33);
+}
+
 .field {
   display: flex;
   align-items: center;
