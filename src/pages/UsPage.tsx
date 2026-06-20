@@ -1,4 +1,6 @@
 import { useState, useRef } from 'react'
+import { daysTogether, partnerLabel } from '@/lib/partner'
+import { getNickname, setNickname } from '@/state/nickname'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { Dialog } from '@/components/common/Dialog'
 import { useAuth } from '@/state/auth'
@@ -55,6 +57,19 @@ export default function UsPage() {
   const connectedDate = couple?.connectedAt
     ? new Date(couple.connectedAt).toLocaleDateString('ko-KR')
     : null
+  // 상대 표시명: display_name 비면 로컬 별명(내 기기에만) → '상대'. 함께한 지 D+N(dossier 02 §4).
+  const [nick, setNick] = useState<string | null>(() =>
+    partner ? getNickname(partner.id) : null,
+  )
+  const [nickDraft, setNickDraft] = useState('')
+  const days = daysTogether(couple?.connectedAt ?? null)
+  const onSaveNick = () => {
+    if (!partner) return
+    const v = nickDraft.trim()
+    setNickname(partner.id, v)
+    setNick(v || null)
+    setNickDraft('')
+  }
 
   const onDisconnect = () => {
     if (!couple?.coupleId) return
@@ -70,16 +85,51 @@ export default function UsPage() {
         {partner ? (
           <section className={styles.card} aria-label="연결된 상대">
             <div className={styles.partnerRow}>
-              <div className={styles.avatar} style={{ background: partner.color }} aria-hidden>
-                {partner.displayName.slice(0, 1).toUpperCase() || '💑'}
-              </div>
+              {partner.avatarUrl ? (
+                <img
+                  className={styles.avatar}
+                  src={partner.avatarUrl}
+                  alt=""
+                  aria-hidden
+                />
+              ) : (
+                <div className={styles.avatar} style={{ background: partner.color }} aria-hidden>
+                  {partner.displayName.slice(0, 1).toUpperCase() || '💑'}
+                </div>
+              )}
               <div className={styles.partnerInfo}>
-                <span className={styles.partnerName}>{partner.displayName || '상대'}</span>
+                <span className={styles.partnerName}>{partnerLabel(partner, nick)}</span>
                 <span className={styles.partnerMeta}>
-                  {connectedDate ? `${connectedDate}부터 연결됨` : '연결됨'}
+                  {days !== null
+                    ? `함께한 지 D+${days}`
+                    : connectedDate
+                      ? `${connectedDate}부터 연결됨`
+                      : '연결됨'}
                 </span>
               </div>
             </div>
+            {/* display_name 빈값일 때만 내 기기 별명 — 공유 X(로컬), 색+이름 라벨 보조(§8) */}
+            {!partner.displayName.trim() ? (
+              <div className={styles.nickRow}>
+                <input
+                  className={styles.nickInput}
+                  type="text"
+                  value={nickDraft}
+                  onChange={(e) => setNickDraft(e.target.value)}
+                  placeholder="별명 정하기"
+                  aria-label="상대 별명"
+                  maxLength={20}
+                />
+                <button
+                  className={styles.ghostBtn}
+                  type="button"
+                  onClick={onSaveNick}
+                  disabled={!nickDraft.trim()}
+                >
+                  저장
+                </button>
+              </div>
+            ) : null}
           </section>
         ) : null}
 

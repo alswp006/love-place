@@ -39,10 +39,31 @@
   flex-shrink: 0;
 }
 
+img.avatar {
+  object-fit: cover;
+}
+
 .partnerInfo {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.nickRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.nickInput {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: var(--fs-body);
 }
 
 .partnerName {
