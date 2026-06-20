@@ -9,6 +9,7 @@ import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useProfiles, type ProfileMap } from '@/hooks/useProfiles'
 import { useEvents, type EventRow } from '@/hooks/useEvents'
+import { usePlaces } from '@/hooks/usePlaces'
 import { useEventMutations, type NewEvent, type EventPatch } from '@/hooks/useEventMutations'
 import { useRestoreEvent } from '@/hooks/useRestoreEvent'
 import { useToast } from '@/hooks/useToast'
@@ -32,6 +33,8 @@ export default function CalendarPage() {
   const coupleId = couple?.coupleId ?? null
   const { data: events } = useEvents(coupleId)
   const { data: profiles } = useProfiles(coupleId)
+  // 저장된 장소(place_id 연결 피커, Task 8) — EventSheet에 props로 주입(focus-trap 안).
+  const { data: places, isLoading: placesLoading } = usePlaces(coupleId)
   const conflict = useConflict()
   // 권한거부(상대 PERSONAL 수정 시도) — 버전충돌과 분리해 별도 배너로 안내(Task 7). 시트는 유지.
   const permission = useConflict()
@@ -203,6 +206,8 @@ export default function CalendarPage() {
           myId={myId}
           busy={busy}
           profiles={profiles ?? {}}
+          places={places ?? []}
+          placesLoading={placesLoading}
           conflictRefresh={conflictRefresh}
           onClose={closeSheet}
           onCreate={onCreate}
