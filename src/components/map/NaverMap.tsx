@@ -9,6 +9,7 @@ import { escapeHtml } from '@/lib/places/infoWindowHtml'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import type { SnapStop } from '@/lib/places/sheetSnap'
 import { getCurrentPosition, getPermissionState, shouldAutoLocate } from '@/lib/geo/currentPosition'
+import { haptic } from '@/lib/haptics'
 import styles from './NaverMap.module.css'
 
 // 네이버 지도 + 장소 마커(§5.5). 네이버 검색 좌표(WGS84)를 그대로 핀으로 찍는다.
@@ -196,7 +197,10 @@ export function NaverMap({
               anchor: new nv.maps.Point(12, 24),
             },
           })
-          const handle = nv.maps.Event.addListener(marker, 'click', () => onSelectRef.current?.(p.id))
+          const handle = nv.maps.Event.addListener(marker, 'click', () => {
+            haptic(8) // 가벼운 패턴 — 시각(상세 오픈) 피드백 병행(ux §1).
+            onSelectRef.current?.(p.id)
+          })
           listenersRef.current.push(handle)
           markersRef.current.push(marker)
           markerMapRef.current.set(p.id, marker)

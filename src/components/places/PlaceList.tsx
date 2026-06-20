@@ -6,6 +6,7 @@ import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { UseMutationResult } from '@tanstack/react-query'
 import { cyclePriority, MAX_PRIORITY, type WishStatus, type WithWish } from '@/lib/places/wishStatus'
+import { haptic } from '@/lib/haptics'
 import styles from './PlaceList.module.css'
 
 type MarkVisited = UseMutationResult<void, Error, { placeId: string; visitDate?: string; alreadyVisited?: boolean }>
@@ -101,13 +102,14 @@ export function PlaceList({
                     <PriorityStepper
                       priority={myWish.priority}
                       disabled={priorityPending}
-                      onCycle={() =>
+                      onCycle={() => {
                         setPriority({
                           wishId: myWish.wishId,
                           expectedVersion: myWish.version,
                           priority: cyclePriority(myWish.priority),
                         })
-                      }
+                        haptic() // 낙관적 시점 — 시각(하트 채움) 피드백 병행(ux §1).
+                      }}
                     />
                   ) : null}
                   {visited ? (

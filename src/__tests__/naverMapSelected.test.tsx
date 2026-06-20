@@ -19,6 +19,10 @@ vi.mock('@/lib/geo/currentPosition', () => ({
   getCurrentPosition: () => Promise.resolve({ ok: false, reason: 'denied' }),
 }))
 
+// 마커 탭 햅틱(R4.1) — vibrate 자체를 모킹해 호출 단언(ux §1, 시각=상세 오픈 병행).
+vi.mock('@/lib/haptics', () => ({ haptic: vi.fn() }))
+import { haptic } from '@/lib/haptics'
+
 import { NaverMap } from '@/components/map/NaverMap'
 
 // 생성된 마커들과 지도 이벤트 리스너를 캡처하는 스텁.
@@ -31,7 +35,11 @@ type CapturedMarker = {
 const markers: CapturedMarker[] = []
 // 지도(map) 객체에 등록된 idle/zoom_changed 리스너를 모은다(재렌더 시뮬레이션용).
 const mapListeners: Record<string, Array<() => void>> = {}
+// 단일 마커에 등록된 'click' 리스너를 등록 순서대로 모은다(마커 탭 디스패치용).
+const markerClickHandlers: Array<() => void> = []
 let mapObj: unknown
+// addListener가 마커 인스턴스를 식별하도록 Marker 생성 시 이 집합에 등록한다.
+const markerInstances = new Set<unknown>()
 
 function makeNaverStub() {
   return {
@@ -57,6 +65,7 @@ function makeNaverStub() {
         constructor(opts: Record<string, unknown>) {
           this.opts = opts
           this.zIndex = (opts.zIndex as number) ?? 0
+          markerInstances.add(this)
           const rec: CapturedMarker = {
             opts,
             zIndex: this.zIndex,
@@ -108,6 +117,8 @@ function makeNaverStub() {
         addListener: (target: unknown, ev: string, fn: () => void) => {
           if (target === mapObj) {
             ;(mapListeners[ev] ??= []).push(fn)
+          } else if (ev === 'click' && markerInstances.has(target)) {
+            markerClickHandlers.push(fn)
           }
           return { target, ev, fn }
         },
@@ -135,6 +146,8 @@ function place(id: string, lat: number, lng: number): PlaceRow & { wish?: undefi
 describe('NaverMap 선택 강조가 pan/zoom 재렌더에서 유지(R1.6)', () => {
   beforeEach(() => {
     markers.length = 0
+    markerClickHandlers.length = 0
+    markerInstances.clear()
     for (const k of Object.keys(mapListeners)) delete mapListeners[k]
     mapObj = undefined
     loadNaverMaps.mockReset()
@@ -178,5 +191,18 @@ describe('NaverMap 선택 강조가 pan/zoom 재렌더에서 유지(R1.6)', () =
     const content = (p1.opts.icon as { content: string }).content
     expect(content).toBe(expected)
     expect(p1.opts.zIndex).toBe(SELECTED_ZINDEX)
+  })
+
+  it('단일 마커 click 시 onSelect 직전 haptic(가벼운 패턴)이 호출된다(시각=상세 오픈 병행, R4.1)', async () => {
+    vi.mocked(haptic).mockClear()
+    // 멀리 떨어진 두 장소 → 각각 single 마커 → 마커별 click 리스너가 캡처된다.
+    const places = [place('p1', 35.0, 127.0), place('p2', 37.5, 126.9)]
+    const onSelect = vi.fn()
+    render(<NaverMap places={places} snap="peek" selectedId={null} onSelect={onSelect} />)
+    await waitFor(() => expect(markerClickHandlers.length).toBeGreaterThanOrEqual(2))
+    // 첫 단일 마커 탭 디스패치 → onSelect(p.id)와 함께 haptic이 1회 발화해야 한다.
+    markerClickHandlers[0]!()
+    expect(onSelect).toHaveBeenCalledWith('p1')
+    expect(haptic).toHaveBeenCalledTimes(1)
   })
 })

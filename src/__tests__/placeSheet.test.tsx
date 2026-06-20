@@ -592,4 +592,12 @@ describe('PlaceSheet — 저장·방문 토글 햅틱 배선(R4.1: 성공/제거
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('가봤음을 취소했어요'))
     expect(haptic).toHaveBeenCalledTimes(1)
   })
+
+  it('❤️ 리액션 토글(onReact) 탭 시 mutate와 같은 시점에 haptic이 호출된다(낙관적, 시각 칩 병행)', () => {
+    renderSheet({ places: [aPlace], selectedId: 'p1' })
+    const detail = screen.getByLabelText('장소 상세')
+    // 리액션 버튼 aria-label: `{name} 하트 리액션 (총 N개)` — 탭 시점(낙관적)에 haptic 발화.
+    fireEvent.click(within(detail).getByRole('button', { name: /하트 리액션/ }))
+    expect(haptic).toHaveBeenCalledTimes(1)
+  })
 })

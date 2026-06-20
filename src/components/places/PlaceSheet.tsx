@@ -371,7 +371,10 @@ export function PlaceSheet({
                       },
                     )
                   }
-                  onReact={() => toggleReaction.mutate({ placeId: selectedPlace.id })}
+                  onReact={() => {
+                    toggleReaction.mutate({ placeId: selectedPlace.id })
+                    haptic() // 낙관적 시점 — 시각(하트 칩 토글) 피드백 병행(ux §1).
+                  }}
                   onClose={onCloseDetail}
                 />
               ) : null}

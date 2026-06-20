@@ -4,6 +4,10 @@ import { PlaceList } from '@/components/places/PlaceList'
 import type { WithWish } from '@/lib/places/wishStatus'
 import type { PlaceRow } from '@/hooks/usePlaces'
 
+// 햅틱은 우선순위 하트 탭(낙관적 시점)에만 발화 — vibrate 자체를 모킹해 호출 단언(ux §1).
+vi.mock('@/lib/haptics', () => ({ haptic: vi.fn() }))
+import { haptic } from '@/lib/haptics'
+
 const wishStatus = { wishedByMe: true, wishedByPartner: true, bothWished: true, wishCount: 2, totalPriority: 3, maxPriority: 2 }
 const place: WithWish<PlaceRow> = {
   id: 'p1', name: '칠성조선소', address: '속초', region_label: '속초', lat: 38, lng: 128,
@@ -69,6 +73,21 @@ describe('PlaceList (카드 리스트 추출)', () => {
     render(<PlaceList {...baseProps} visitedIds={new Set<string>()} />)
     expect(screen.getByRole('button', { name: /다녀왔어요/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /가봤음 기록 취소/ })).not.toBeInTheDocument()
+  })
+
+  it('우선순위 하트 스텝퍼 탭 시 setPriority 직후 haptic(낙관적 시점)이 호출된다(시각 피드백 병행)', () => {
+    vi.mocked(haptic).mockClear()
+    const setPriority = vi.fn()
+    render(
+      <PlaceList
+        {...baseProps}
+        setPriority={setPriority}
+        wishes={{ byPlace: {}, mine: { p1: { wishId: 'w1', priority: 1, version: 1 } } }}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /내 우선순위/ }))
+    expect(setPriority).toHaveBeenCalledTimes(1)
+    expect(haptic).toHaveBeenCalledTimes(1)
   })
 
   it('삭제 시 실행취소 토스트를 띄우고, 실행취소 클릭은 restorePlace(version+1)을 호출한다', () => {
