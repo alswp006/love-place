@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
+import { Dialog } from '@/components/common/Dialog'
 import { useAuth } from '@/state/auth'
 import { useSignOut } from '@/hooks/useSignOut'
 import { useCouple } from '@/hooks/useCouple'
@@ -33,17 +34,6 @@ export default function UsPage() {
     myId,
     conflict.flag,
   )
-
-  // 연결해제 확인 다이얼로그(파괴적): 열리면 취소에 초기 포커스 + ESC로 닫기(§8).
-  useEffect(() => {
-    if (!confirming) return
-    cancelRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setConfirming(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [confirming])
 
   // 내보내기 v0(§10.4 회수권) — 내 커플 데이터 전체를 JSON으로 다운로드.
   const onExport = async () => {
@@ -138,31 +128,28 @@ export default function UsPage() {
         {/* 연결 해제 */}
         {couple?.status === 'ACTIVE' ? (
           <section className={styles.card} aria-label="연결 관리">
-            {confirming ? (
-              <div className={styles.confirm} role="dialog" aria-modal="true" aria-label="연결 해제 확인">
-                <p className={styles.confirmText}>
-                  연결을 해제하면 새 공유 기록 추가가 중단돼요. 기존 기록은 남습니다.
-                  <br />
-                  해제 전 위 <strong>내보내기</strong>로 데이터를 받아두는 걸 권장해요. 정말 해제할까요?
-                </p>
-                <div className={styles.confirmActions}>
-                  <button ref={cancelRef} type="button" className={styles.ghostBtn} onClick={() => setConfirming(false)}>
-                    취소
-                  </button>
-                  <button
-                    className={styles.dangerBtn}
-                    onClick={onDisconnect}
-                    disabled={disconnect.isPending}
-                  >
-                    {disconnect.isPending ? '해제 중…' : '연결 해제'}
-                  </button>
-                </div>
+            <button className={styles.dangerGhost} onClick={() => setConfirming(true)}>
+              연결 해제
+            </button>
+            <Dialog
+              open={confirming}
+              onClose={() => setConfirming(false)}
+              ariaLabel="연결 해제 확인"
+              initialFocusRef={cancelRef}
+            >
+              {/* 본문은 Task 8에서 정직한 카피 + 내보내기 게이트로 교체 */}
+              <p className={styles.confirmText}>
+                연결을 해제하면 새 공유 기록 추가가 중단돼요. 기존 기록은 남습니다.
+              </p>
+              <div className={styles.confirmActions}>
+                <button ref={cancelRef} type="button" className={styles.ghostBtn} onClick={() => setConfirming(false)}>
+                  취소
+                </button>
+                <button className={styles.dangerBtn} onClick={onDisconnect} disabled={disconnect.isPending}>
+                  {disconnect.isPending ? '해제 중…' : '연결 해제'}
+                </button>
               </div>
-            ) : (
-              <button className={styles.dangerGhost} onClick={() => setConfirming(true)}>
-                연결 해제
-              </button>
-            )}
+            </Dialog>
           </section>
         ) : null}
       </div>
