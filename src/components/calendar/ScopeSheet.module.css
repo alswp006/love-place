@@ -1,0 +1,85 @@
+/* 반복 범위 선택 시트(R2.3) — EventSheet와 동일한 바텀시트 모션/세이프에어리어. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 60;
+  padding-bottom: var(--safe-bottom);
+}
+
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--c-surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: var(--sp-4);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
+  animation: rise var(--motion-base) var(--ease);
+}
+
+/* Reduce Motion: 슬라이드 업 모션 생략(§5). */
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.title {
+  margin: 0 0 var(--sp-3);
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.option {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2, var(--c-surface));
+  color: var(--c-text);
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+.cancel {
+  width: 100%;
+  min-height: 44px;
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--c-text-dim, var(--c-text));
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.cancel:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}

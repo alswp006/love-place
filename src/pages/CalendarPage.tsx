@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { EventSheet } from '@/components/calendar/EventSheet'
+import { ScopeSheet, type Scope } from '@/components/calendar/ScopeSheet'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useProfiles, type ProfileMap } from '@/hooks/useProfiles'
@@ -17,7 +18,8 @@ import { useConflict } from '@/lib/sync/useConflict'
 import { refetchEventRow, ConflictError } from '@/lib/sync/versionedUpdate'
 import { deriveTrack, TRACK_META, ALL_TRACKS, type Track } from '@/lib/calendar/track'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
-import { expandEvents, type Occurrence } from '@/lib/calendar/rrule'
+import { expandEvents, buildRule, parseRule, type Occurrence } from '@/lib/calendar/rrule'
+import { exdateOccurrence, splitFollowing, shiftTimesToOccurrence } from '@/lib/calendar/recurrenceScope'
 import { tabByPath } from '@/app/tabs'
 import styles from './CalendarPage.module.css'
 
@@ -64,7 +66,16 @@ export default function CalendarPage() {
     setView({ year: Number(parts[0]), month0: Number(parts[1]) - 1 })
   }, [dateParam])
   const [filter, setFilter] = useState<Set<Track>>(() => new Set(ALL_TRACKS))
-  const [sheet, setSheet] = useState<{ open: boolean; editing: EventRow | null }>({ open: false, editing: null })
+  // 편집 시트는 시리즈 행(editing)을 보여주되, 클릭한 occurrence의 시작 ISO/dayKey도 함께 보존한다
+  // (조사 01 §3 — 현재는 시리즈로 덮어써 occurrence가 소실 → 범위 분기에 occurrence 시각이 필요).
+  const [sheet, setSheet] = useState<{
+    open: boolean
+    editing: EventRow | null
+    occStartIso: string | null
+    occDayKey: string | null
+  }>({ open: false, editing: null, occStartIso: null, occDayKey: null })
+  // 반복 occurrence 편집/삭제 시 범위 선택 시트(이 일정만/이후/전체). pending에 분기 컨텍스트 보존.
+  const [scope, setScope] = useState<{ mode: 'edit' | 'delete'; series: EventRow; occStartIso: string; occDayKey: string; patch: EventPatch | null } | null>(null)
 
   const visibleEvents = useMemo(
     () => (events ?? []).filter((e) => filter.has(deriveTrack(e, myId))),
@@ -105,13 +116,14 @@ export default function CalendarPage() {
 
   const busy = create.isPending || update.isPending || remove.isPending
   const closeSheet = () => {
-    setSheet({ open: false, editing: null })
+    setSheet({ open: false, editing: null, occStartIso: null, occDayKey: null })
     setConflictRefresh(null)
   }
   const onCreate = (e: NewEvent) => create.mutate(e, { onSuccess: closeSheet })
-  // 성공이면 닫고, 버전충돌이면 시트 유지 + 최신 서버 행을 시트로 내려 version 재시드·메모 머지(§4.3).
+
+  // 버전충돌이면 시트 유지 + 최신 서버 행을 시트로 내려 version 재시드·메모 머지(§4.3).
   // 권한거부는 시트 유지(배너로 안내) — onError에서 콜백이 갈리므로 여기선 충돌만 재시드한다.
-  const onUpdate = (id: string, v: number, patch: EventPatch) =>
+  const plainUpdate = (id: string, v: number, patch: EventPatch) =>
     update.mutate(
       { id, expectedVersion: v, patch },
       {
@@ -126,7 +138,7 @@ export default function CalendarPage() {
       },
     )
   // 삭제 성공 → 시트 닫고 Undo 토스트. 되돌리기는 삭제로 +1된 버전(v+1)으로 복구(낙관적 락, §4.3).
-  const onDelete = (id: string, v: number) =>
+  const plainDelete = (id: string, v: number) =>
     remove.mutate(
       { id, expectedVersion: v },
       {
@@ -139,6 +151,122 @@ export default function CalendarPage() {
         },
       },
     )
+
+  // 반복 occurrence 편집/삭제는 범위 시트로 분기(조사 01 §1/§6). 비반복은 곧장 plain 적용.
+  const onUpdate = (id: string, v: number, patch: EventPatch) => {
+    const series = sheet.editing
+    if (series && series.recurrence_rule && sheet.occStartIso && sheet.occDayKey) {
+      setScope({ mode: 'edit', series, occStartIso: sheet.occStartIso, occDayKey: sheet.occDayKey, patch })
+      return
+    }
+    plainUpdate(id, v, patch)
+  }
+  const onDelete = (id: string, v: number) => {
+    const series = sheet.editing
+    if (series && series.recurrence_rule && sheet.occStartIso && sheet.occDayKey) {
+      setScope({ mode: 'delete', series, occStartIso: sheet.occStartIso, occDayKey: sheet.occDayKey, patch: null })
+      return
+    }
+    plainDelete(id, v)
+  }
+
+  // patch → NewEvent(override/새 시리즈 생성용). owner_id는 create가 myId로 채움(RLS WITH CHECK).
+  const patchToNewEvent = (series: EventRow, patch: EventPatch, recurrenceRule: string | null): NewEvent => ({
+    title: patch.title ?? series.title,
+    start: patch.start ?? series.start,
+    end: patch.end ?? series.end,
+    isAllDay: patch.is_all_day ?? series.is_all_day,
+    timeZone: series.time_zone,
+    visibility: patch.visibility ?? series.visibility,
+    placeId: patch.place_id !== undefined ? patch.place_id : series.place_id,
+    memo: patch.memo !== undefined ? patch.memo : series.memo,
+    recurrenceRule,
+    reminders: patch.reminders ?? series.reminders,
+  })
+
+  // 범위 시트에서 고른 범위를 적용. 'this'=EXDATE(+override), 'following'=시리즈 분할, 'all'=plain.
+  const applyScope = (pick: Scope) => {
+    if (!scope) return
+    const { mode, series, occStartIso, occDayKey, patch } = scope
+    const rule = series.recurrence_rule
+    if (!rule) {
+      setScope(null)
+      return
+    }
+
+    if (pick === 'all') {
+      setScope(null)
+      if (mode === 'delete') plainDelete(series.id, series.version)
+      else if (patch) plainUpdate(series.id, series.version, patch)
+      return
+    }
+
+    if (pick === 'this') {
+      // 이 회차 제외(EXDATE append) — softDelete 아님. 시리즈 update 1건.
+      const exRule = exdateOccurrence(rule, occDayKey)
+      setScope(null)
+      if (mode === 'delete') {
+        update.mutate(
+          { id: series.id, expectedVersion: series.version, patch: { recurrence_rule: exRule } },
+          {
+            onSuccess: () => {
+              closeSheet()
+              toast.show({ message: '이 일정만 삭제했어요' })
+            },
+            onError: (err) => {
+              if (err instanceof ConflictError) conflict.flag()
+            },
+          },
+        )
+      } else if (patch) {
+        // override 는 클릭한 occurrence 날(occDayKey)에 떨어져야 한다 — 폼 start/end는 시리즈 앵커 날
+        // 기준이므로 occDayKey로 평행이동(벽시계·기간 보존). 안 하면 앵커 날에 잘못 생기고 회차는 EXDATE로 사라짐.
+        const base = patchToNewEvent(series, patch, null)
+        const occ = shiftTimesToOccurrence(base.start, base.end, occDayKey)
+        const override = { ...base, start: occ.start, end: occ.end }
+        // EXDATE update 성공 후 override create(비반복 단일·내 소유) — 부분실패 방어(§6: 순서 보장).
+        update.mutate(
+          { id: series.id, expectedVersion: series.version, patch: { recurrence_rule: exRule } },
+          {
+            onSuccess: () => create.mutate(override, { onSuccess: closeSheet }),
+            onError: (err) => {
+              if (err instanceof ConflictError) conflict.flag()
+            },
+          },
+        )
+      }
+      return
+    }
+
+    // pick === 'following' — 분할일 직전까지 시리즈 절단(UNTIL). 삭제면 절단만, 수정이면 새 시리즈 생성.
+    const { truncatedRule } = splitFollowing(rule, occStartIso)
+    setScope(null)
+    update.mutate(
+      { id: series.id, expectedVersion: series.version, patch: { recurrence_rule: truncatedRule } },
+      {
+        onSuccess: () => {
+          if (mode === 'delete') {
+            closeSheet()
+            toast.show({ message: '이후 일정을 삭제했어요' })
+            return
+          }
+          if (!patch) return
+          // 새 시리즈: 분할 occurrence 시작부터, 원 freq/interval 유지(COUNT/UNTIL은 새로 안 둠 → 계속).
+          const p = parseRule(rule)
+          const newRule = p ? buildRule(p.freq, p.interval) : rule
+          // start/end 둘 다 occDayKey로 평행이동 — start만 occStartIso로 두고 end를 앵커 날에 남기면
+          // 첫 회차(및 전개되는 모든 회차)가 음수/다중일 기간이 된다(이슈 #2). 벽시계·기간 보존.
+          const base = patchToNewEvent(series, patch, newRule)
+          const occ = shiftTimesToOccurrence(base.start, base.end, occDayKey)
+          const newEvent = { ...base, start: occ.start, end: occ.end }
+          create.mutate(newEvent, { onSuccess: closeSheet })
+        },
+        onError: (err) => {
+          if (err instanceof ConflictError) conflict.flag()
+        },
+      },
+    )
+  }
 
   return (
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
@@ -186,13 +314,22 @@ export default function CalendarPage() {
           events={dayEvents}
           myId={myId}
           profiles={profiles ?? {}}
-          onEdit={(ev) => setSheet({ open: true, editing: { ...ev, start: ev._seriesStart, end: ev._seriesEnd } })}
+          onEdit={(ev) =>
+            setSheet({
+              open: true,
+              // 편집 폼은 시리즈 기준(start/end를 _seriesStart/End로 복원)이되,
+              editing: { ...ev, start: ev._seriesStart, end: ev._seriesEnd },
+              // 범위 분기를 위해 클릭한 occurrence의 시작 ISO/dayKey를 별도로 보존(occurrence 소실 방지).
+              occStartIso: ev.start,
+              occDayKey: dayKey(ev.start),
+            })
+          }
         />
 
         <button
           type="button"
           className={styles.fab}
-          onClick={() => setSheet({ open: true, editing: null })}
+          onClick={() => setSheet({ open: true, editing: null, occStartIso: null, occDayKey: null })}
           aria-label="일정 추가"
         >
           ＋
@@ -214,6 +351,10 @@ export default function CalendarPage() {
           onUpdate={onUpdate}
           onDelete={onDelete}
         />
+      ) : null}
+
+      {scope ? (
+        <ScopeSheet mode={scope.mode} onPick={applyScope} onCancel={() => setScope(null)} />
       ) : null}
     </ScreenScaffold>
   )

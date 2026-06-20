@@ -1,6 +1,27 @@
 // 반복 일정 3-범위(이 일정만/이후/전체) 연산 — 순수 함수. 'all'은 시리즈 plain update(여기 없음).
 import { parseRule, buildRule } from './rrule'
-import { dayKey } from './eventDays'
+import { dayKey, diffDays } from './eventDays'
+
+const DAY_MS = 86_400_000
+
+/**
+ * override/새 시리즈용 시각 보정: 폼 start/end(=시리즈 앵커 날에 사용자가 고른 벽시계 시각)를
+ * 클릭한 occurrence 날짜(occDayKey)로 통째로 이동한다. 벽시계 시각·기간은 보존(일수만 평행이동).
+ * Asia/Seoul 고정 오프셋(DST 없음)이라 N일 ms 가산이 벽시계 시각을 흔들지 않는다.
+ * (시리즈 앵커가 아닌 회차를 편집할 때 override가 앵커 날에 잘못 떨어지는 버그 방어 — 조사 01 §3/§6.)
+ */
+export function shiftTimesToOccurrence(
+  start: string,
+  end: string,
+  occDayKey: string,
+): { start: string; end: string } {
+  const delta = diffDays(dayKey(start), occDayKey) * DAY_MS
+  if (delta === 0) return { start, end }
+  return {
+    start: new Date(new Date(start).getTime() + delta).toISOString(),
+    end: new Date(new Date(end).getTime() + delta).toISOString(),
+  }
+}
 
 /** '이 일정만' 삭제/오버라이드: 해당 occurrence dayKey를 시리즈 EXDATE에 추가한 RRULE 반환. */
 export function exdateOccurrence(rule: string, occDayKey: string): string {
