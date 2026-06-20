@@ -16,6 +16,7 @@ export type CoupleInfo = {
   userB: string | null
   connectedAt: string | null
   partner: Partner | null // ACTIVE일 때만 채움
+  myRole: 'user_a' | 'user_b' | null // 호출자 역할(초대자=user_a) — 역할 기본색·동의 흐름이 참조(dossier 02 §3)
 }
 
 const EMPTY: CoupleInfo = {
@@ -25,6 +26,7 @@ const EMPTY: CoupleInfo = {
   userB: null,
   connectedAt: null,
   partner: null,
+  myRole: null,
 }
 
 // 현재 사용자의 커플 상태 + (ACTIVE면) 상대 프로필(§4.2). 라우트 가드·우리 탭이 사용.
@@ -51,6 +53,7 @@ export function useCouple() {
         userB: data.user_b,
         connectedAt: data.connected_at,
         partner: null,
+        myRole: data.user_a === user.id ? 'user_a' : 'user_b',
       }
 
       // ACTIVE면 상대 프로필 조회(0004 profiles_self_or_partner_select가 허용).

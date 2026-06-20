@@ -12,6 +12,7 @@ import { TrashSection } from '@/components/places/TrashSection'
 import { useTrashPlaces, useRestorePlace } from '@/hooks/usePlaceTrash'
 import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
+import { ProfileEditor } from '@/components/profile/ProfileEditor'
 import styles from './UsPage.module.css'
 
 // 💑 우리 — 프로필·연결·내보내기(§3, §10). 연결 후 상대 표시 + 연결 해제.
@@ -88,6 +89,8 @@ export default function UsPage() {
             <span className={styles.label}>로그인</span>
             <span className={styles.value}>{user?.email}</span>
           </div>
+          {/* 내 프로필(이름·색) 편집 — 색+라벨 이중화(§8), 낙관적 락 저장(Task 6/7) */}
+          {couple?.coupleId ? <ProfileEditor coupleId={couple.coupleId} /> : null}
           <button className={styles.ghostBtn} type="button" onClick={() => void signOut()}>
             로그아웃
           </button>

@@ -1,0 +1,86 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.fieldLabel {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.input {
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 1rem;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--c-border);
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatchOn {
+  border-color: var(--c-text);
+  outline: 2px solid var(--c-text);
+  outline-offset: 2px;
+}
+
+.swatch:focus-visible {
+  outline: 2px solid var(--c-text);
+  outline-offset: 2px;
+}
+
+.saveBtn {
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--c-accent, #3b6db5);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-danger);
+}
+
+.skeletonLine {
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: var(--c-border);
+}
+
+.skeletonGrid {
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--c-border);
+}

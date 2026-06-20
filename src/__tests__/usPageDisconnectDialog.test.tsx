@@ -19,6 +19,8 @@ vi.mock('@/hooks/usePlaceTrash', () => ({
   useTrashPlaces: () => ({ data: [] }),
   useRestorePlace: () => ({ restorePlace: vi.fn(), isPending: false }),
 }))
+// ProfileEditor는 별도 테스트(profileEditor.test.tsx)에서 검증 — 여기선 스텁으로 격리.
+vi.mock('@/components/profile/ProfileEditor', () => ({ ProfileEditor: () => null }))
 
 import { OfflineQueueProvider } from '@/state/OfflineQueueProvider'
 import UsPage from '@/pages/UsPage'
