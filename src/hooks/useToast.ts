@@ -1,13 +1,3 @@
-import { useState, useCallback, useRef } from 'react'
-
-// 가벼운 토스트 상태 훅(액션 피드백). 컴포넌트는 components/common/Toast.tsx의 <Toast />.
-export function useToast() {
-  const [msg, setMsg] = useState<string | null>(null)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const show = useCallback((m: string, ms = 2200) => {
-    setMsg(m)
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => setMsg(null), ms)
-  }, [])
-  return { msg, show }
-}
+// 토스트 훅 — 앱 레벨 ToastProvider(컨텍스트·포털·큐·액션)로 일원화(Task 11/12).
+// 기존 import 경로(@/hooks/useToast)를 유지하기 위한 drop-in 재export.
+export { useToast } from '@/components/common/ToastProvider'

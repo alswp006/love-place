@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
 import { CtaLink } from '@/components/common/CtaLink'
-import { Toast } from '@/components/common/Toast'
 import { CourseSheet } from '@/components/discover/CourseSheet'
-import { useToast } from '@/hooks/useToast'
+import { useToast } from '@/components/common/ToastProvider'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { usePlaces } from '@/hooks/usePlaces'
@@ -102,7 +101,6 @@ export default function RecommendPage() {
   return (
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
       <div className={styles.container}>
-        <Toast msg={toast.msg} />
         {ready.length > 0 ? (
           <section aria-label="코스 추천">
             <h2 className={styles.sectionTitle}>코스 짜기 좋은 지역</h2>

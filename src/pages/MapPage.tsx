@@ -16,8 +16,7 @@ import { useReactions } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
 import { attachAndSortWishes } from '@/lib/places/wishStatus'
 import { useSavePlace } from '@/hooks/useSavePlace'
-import { useToast } from '@/hooks/useToast'
-import { Toast } from '@/components/common/Toast'
+import { useToast } from '@/components/common/ToastProvider'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import { type SnapStop } from '@/lib/places/sheetSnap'
 import { tabByPath } from '@/app/tabs'
@@ -159,7 +158,6 @@ export default function MapPage() {
           onSnapChange={setSnap}
         />
       ) : null}
-      <Toast msg={toast.msg} />
     </ScreenScaffold>
   )
 }

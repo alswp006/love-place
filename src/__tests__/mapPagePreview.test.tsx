@@ -65,6 +65,7 @@ vi.mock('@/components/map/NaverMap', () => ({
   ),
 }))
 
+import { ToastProvider } from '@/components/common/ToastProvider'
 import MapPage from '@/pages/MapPage'
 
 function renderMap() {
@@ -72,7 +73,9 @@ function renderMap() {
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
-        <MapPage />
+        <ToastProvider>
+          <MapPage />
+        </ToastProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   )
@@ -150,7 +153,9 @@ describe('MapPage 검색→프리뷰→저장 오케스트레이션(spec §3.6)'
     const tree = () => (
       <QueryClientProvider client={qc}>
         <MemoryRouter>
-          <MapPage />
+          <ToastProvider>
+            <MapPage />
+          </ToastProvider>
         </MemoryRouter>
       </QueryClientProvider>
     )

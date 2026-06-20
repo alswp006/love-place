@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { Link } from 'react-router-dom'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
-import { Toast } from '@/components/common/Toast'
-import { useToast } from '@/hooks/useToast'
+import { useToast } from '@/components/common/ToastProvider'
 import { PlaceList } from '@/components/places/PlaceList'
 import { PlaceDetail } from '@/components/places/PlaceDetail'
 import { PlacePreviewDetail } from '@/components/places/PlacePreviewDetail'
@@ -392,7 +391,6 @@ export function PlaceSheet({
           {/* 여행 섹션은 코드 보존하되 시트에서 숨김(spec §3.4). 휴지통은 '우리' 탭으로 이동(Task 12). */}
         </div>
       )}
-      <Toast msg={toast.msg} />
       </div>
     </>
   )
