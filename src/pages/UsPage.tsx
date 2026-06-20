@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { daysTogether, partnerLabel } from '@/lib/partner'
 import { getNickname, setNickname } from '@/state/nickname'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
+import { Skeleton } from '@/components/common/Skeleton'
 import { Dialog } from '@/components/common/Dialog'
 import { useAuth } from '@/state/auth'
 import { useSignOut } from '@/hooks/useSignOut'
@@ -24,7 +25,7 @@ export default function UsPage() {
   const tab = tabByPath('/us')
   const { user } = useAuth()
   const signOut = useSignOut()
-  const { data: couple } = useCouple()
+  const { data: couple, isLoading: coupleLoading } = useCouple()
   const disconnect = useDisconnectCouple()
   const [confirming, setConfirming] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -122,6 +123,15 @@ export default function UsPage() {
     disconnect.mutate(couple.coupleId, {
       onSettled: () => setConfirming(false),
     })
+  }
+
+  // 콜드스타트 플래시 제거(Task 9): 커플 정보 로딩 중엔 프로필/연결 블록 대신 페이지 스켈레톤.
+  if (coupleLoading) {
+    return (
+      <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+        <Skeleton count={4} label="우리 정보 불러오는 중" />
+      </ScreenScaffold>
+    )
   }
 
   return (

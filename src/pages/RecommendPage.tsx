@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
 import { CtaLink } from '@/components/common/CtaLink'
+import { Skeleton } from '@/components/common/Skeleton'
 import { CourseSheet } from '@/components/discover/CourseSheet'
 import { useToast } from '@/components/common/ToastProvider'
 import { useAuth } from '@/state/auth'
@@ -30,8 +31,8 @@ export default function RecommendPage() {
   const myId = user?.id ?? null
   const { data: couple, isLoading: coupleLoading } = useCouple()
   const coupleId = couple?.coupleId ?? null
-  const { data: places } = usePlaces(coupleId)
-  const { data: visits } = useVisits(coupleId)
+  const { data: places, isLoading: placesLoading } = usePlaces(coupleId)
+  const { data: visits, isLoading: visitsLoading } = useVisits(coupleId)
   const toast = useToast()
   const navigate = useNavigate()
   const { addCourse } = useEventMutations(coupleId, myId, () => {}) // 코스 일괄 추가(멱등)
@@ -94,6 +95,15 @@ export default function RecommendPage() {
           title="먼저 상대와 연결해요"
           hint="'우리' 탭에서 연결하면, 둘이 모은 장소로 코스를 추천해요."
         />
+      </ScreenScaffold>
+    )
+  }
+
+  // 콜드스타트 플래시 제거(Task 9): 데이터 로딩 중엔 빈 상태/SEED 대신 추천 카드 자리 스켈레톤.
+  if (placesLoading || visitsLoading) {
+    return (
+      <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+        <Skeleton count={3} label="추천 불러오는 중" />
       </ScreenScaffold>
     )
   }
