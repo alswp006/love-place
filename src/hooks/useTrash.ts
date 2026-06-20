@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
-import { restore, ConflictError } from '@/lib/sync/versionedUpdate'
+import { softDelete, restore, ConflictError } from '@/lib/sync/versionedUpdate'
 import { useOfflineQueue } from '@/state/OfflineQueueProvider'
+import { useToast } from '@/hooks/useToast'
 
 // 휴지통(R3 T16) — soft-delete된 전 엔티티 조회 + 복구를 table 파라미터화로 일반화(usePlaceTrash 후속).
 // 물리삭제 금지(§4.3), 둘 다 복구 가능("상대가 지운 추억"도). 복구 경로(deleted_at IS NOT NULL 행 조회·update)는
@@ -111,4 +112,77 @@ export function useRestore(kind: TrashKind, coupleId: string | null, myId: strin
     },
   })
   return { restore: mutation.mutate, isPending: mutation.isPending }
+}
+
+// 삭제 즉시 '되돌리기' Undo(R1.5 토스트 패턴) — 방문·여행·일정 한 구현으로 통합(Task 18).
+// soft-delete 성공 시 toast.show({ message, action:{ label:'되돌리기', onClick: restore(version+1) } })를 띄운다.
+// 충돌(0행) → onConflict()만(토스트 없음; LWW 무음 덮어쓰기 금지 §4.3). 오프라인이면 ${table}.delete/${table}.restore로 큐잉
+// (usePlaceTrash 가드 패턴 재사용). 메시지 미지정 시 kind 라벨 기반 기본('${label}을 삭제했어요').
+export function useSoftDeleteWithUndo(
+  kind: TrashKind,
+  coupleId: string | null,
+  myId: string | null,
+  onConflict: () => void,
+) {
+  const queryClient = useQueryClient()
+  const { enqueue } = useOfflineQueue()
+  const toast = useToast()
+  const table = TRASH_KINDS[kind].table
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: [table, coupleId] })
+    void queryClient.invalidateQueries({ queryKey: ['trash', kind, coupleId] })
+  }
+
+  const mutation = useMutation<void, Error, { id: string; expectedVersion: number; message?: string }>({
+    mutationFn: async ({ id, expectedVersion }) => {
+      if (!myId) throw new Error('로그인이 필요해요.')
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await enqueue(`${table}.delete`, { id, expectedVersion, myId }, `${table}.delete:${id}`)
+        return
+      }
+      const res = await softDelete(table, id, expectedVersion, myId)
+      if (res.status === 'conflict') throw new ConflictError()
+    },
+    onSuccess: (_data, { id, expectedVersion, message }) => {
+      // 되돌리기는 삭제로 +1된 버전(expectedVersion+1)으로 복구(낙관적 락, §4.3).
+      toast.show(
+        {
+          message: message ?? `${TRASH_KINDS[kind].label}을 삭제했어요`,
+          action: {
+            label: '되돌리기',
+            onClick: () => {
+              void (async () => {
+                if (!myId) return
+                if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                  await enqueue(
+                    `${table}.restore`,
+                    { id, expectedVersion: expectedVersion + 1, myId },
+                    `${table}.restore:${id}`,
+                  )
+                } else {
+                  await restore(table, id, expectedVersion + 1, myId)
+                }
+                invalidate()
+              })()
+            },
+          },
+        },
+        6000,
+      )
+    },
+    onError: (err) => {
+      if (err instanceof ConflictError) onConflict()
+    },
+    onSettled: invalidate,
+  })
+
+  // 충돌은 onError에서 onConflict()로 이미 처리하므로 호출 측엔 reject를 전파하지 않는다(useUnmarkVisited와 동형).
+  const deleteWithUndo = (vars: { id: string; expectedVersion: number; message?: string }): Promise<void> =>
+    mutation.mutateAsync(vars).catch((err: unknown) => {
+      if (err instanceof ConflictError) return
+      throw err
+    })
+
+  return { deleteWithUndo, isPending: mutation.isPending }
 }

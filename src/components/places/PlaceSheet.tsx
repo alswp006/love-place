@@ -357,8 +357,8 @@ export function PlaceSheet({
                       { placeId: selectedPlace.id },
                       {
                         onSuccess: (r) => {
-                          if (r.status === 'removed') toast.show('가봤음 기록을 취소했어요')
-                          else if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
+                          // removed → 훅이 '되돌리기' Undo 토스트를 띄움(Task 18, 중복 토스트 방지).
+                          if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
                           // conflict → ConflictBanner는 onConflict가 이미 띄움
                         },
                       },
@@ -391,8 +391,8 @@ export function PlaceSheet({
                     { placeId },
                     {
                       onSuccess: (r) => {
-                        if (r.status === 'removed') toast.show('가봤음 기록을 취소했어요')
-                        else if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
+                        // removed → 훅이 '되돌리기' Undo 토스트를 띄움(Task 18, 중복 토스트 방지).
+                        if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
                       },
                     },
                   )

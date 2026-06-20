@@ -34,8 +34,9 @@ vi.mock('@/hooks/useEventMutations', () => ({
     remove: { mutate: () => {}, isPending: false },
   }),
 }))
-vi.mock('@/hooks/useRestoreEvent', () => ({
-  useRestoreEvent: () => ({ restoreEvent: () => {}, isPending: false }),
+// Task 18: CalendarPage가 일정 삭제 Undo를 공용 헬퍼 useSoftDeleteWithUndo로 소비 — noop으로 mock(여기선 상태 분기만 검증).
+vi.mock('@/hooks/useTrash', () => ({
+  useSoftDeleteWithUndo: () => ({ deleteWithUndo: async () => {}, isPending: false }),
 }))
 
 import CalendarPage from '@/pages/CalendarPage'

@@ -16,7 +16,7 @@ import { useProfiles, type ProfileMap } from '@/hooks/useProfiles'
 import { useEvents, type EventRow } from '@/hooks/useEvents'
 import { usePlaces, type PlaceRow } from '@/hooks/usePlaces'
 import { useEventMutations, type NewEvent, type EventPatch } from '@/hooks/useEventMutations'
-import { useRestoreEvent } from '@/hooks/useRestoreEvent'
+import { useSoftDeleteWithUndo } from '@/hooks/useTrash'
 import { useToast } from '@/hooks/useToast'
 import { useConflict } from '@/lib/sync/useConflict'
 import { refetchEventRow, ConflictError } from '@/lib/sync/versionedUpdate'
@@ -45,8 +45,9 @@ export default function CalendarPage() {
   const conflict = useConflict()
   // 권한거부(상대 PERSONAL 수정 시도) — 버전충돌과 분리해 별도 배너로 안내(Task 7). 시트는 유지.
   const permission = useConflict()
-  const { create, update, remove } = useEventMutations(coupleId, myId, conflict.flag, permission.flag)
-  const { restoreEvent } = useRestoreEvent(coupleId, myId, conflict.flag)
+  const { create, update } = useEventMutations(coupleId, myId, conflict.flag, permission.flag)
+  // 일정 삭제 Undo는 공용 헬퍼로 통합(Task 18) — 방문·여행과 단일 구현(이전 useRestoreEvent 인라인 중복 제거).
+  const { deleteWithUndo, isPending: deletePending } = useSoftDeleteWithUndo('events', coupleId, myId, conflict.flag)
   const toast = useToast()
   // 충돌 후 시트로 내려보낼 최신 서버 행(version 재시드 + 메모 append-merge용, §4.3).
   const [conflictRefresh, setConflictRefresh] = useState<{ version: number; memo: string | null } | null>(null)
@@ -164,7 +165,7 @@ export default function CalendarPage() {
       return next
     })
 
-  const busy = create.isPending || update.isPending || remove.isPending
+  const busy = create.isPending || update.isPending || deletePending
   // occurrence 클릭 → 편집 시트. 폼은 시리즈 기준(start/end를 _seriesStart/End로 복원)이되,
   // 범위 분기를 위해 클릭한 occurrence의 시작 ISO/dayKey를 별도 보존(DayAgenda·DayTimeline 공통).
   const openEdit = (ev: Occurrence<EventRow>) =>
@@ -197,20 +198,12 @@ export default function CalendarPage() {
         },
       },
     )
-  // 삭제 성공 → 시트 닫고 Undo 토스트. 되돌리기는 삭제로 +1된 버전(v+1)으로 복구(낙관적 락, §4.3).
-  const plainDelete = (id: string, v: number) =>
-    remove.mutate(
-      { id, expectedVersion: v },
-      {
-        onSuccess: () => {
-          closeSheet()
-          toast.show({
-            message: '일정을 삭제했어요',
-            action: { label: '되돌리기', onClick: () => restoreEvent({ id, expectedVersion: v + 1 }) },
-          })
-        },
-      },
-    )
+  // 삭제 → 시트 닫고 공용 헬퍼가 '일정을 삭제했어요' + 되돌리기 Undo 토스트(삭제로 +1된 버전 v+1로 복구, §4.3).
+  // 충돌은 헬퍼가 onConflict(conflict.flag)로 처리(토스트 없음). 단일 토스트만 발화(중복 제거).
+  const plainDelete = (id: string, v: number) => {
+    closeSheet()
+    void deleteWithUndo({ id, expectedVersion: v })
+  }
 
   // 반복 occurrence 편집/삭제는 범위 시트로 분기(조사 01 §1/§6). 비반복은 곧장 plain 적용.
   const onUpdate = (id: string, v: number, patch: EventPatch) => {

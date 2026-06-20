@@ -45,34 +45,43 @@ vi.mock('@/hooks/usePlaces', () => ({ usePlaces: () => ({ data: [], isLoading: f
 const h = vi.hoisted(() => {
   const createMutate = vi.fn((_vars: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.())
   const updateMutate = vi.fn((_vars: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.())
-  const removeMutate = vi.fn((_vars: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.())
-  const restoreEvent = vi.fn()
-  return { createMutate, updateMutate, removeMutate, restoreEvent }
+  // Task 18: '전체' 삭제는 공용 헬퍼(useSoftDeleteWithUndo('events'))로 위임 → softDelete('events',…)를 직접 검증.
+  const softDelete = vi.fn(async () => ({ status: 'ok' }) as { status: 'ok' | 'conflict' })
+  const restore = vi.fn(async () => ({ status: 'ok' }) as { status: 'ok' | 'conflict' })
+  return { createMutate, updateMutate, softDelete, restore }
 })
 vi.mock('@/hooks/useEventMutations', () => ({
   useEventMutations: () => ({
     create: { mutate: h.createMutate, isPending: false },
     update: { mutate: h.updateMutate, isPending: false },
-    remove: { mutate: h.removeMutate, isPending: false },
+    remove: { mutate: () => {}, isPending: false },
   }),
 }))
-vi.mock('@/hooks/useRestoreEvent', () => ({
-  useRestoreEvent: () => ({ restoreEvent: h.restoreEvent, isPending: false }),
+vi.mock('@/lib/supabase/client', () => ({
+  supabase: { from: vi.fn(), channel: vi.fn(() => ({ on: () => ({ subscribe: () => ({}) }) })), removeChannel: vi.fn() },
+  isSupabaseConfigured: true,
 }))
+vi.mock('@/lib/sync/versionedUpdate', async (orig) => {
+  const real = await orig<typeof import('@/lib/sync/versionedUpdate')>()
+  return { ...real, softDelete: h.softDelete, restore: h.restore }
+})
 
 import CalendarPage from '@/pages/CalendarPage'
 import { ToastProvider } from '@/components/common/ToastProvider'
+import { OfflineQueueProvider } from '@/state/OfflineQueueProvider'
 import { dayKey } from '@/lib/calendar/eventDays'
 
 function renderCalendar() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={['/calendar?date=2026-06-20']}>
-          <CalendarPage />
-        </MemoryRouter>
-      </ToastProvider>
+      <OfflineQueueProvider>
+        <ToastProvider>
+          <MemoryRouter initialEntries={['/calendar?date=2026-06-20']}>
+            <CalendarPage />
+          </MemoryRouter>
+        </ToastProvider>
+      </OfflineQueueProvider>
     </QueryClientProvider>,
   )
 }
@@ -92,8 +101,11 @@ function selectDayAndEdit(occDay: string) {
 beforeEach(() => {
   h.createMutate.mockClear()
   h.updateMutate.mockClear()
-  h.removeMutate.mockClear()
-  h.restoreEvent.mockClear()
+  h.softDelete.mockClear()
+  h.restore.mockClear()
+  h.softDelete.mockResolvedValue({ status: 'ok' })
+  h.restore.mockResolvedValue({ status: 'ok' })
+  Object.defineProperty(navigator, 'onLine', { value: true, configurable: true, writable: true })
 })
 
 describe('반복 일정 범위 선택 시트 배선(Task 10)', () => {
@@ -102,8 +114,8 @@ describe('반복 일정 범위 선택 시트 배선(Task 10)', () => {
     openEditSheet()
     fireEvent.click(screen.getByRole('button', { name: '삭제' }))
     fireEvent.click(screen.getByRole('button', { name: '정말 삭제할까요?' }))
-    // 반복이므로 곧장 remove를 부르지 않고 범위 시트를 먼저 띄운다.
-    expect(h.removeMutate).not.toHaveBeenCalled()
+    // 반복이므로 곧장 삭제(softDelete)하지 않고 범위 시트를 먼저 띄운다.
+    expect(h.softDelete).not.toHaveBeenCalled()
     const dialog = screen.getByRole('dialog', { name: /반복 일정/ })
     expect(dialog).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '이 일정만' })).toBeInTheDocument()
@@ -111,13 +123,13 @@ describe('반복 일정 범위 선택 시트 배선(Task 10)', () => {
     expect(screen.getByRole('button', { name: '전체' })).toBeInTheDocument()
   })
 
-  it("'이 일정만' 삭제 → 시리즈 update(EXDATE append), softDelete(remove) 아님", () => {
+  it("'이 일정만' 삭제 → 시리즈 update(EXDATE append), softDelete 아님", () => {
     renderCalendar()
     openEditSheet()
     fireEvent.click(screen.getByRole('button', { name: '삭제' }))
     fireEvent.click(screen.getByRole('button', { name: '정말 삭제할까요?' }))
     fireEvent.click(screen.getByRole('button', { name: '이 일정만' }))
-    expect(h.removeMutate).not.toHaveBeenCalled()
+    expect(h.softDelete).not.toHaveBeenCalled()
     expect(h.updateMutate).toHaveBeenCalledTimes(1)
     const [vars] = h.updateMutate.mock.calls[0] as [
       { id: string; expectedVersion: number; patch: { recurrence_rule?: string } },
@@ -128,16 +140,14 @@ describe('반복 일정 범위 선택 시트 배선(Task 10)', () => {
     expect(vars.patch.recurrence_rule).toContain('FREQ=WEEKLY')
   })
 
-  it("'전체' 삭제 → 시리즈 softDelete(remove) expectedVersion=시리즈 version", () => {
+  it("'전체' 삭제 → 시리즈 softDelete(공용 헬퍼) expectedVersion=시리즈 version", async () => {
     renderCalendar()
     openEditSheet()
     fireEvent.click(screen.getByRole('button', { name: '삭제' }))
     fireEvent.click(screen.getByRole('button', { name: '정말 삭제할까요?' }))
     fireEvent.click(screen.getByRole('button', { name: '전체' }))
     expect(h.updateMutate).not.toHaveBeenCalled()
-    expect(h.removeMutate).toHaveBeenCalledTimes(1)
-    const [vars] = h.removeMutate.mock.calls[0] as [{ id: string; expectedVersion: number }]
-    expect(vars).toMatchObject({ id: 'e1', expectedVersion: 4 })
+    await waitFor(() => expect(h.softDelete).toHaveBeenCalledWith('events', 'e1', 4, 'u1'))
   })
 
   it("'이후' 삭제 → 시리즈 update(truncatedRule UNTIL) + 분할일 이후 차단(새 시리즈 create 없음)", () => {

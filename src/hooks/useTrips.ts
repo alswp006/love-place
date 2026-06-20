@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
-import { softDelete } from '@/lib/sync/versionedUpdate'
+import { useSoftDeleteWithUndo } from '@/hooks/useTrash'
 
 // Trips(여행 묶음 §5.3) — 가본 곳(visits)을 여행 단위로. cover_photo는 P3c(사진앨범, needs-supabase) 후.
 export type TripRow = {
@@ -71,13 +71,12 @@ export function useCreateTrip(coupleId: string | null, myId: string | null) {
   })
 }
 
+// 여행 삭제 — R1.5 즉시 '되돌리기' Undo(Task 18). 공용 헬퍼 useSoftDeleteWithUndo('trips')로 위임해
+// 삭제 성공 시 "여행을 삭제했어요" + 되돌리기 토스트, 충돌은 조용히 무시(목록 재조회로 정정). 호출 측 call shape({id,expectedVersion}) 유지.
 export function useDeleteTrip(coupleId: string | null, myId: string | null) {
-  const queryClient = useQueryClient()
-  return useMutation<void, Error, { id: string; expectedVersion: number }>({
-    mutationFn: async ({ id, expectedVersion }) => {
-      if (!myId) throw new Error('로그인이 필요해요.')
-      await softDelete('trips', id, expectedVersion, myId) // 휴지통(soft-delete); 충돌은 조용히 무시(목록 재조회로 정정)
-    },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['trips', coupleId] }),
-  })
+  const { deleteWithUndo, isPending } = useSoftDeleteWithUndo('trips', coupleId, myId, () => {})
+  return {
+    mutate: (vars: { id: string; expectedVersion: number }) => void deleteWithUndo(vars),
+    isPending,
+  }
 }

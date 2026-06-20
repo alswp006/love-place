@@ -39,6 +39,11 @@ vi.mock('@/lib/sync/versionedUpdate', async (orig) => {
 vi.mock('@/state/OfflineQueueProvider', () => ({
   useOfflineQueue: () => ({ enqueue: h.enqueue }),
 }))
+// Task 18: useUnmarkVisited가 removed 시 '되돌리기' Undo 토스트를 띄운다 → useToast 의존 추가.
+// 여기선 status/캐시 동작만 검증하므로 토스트는 noop으로 mock(토스트 내용은 placeSheet/trashUndo 테스트가 담당).
+vi.mock('@/hooks/useToast', () => ({
+  useToast: () => ({ show: vi.fn() }),
+}))
 
 import { renderHook, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -81,7 +86,8 @@ describe('useUnmarkVisited (라이브 재조회 → {status})', () => {
     await act(async () => {
       res = await result.current.mutateAsync({ placeId: 'p1' })
     })
-    expect(res).toEqual({ status: 'removed' })
+    // Task 18: removed면 삭제한 행들의 id+삭제후버전(version+1)을 함께 돌려 Undo가 같은 행을 복구한다.
+    expect(res).toEqual({ status: 'removed', deleted: [{ id: 'v1', version: 2 }, { id: 'v2', version: 4 }] })
     expect(h.softDelete).toHaveBeenCalledTimes(2)
     expect(h.softDelete).toHaveBeenCalledWith('visits', 'v1', 1, 'u1')
     expect(h.softDelete).toHaveBeenCalledWith('visits', 'v2', 3, 'u1')
@@ -148,7 +154,8 @@ describe('useUnmarkVisited (라이브 재조회 → {status})', () => {
     await act(async () => {
       res = await result.current.mutateAsync({ placeId: 'p1' })
     })
-    expect(res).toEqual({ status: 'removed' })
+    // 오프라인 삭제는 어떤 행을 지웠는지 모르므로 Undo 복구 대상 없음(deleted: []).
+    expect(res).toEqual({ status: 'removed', deleted: [] })
     expect(h.enqueue).toHaveBeenCalledWith(
       'visit.remove',
       { placeId: 'p1', myId: 'u1', coupleId: 'c1' },

@@ -2,8 +2,9 @@ import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { dayKey } from '@/lib/calendar/eventDays'
-import { softDelete } from '@/lib/sync/versionedUpdate'
+import { softDelete, restore } from '@/lib/sync/versionedUpdate'
 import { useOfflineQueue } from '@/state/OfflineQueueProvider'
+import { useToast } from '@/hooks/useToast'
 
 // 방문(가봤음) — "상태 플래그가 아니라 기록 추가"(§5.3·CLAUDE.md §7). 같은 장소 재방문은 각각 행.
 // "가봤음 = visits 존재"로 도출(마커 채운 별). 키 ['visits', coupleId], realtime 전파.
@@ -99,8 +100,10 @@ export function useUnmarkVisited(
 ) {
   const queryClient = useQueryClient()
   const { enqueue } = useOfflineQueue()
+  const toast = useToast()
   return useMutation<
-    { status: 'removed' | 'noop' | 'conflict' },
+    // removed면 삭제한 행들의 id+삭제후버전(version+1)을 함께 돌려 Undo가 같은 행을 복구하게 한다(Task 18).
+    { status: 'removed'; deleted: { id: string; version: number }[] } | { status: 'noop' | 'conflict' },
     Error,
     { placeId: string },
     { prev: VisitRow[] | undefined }
@@ -108,9 +111,10 @@ export function useUnmarkVisited(
     mutationFn: async ({ placeId }) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
       // 오프라인: 살아있는 행을 재조회할 수 없으므로 placeId+coupleId만 큐잉(재연결 시 flush가 재조회).
+      // 오프라인이면 어떤 행을 지웠는지 알 수 없어 Undo 복구 대상이 없다 → deleted: [].
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         await enqueue('visit.remove', { placeId, myId, coupleId }, `visit.remove:${placeId}`)
-        return { status: 'removed' }
+        return { status: 'removed', deleted: [] }
       }
       // stale-cache race 회피 — mutationFn에서 살아있는 방문행을 직접 조회(id+version).
       const { data: live, error: selErr } = await supabase
@@ -123,15 +127,17 @@ export function useUnmarkVisited(
       const rows = (live ?? []) as { id: string; version: number }[]
       if (rows.length === 0) return { status: 'noop' }
       let conflicted = false
+      const deleted: { id: string; version: number }[] = []
       for (const r of rows) {
         const res = await softDelete('visits', r.id, r.version, myId)
         if (res.status === 'conflict') conflicted = true
+        else deleted.push({ id: r.id, version: r.version + 1 }) // 삭제로 +1된 버전(복구 기대버전)
       }
       if (conflicted) {
         onConflict()
         return { status: 'conflict' }
       }
-      return { status: 'removed' }
+      return { status: 'removed', deleted }
     },
     // 낙관적 마커 토글(spec R1.2): 캐시에서 해당 place의 활성 방문행을 즉시 제거 → 마커가 '가고싶음'으로.
     onMutate: async ({ placeId }) => {
@@ -146,6 +152,26 @@ export function useUnmarkVisited(
     onError: (_err, _vars, ctx) => {
       // 롤백: 스냅샷 복원(무음 덮어쓰기 금지).
       if (ctx?.prev !== undefined) queryClient.setQueryData(['visits', coupleId], ctx.prev)
+    },
+    // 가봤음 취소 성공 시 R1.5 즉시 '되돌리기' Undo(Task 18). removed에서만(noop/conflict는 호출 측 R1.2 메시지 유지).
+    // 되돌리기는 삭제한 행들을 삭제후버전(version+1)으로 restore(같은 row 복구). 오프라인 삭제(deleted: [])는 복구 대상 없음.
+    onSuccess: (r) => {
+      if (r.status !== 'removed' || !myId) return
+      toast.show(
+        {
+          message: '가봤음을 취소했어요',
+          action: {
+            label: '되돌리기',
+            onClick: () => {
+              void (async () => {
+                for (const d of r.deleted) await restore('visits', d.id, d.version, myId)
+                void queryClient.invalidateQueries({ queryKey: ['visits', coupleId] })
+              })()
+            },
+          },
+        },
+        6000,
+      )
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['visits', coupleId] })
