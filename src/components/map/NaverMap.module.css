@@ -7,6 +7,18 @@
   background: var(--c-surface-2);
 }
 
+/* ≥44px 투명 터치 타깃(HIG, ux §1). 시각 tip은 글리프 하단이 anchor(12,24)에 닿도록
+   translate로 위치(글리프를 좌우 가운데·하단 정렬). reduce-motion 안전: tap-scale은 transition만. */
+.pinHit {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transform: translate(-50%, -100%);
+  cursor: pointer;
+}
+
 .pin {
   font-size: 22px;
   line-height: 1;
@@ -14,8 +26,13 @@
   text-shadow:
     0 1px 2px rgba(0, 0, 0, 0.3),
     0 0 2px #fff;
-  transform: translate(-50%, -100%);
-  cursor: pointer;
+  /* tip 위치는 .pinHit가 담당(translate 이동) — .pin 자체 transform 제거. */
+}
+
+/* 탭 피드백 — 누르는 동안 글리프 확대. transition만 쓰므로 reduce-motion에서 자동 무력화(ux §5). */
+.pinHit:active .pin {
+  transform: scale(1.2);
+  transition: transform var(--motion-fast) var(--ease);
 }
 
 /* 둘 다 찜 — 모양(♥)+색(퍼플=함께 트랙)으로 이중 구분(§8) */
@@ -60,9 +77,10 @@
   background: var(--c-surface);
 }
 
-/* 선택 강조 — 확대 + 링(색 + 모양 이중화, §8). transform/transition만 사용(reduce-motion 자동 무력화). */
+/* 선택 강조 — 확대 + 링(색 + 모양 이중화, §8). transform/transition만 사용(reduce-motion 자동 무력화).
+   tip 위치는 .pinHit가 담당하므로 translate 없이 scale만(중심 기준 확대). */
 .pinSelected {
-  transform: translate(-50%, -100%) scale(1.5);
+  transform: scale(1.5);
   filter: drop-shadow(0 0 0 var(--c-brand));
   text-shadow:
     0 0 0 var(--c-brand),

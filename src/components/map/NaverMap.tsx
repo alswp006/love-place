@@ -387,7 +387,14 @@ export function NaverMap({
         map,
         zIndex: SELECTED_ZINDEX + 1,
         icon: {
-          content: `<div class="${styles.pin} ${styles.pinPreview}" aria-label="${escapeHtml(previewHit.name)} 미리보기">＋</div>`,
+          // 저장 마커와 동일한 .pinHit 래퍼로 감싸 tip 앵커 보정(translate)·≥44px 터치 타깃 확보(Task 17).
+          // .pin 자체엔 더 이상 translate가 없으므로 직접 렌더하면 좌표에서 오프셋됨 → markerIconHtml 재사용.
+          content: markerIconHtml({
+            glyph: '＋',
+            pinClass: `${styles.pin} ${styles.pinPreview}`,
+            label: `${previewHit.name} 미리보기`,
+            selected: false,
+          }),
           anchor: new nv.maps.Point(12, 24),
         },
       })

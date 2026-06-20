@@ -14,5 +14,6 @@ export function markerIconHtml(opts: {
 }): string {
   const cls = `${opts.pinClass}${opts.selected ? ` ${pin.pinSelected}` : ''}`.trim()
   const badge = opts.badge ? `<span class="${pin.pinCheck}" aria-hidden>${escapeHtml(opts.badge)}</span>` : ''
-  return `<div class="${cls}" aria-label="${escapeHtml(opts.label)}">${opts.glyph}${badge}</div>`
+  // ≥44px 히트영역으로 글리프를 감싸되 시각 tip 위치는 유지(anchor 그대로).
+  return `<div class="${pin.pinHit}" aria-label="${escapeHtml(opts.label)}"><div class="${cls}" aria-hidden>${opts.glyph}${badge}</div></div>`
 }
