@@ -74,6 +74,11 @@
   gap: var(--sp-4);
 }
 
+/* 상세 모드(T18) — 상세를 body 전체로 채운다(목록은 렌더 안 됨). 직계 상세 카드가 남는 높이를 가득. */
+.bodyDetail > :first-child {
+  flex: 1 1 auto;
+}
+
 /* 필터 칩 행 — peek 헤더 안(요약 아래). 좁은 화면에서 가로 스크롤 허용(고정 높이 박스 금지, ux §4). */
 .filterRow {
   display: flex;

@@ -175,8 +175,82 @@ describe('PlaceSheet (드래그 시트)', () => {
     renderSheet({ places: [place], selectedId: 'p1' })
     const detail = screen.getByLabelText('장소 상세')
     expect(detail).toBeInTheDocument()
-    // 이름은 상세(상단)와 목록 카드 양쪽에 나타나므로 상세 영역 내부로 한정해 단언한다.
+    // 상세 모드에서는 목록이 숨겨지므로 이름은 상세 영역 안에만 나타난다.
     expect(within(detail).getByText('칠성조선소')).toBeInTheDocument()
+  })
+
+  // T18: 마커/카드 탭 → 상세 모드(PlaceDetail 주요, 목록 숨김). 닫으면 목록 복귀, 칩도 복귀.
+  it('상세 모드(selectedId)에서는 PlaceDetail만 보이고 PlaceList(목록)는 렌더하지 않는다', () => {
+    renderSheet({ places: [aPlace], selectedId: 'p1' })
+    expect(screen.getByLabelText('장소 상세')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '장소 목록' })).toBeNull()
+  })
+
+  it('상세 모드에서는 peek 헤더의 필터 칩 그룹을 숨긴다', () => {
+    renderSheet({ places: [aPlace], selectedId: 'p1' })
+    expect(screen.queryByRole('group', { name: '장소 필터' })).toBeNull()
+  })
+
+  it('상세 모드에서 닫으면(selectedId 해제) 목록이 다시 보이고 상세는 사라진다', () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const CloseHarness = ({ selectedId }: { selectedId: string | null }) => {
+      const [snap, setSnap] = useState<SnapStop>('peek')
+      return (
+        <PlaceSheet
+          coupleId="c1"
+          myId="u1"
+          coupleActive
+          places={[aPlace]}
+          wishes={{ byPlace: {}, mine: {} }}
+          visitedIds={new Set<string>()}
+          placesLoading={false}
+          selectedId={selectedId}
+          onSelect={() => {}}
+          previewHit={null}
+          reactions={{}}
+          onSave={() => {}}
+          onCloseDetail={() => {}}
+          snap={snap}
+          onSnapChange={setSnap}
+        />
+      )
+    }
+    const { rerender } = render(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <OfflineQueueProvider>
+            <ToastProvider>
+              <CloseHarness selectedId="p1" />
+            </ToastProvider>
+          </OfflineQueueProvider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    // 상세 모드: 목록 없음.
+    expect(screen.getByLabelText('장소 상세')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '장소 목록' })).toBeNull()
+    // 닫기(onCloseDetail이 MapPage에서 selectedId를 비움) → 목록 복귀, 상세 사라짐, 칩 복귀.
+    rerender(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <OfflineQueueProvider>
+            <ToastProvider>
+              <CloseHarness selectedId={null} />
+            </ToastProvider>
+          </OfflineQueueProvider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    )
+    expect(screen.queryByLabelText('장소 상세')).toBeNull()
+    expect(screen.getByRole('region', { name: '장소 목록' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: '장소 필터' })).toBeInTheDocument()
+  })
+
+  it('미리보기(previewHit) 모드에서도 목록은 숨기고 미리보기 상세만 보인다', () => {
+    const hit = { kakaoPlaceId: 'k9', name: '미리보기카페', address: '서울', lat: 37, lng: 127, category: '카페', placeUrl: 'https://place/k9' } as Parameters<typeof PlaceSheet>[0]['previewHit']
+    renderSheet({ places: [aPlace], previewHit: hit })
+    expect(screen.getByLabelText('검색 결과 미리보기')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '장소 목록' })).toBeNull()
   })
 
   it('커플 미연결이면 연결 안내 빈 상태를 보여준다', () => {

@@ -65,6 +65,8 @@ export function PlaceSheet({
   const toggleReaction = useToggleReaction(coupleId, myId, conflict.flag)
   const selectedPlace = selectedId ? places.find((p) => p.id === selectedId) ?? null : null
   const [placeFilter, setPlaceFilter] = useState<'all' | 'wish' | 'visited'>('all')
+  // 상세 모드(마커/카드 탭) — 상세를 주요로 두고 목록·필터 칩을 숨긴다(R1.6, T18). 닫으면 목록 복귀.
+  const detailMode = Boolean(selectedPlace || previewHit)
 
   const visible = useMemo(() => {
     if (placeFilter === 'wish') return places.filter((p) => !visitedIds.has(p.id))
@@ -268,8 +270,9 @@ export function PlaceSheet({
           </button>
         </div>
 
-        {coupleActive ? (
+        {coupleActive && !detailMode ? (
           // data-no-sheet-drag: 칩 탭/가로 스크롤이 헤더 드래그/cycleSnap을 트리거하지 않게 표시(위 가드).
+          // 상세 모드에서는 칩을 숨겨 상세에 집중(T18) — 닫으면 다시 렌더.
           <div className={styles.filterRow} role="group" aria-label="장소 필터" data-no-sheet-drag>
             {(
               [
@@ -315,81 +318,94 @@ export function PlaceSheet({
       ) : (
         <div
           ref={bodyRef}
-          className={styles.body}
+          className={`${styles.body} ${detailMode ? styles.bodyDetail : ''}`}
           data-sheet-body
           onPointerDown={onBodyPointerDown}
           onPointerMove={onBodyPointerMove}
           onPointerUp={onBodyPointerUp}
         >
-          {previewHit ? (
-            <PlacePreviewDetail
-              hit={previewHit}
-              saving={false}
-              onSave={onSave}
-              onClose={onCloseDetail}
-            />
-          ) : selectedPlace ? (
-            <PlaceDetail
-              place={selectedPlace}
-              visited={visitedIds.has(selectedPlace.id)}
-              didIReact={reactions?.[selectedPlace.id]?.didIReact ?? false}
-              reactionCount={reactions?.[selectedPlace.id]?.count ?? 0}
-              busy={markVisited.isPending || unmarkVisited.isPending}
-              onVisit={() => {
-                if (!visitedIds.has(selectedPlace.id))
-                  markVisited.mutate(
-                    { placeId: selectedPlace.id, alreadyVisited: visitedIds.has(selectedPlace.id) },
-                    { onSuccess: () => toast.show('가봤어요로 기록했어요 ✅') },
-                  )
-              }}
-              onUnvisit={() =>
-                unmarkVisited.mutate(
-                  { placeId: selectedPlace.id },
-                  {
-                    onSuccess: (r) => {
-                      if (r.status === 'removed') toast.show('가봤음 기록을 취소했어요')
-                      else if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
-                      // conflict → ConflictBanner는 onConflict가 이미 띄움
+          {detailMode ? (
+            // 상세 모드(R1.6, T18) — 상세를 body 전체로 두고 목록은 렌더하지 않는다. 닫기(✕/onCloseDetail)는
+            // MapPage에서 selectedId·previewHit를 비워 detailMode를 풀고 목록을 복귀시킨다.
+            <>
+              {previewHit ? (
+                <PlacePreviewDetail
+                  hit={previewHit}
+                  saving={false}
+                  onSave={onSave}
+                  onClose={onCloseDetail}
+                />
+              ) : selectedPlace ? (
+                <PlaceDetail
+                  place={selectedPlace}
+                  visited={visitedIds.has(selectedPlace.id)}
+                  didIReact={reactions?.[selectedPlace.id]?.didIReact ?? false}
+                  reactionCount={reactions?.[selectedPlace.id]?.count ?? 0}
+                  busy={markVisited.isPending || unmarkVisited.isPending}
+                  onVisit={() => {
+                    if (!visitedIds.has(selectedPlace.id))
+                      markVisited.mutate(
+                        {
+                          placeId: selectedPlace.id,
+                          alreadyVisited: visitedIds.has(selectedPlace.id),
+                        },
+                        { onSuccess: () => toast.show('가봤어요로 기록했어요 ✅') },
+                      )
+                  }}
+                  onUnvisit={() =>
+                    unmarkVisited.mutate(
+                      { placeId: selectedPlace.id },
+                      {
+                        onSuccess: (r) => {
+                          if (r.status === 'removed') toast.show('가봤음 기록을 취소했어요')
+                          else if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
+                          // conflict → ConflictBanner는 onConflict가 이미 띄움
+                        },
+                      },
+                    )
+                  }
+                  onReact={() => toggleReaction.mutate({ placeId: selectedPlace.id })}
+                  onClose={onCloseDetail}
+                />
+              ) : null}
+
+              {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
+            </>
+          ) : (
+            <>
+              {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
+
+              <PlaceList
+                visible={visible}
+                wishes={wishes}
+                visitedIds={visitedIds}
+                placesLoading={placesLoading}
+                placeFilter={placeFilter}
+                selectedId={selectedId}
+                onSelect={onSelect}
+                setPriority={setPriority}
+                priorityPending={priorityPending}
+                markVisited={markVisited}
+                onUnvisit={(placeId) =>
+                  unmarkVisited.mutate(
+                    { placeId },
+                    {
+                      onSuccess: (r) => {
+                        if (r.status === 'removed') toast.show('가봤음 기록을 취소했어요')
+                        else if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
+                      },
                     },
-                  },
-                )
-              }
-              onReact={() => toggleReaction.mutate({ placeId: selectedPlace.id })}
-              onClose={onCloseDetail}
-            />
-          ) : null}
-
-          {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
-
-          <PlaceList
-            visible={visible}
-            wishes={wishes}
-            visitedIds={visitedIds}
-            placesLoading={placesLoading}
-            placeFilter={placeFilter}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            setPriority={setPriority}
-            priorityPending={priorityPending}
-            markVisited={markVisited}
-            onUnvisit={(placeId) =>
-              unmarkVisited.mutate(
-                { placeId },
-                {
-                  onSuccess: (r) => {
-                    if (r.status === 'removed') toast.show('가봤음 기록을 취소했어요')
-                    else if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
-                  },
-                },
-              )
-            }
-            unvisitPending={unmarkVisited.isPending}
-            deletePlace={deletePlace}
-            deletePending={deletePending}
-            onToast={toast.show}
-            onToastAction={toast.show}
-            restorePlace={restorePlace}
-          />
+                  )
+                }
+                unvisitPending={unmarkVisited.isPending}
+                deletePlace={deletePlace}
+                deletePending={deletePending}
+                onToast={toast.show}
+                onToastAction={toast.show}
+                restorePlace={restorePlace}
+              />
+            </>
+          )}
 
           {/* 여행 섹션은 코드 보존하되 시트에서 숨김(spec §3.4). 휴지통은 '우리' 탭으로 이동(Task 12). */}
         </div>
