@@ -427,13 +427,22 @@ function MonthGrid({
             aria-label={`${c.key}${evs.length ? ` · ${tracks.map((t) => TRACK_META[t].label).join('·')} 일정 ${evs.length}개` : ''}`}
           >
             <span className={styles.cellDay}>{c.day}</span>
-            <span className={styles.dots}>
-              {/* 색만 아니라 트랙 심볼(●▲■)로 이중화(§8 색각 이상 대응) */}
-              {tracks.map((t) => (
-                <span key={t} className={styles.dot} style={{ color: TRACK_META[t].cssVar }} aria-hidden>
-                  {TRACK_META[t].symbol}
+            {/* 제목 칩 앞 2개 + `+N` overflow(조사 01 §4). 색 단독 금지(§8) → 트랙 심볼(●▲■) 텍스트 동반.
+                칩은 비인터랙티브 span(중첩 버튼 회피 — 셀 button 하나만 탭 대상). */}
+            <span className={styles.cellChips}>
+              {evs.slice(0, 2).map((e) => {
+                const t = deriveTrack(e, myId)
+                return (
+                  <span key={e.id} className={styles.cellChip} style={{ color: TRACK_META[t].cssVar }} aria-hidden>
+                    {TRACK_META[t].symbol} {e.title}
+                  </span>
+                )
+              })}
+              {evs.length > 2 ? (
+                <span className={styles.chipMore} aria-hidden>
+                  +{evs.length - 2}
                 </span>
-              ))}
+              ) : null}
             </span>
           </button>
         )
