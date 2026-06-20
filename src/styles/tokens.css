@@ -33,15 +33,20 @@
   /* 타이포 — 상대단위(Dynamic Type 존중, 고정 px 금지) */
   --font-sans:
     -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
+  --fs-h1: 1.75rem; /* 페이지 라지 타이틀 상향 */
   --fs-title: 1.5rem;
+  --fs-h2: 1.125rem; /* 섹션 <h2> */
   --fs-body: 1rem;
+  --fs-label: 0.875rem; /* 칩/배지/라벨 */
   --fs-caption: 0.8125rem;
+  --fs-micro: 0.7rem; /* 초소형 배지 */
 
   /* 간격/모서리 */
   --sp-1: 0.25rem;
   --sp-2: 0.5rem;
   --sp-3: 0.75rem;
   --sp-4: 1rem;
+  --sp-5: 1.25rem;
   --sp-6: 1.5rem;
   --radius: 14px;
   --radius-sm: 8px;
