@@ -11,7 +11,7 @@
 }
 
 .emoji {
-  font-size: 2.5rem;
+  font-size: var(--fs-h1);
   margin-bottom: var(--sp-2);
 }
 

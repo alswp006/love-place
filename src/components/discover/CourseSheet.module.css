@@ -29,7 +29,7 @@
 }
 
 .title {
-  font-size: 1.1rem;
+  font-size: var(--fs-h2);
   font-weight: 600;
   color: var(--c-text);
   margin: 0 0 var(--sp-3);

@@ -62,7 +62,7 @@
 }
 
 .input {
-  font-size: 1.1rem;
+  font-size: var(--fs-h2);
   font-weight: 600;
   border: none;
   border-bottom: 2px solid var(--c-border);

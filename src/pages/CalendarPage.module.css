@@ -20,7 +20,7 @@
   border-radius: 999px;
   width: 40px;
   height: 40px;
-  font-size: 1.3rem;
+  font-size: var(--fs-h2);
   cursor: pointer;
 }
 
@@ -65,7 +65,7 @@
 
 .weekday {
   text-align: center;
-  font-size: 0.7rem;
+  font-size: var(--fs-micro);
   color: var(--c-text-weak);
   padding: var(--sp-1) 0;
 }
@@ -87,7 +87,7 @@
 }
 
 .cellDay {
-  font-size: 0.85rem;
+  font-size: var(--fs-label);
   text-align: center;
 }
 
@@ -118,7 +118,7 @@
 
 .cellChip {
   display: block;
-  font-size: 0.62rem;
+  font-size: var(--fs-micro);
   line-height: 1.25;
   text-align: left;
   white-space: nowrap;
@@ -128,7 +128,7 @@
 }
 
 .chipMore {
-  font-size: 0.6rem;
+  font-size: var(--fs-micro);
   line-height: 1.2;
   color: var(--c-text-weak);
   text-align: left;
@@ -223,7 +223,7 @@
 }
 
 .eventTrack {
-  font-size: 0.7rem;
+  font-size: var(--fs-micro);
   flex-shrink: 0;
 }
 
@@ -285,7 +285,7 @@
 }
 
 .hourLabel {
-  font-size: 0.62rem;
+  font-size: var(--fs-micro);
   color: var(--c-text-weak);
   padding: 0 var(--sp-2) 0 0;
 }
@@ -318,7 +318,7 @@
 }
 
 .timelineTime {
-  font-size: 0.62rem;
+  font-size: var(--fs-micro);
   color: var(--c-text-weak);
   flex-shrink: 0;
 }
@@ -343,7 +343,7 @@
   border-radius: 999px;
   width: 36px;
   height: 36px;
-  font-size: 1.2rem;
+  font-size: var(--fs-h2);
   cursor: pointer;
 }
 
@@ -411,12 +411,12 @@
 }
 
 .weekChipDow {
-  font-size: 0.62rem;
+  font-size: var(--fs-micro);
   color: var(--c-text-weak);
 }
 
 .weekChipNum {
-  font-size: 0.9rem;
+  font-size: var(--fs-label);
 }
 
 .weekChipDot {
