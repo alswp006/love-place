@@ -6,6 +6,7 @@ import { AuthProvider } from '@/state/auth'
 import { queryClient } from '@/lib/queryClient'
 import { router } from '@/app/router'
 import { registerPwa } from '@/lib/pwa'
+import { initNativeAuthDeepLink } from '@/lib/native/authDeepLink'
 import './styles/tokens.css'
 
 const rootEl = document.getElementById('root')
@@ -23,3 +24,6 @@ createRoot(rootEl).render(
 
 // PWA 서비스워커 등록(브라우저 전용 — 네이티브는 src/lib/pwa.ts에서 게이트).
 void registerPwa()
+
+// 네이티브 매직링크 딥링크 복귀 처리(웹에선 no-op).
+initNativeAuthDeepLink()
