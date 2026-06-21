@@ -21,7 +21,11 @@
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps chromium",
     "iphone:lan": "node scripts/iphone-lan.mjs",
-    "iphone:tunnel": "node scripts/iphone-tunnel.mjs"
+    "iphone:tunnel": "node scripts/iphone-tunnel.mjs",
+    "cap:sync": "cap sync",
+    "cap:ios": "cap open ios",
+    "cap:android": "cap open android",
+    "build:native": "vite build && cap sync"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",

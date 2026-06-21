@@ -28,6 +28,13 @@ test-results/
 supabase/.branches/
 supabase/.temp/
 
+# Capacitor 네이티브 빌드 캐시(프로젝트 ios/·android/는 커밋, 빌드 산출물만 무시)
+/ios/App/Pods
+/ios/App/build
+/android/.gradle
+/android/app/build
+/android/build
+
 # logs
 *.log
 npm-debug.log*
