@@ -69,4 +69,31 @@ describe('selectedMarker (선택 마커 강조 — 순수)', () => {
     // 라벨은 외곽 히트 래퍼에 위치(접근성 라벨은 컨테이너에).
     expect(html).toMatch(/pinHit[^>]*aria-label[^>]*새 후보 식당 미리보기/)
   })
+
+  // Task 17 — id가 주어진 마커는 포커스·키 활성화 가능 요소(role=button+tabindex)로 emit.
+  // 키보드/SR 사용자가 지도에서 장소를 선택할 수 있어야 함(spec line 54 "마커 키보드", R4.4).
+  it('id가 주어지면 히트 래퍼가 role=button+tabindex=0+data-place-id를 갖는다(키보드 선택)', () => {
+    const html = markerIconHtml({ glyph: '★', pinClass: 'pin', label: '테스트', selected: false, id: 'p1' })
+    expect(html).toContain('role="button"')
+    expect(html).toContain('tabindex="0"')
+    expect(html).toContain('data-place-id="p1"')
+    // 글리프 내부 div는 aria-hidden 유지(중복 SR 읽기 방지).
+    expect(html).toMatch(/aria-hidden/)
+    // 키보드 속성은 외곽 히트 래퍼에 위치(focusable 컨테이너).
+    const hitIdx = html.indexOf('pinHit')
+    const roleIdx = html.indexOf('role="button"')
+    expect(roleIdx).toBeGreaterThan(hitIdx)
+  })
+
+  it('id가 없으면(미리보기핀) 키보드 속성을 붙이지 않는다(선택 대상 아님 — 무회귀)', () => {
+    const html = markerIconHtml({ glyph: '＋', pinClass: 'pin pinPreview', label: '미리보기', selected: false })
+    expect(html).not.toContain('role="button"')
+    expect(html).not.toContain('tabindex="0"')
+    expect(html).not.toContain('data-place-id')
+  })
+
+  it('data-place-id 값은 이스케이프된다(속성 인젝션 방지)', () => {
+    const html = markerIconHtml({ glyph: '★', pinClass: 'pin', label: '라벨', selected: false, id: 'a"b' })
+    expect(html).toContain('data-place-id="a&quot;b"')
+  })
 })

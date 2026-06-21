@@ -51,6 +51,8 @@ export function NaverMap({
   const accuracyCircleRef = useRef<naver.maps.Circle | null>(null)
   const userMovedRef = useRef(false)
   const userMovedListenerRef = useRef<naver.maps.MapEventListener | null>(null)
+  // 마커 키 활성화(Enter/Space) 위임 listener — 맵 컨테이너에 1개. cleanup에서 제거(Task 17/R4.4).
+  const keyActivateRef = useRef<((e: KeyboardEvent) => void) | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
@@ -101,6 +103,19 @@ export function NaverMap({
       userMovedListenerRef.current = nv.maps.Event.addListener(mapRef.current, 'dragend', () => {
         userMovedRef.current = true
       })
+      // 마커 키보드 활성화(위임) — 포커스된 마커(data-place-id)에서 Enter/Space → click과 동등한
+      // onSelect+haptic. Naver 오버레이 내부 구현에 의존하지 않게 컨테이너 위임으로(Task 17/R4.4).
+      const onKeyActivate = (e: KeyboardEvent) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return
+        const hit = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-place-id]')
+        const id = hit?.dataset.placeId
+        if (!id) return
+        e.preventDefault()
+        onSelectRef.current?.(id)
+        haptic(8) // click 경로와 동일(시각 피드백=선택 강조 핀과 병행, ux §1).
+      }
+      keyActivateRef.current = onKeyActivate
+      elRef.current.addEventListener('keydown', onKeyActivate)
     }
     const existing =
       (typeof window !== 'undefined' && window.naver?.maps && window.naver) || null
@@ -135,6 +150,8 @@ export function NaverMap({
       if (userMovedListenerRef.current)
         window.naver?.maps.Event.removeListener(userMovedListenerRef.current)
       userMovedListenerRef.current = null
+      if (keyActivateRef.current) elRef.current?.removeEventListener('keydown', keyActivateRef.current)
+      keyActivateRef.current = null
       mapRef.current = null
     }
   }, [loadKey])
@@ -194,6 +211,7 @@ export function NaverMap({
                 label: visual.label,
                 selected: isSelected,
                 badge: visual.badge,
+                id: p.id, // 포커스·키 활성화 가능(role=button+tabindex+data-place-id, Task 17/R4.4).
               }),
               anchor: new nv.maps.Point(12, 24),
             },
@@ -370,7 +388,7 @@ export function NaverMap({
       const pinClass = `${styles.pin} ${modifier}`.trim()
       const selected = id === selectedId
       marker.setIcon({
-        content: markerIconHtml({ glyph: visual.glyph, pinClass, label: visual.label, selected, badge: visual.badge }),
+        content: markerIconHtml({ glyph: visual.glyph, pinClass, label: visual.label, selected, badge: visual.badge, id }),
         anchor: new nv.maps.Point(12, 24),
       })
       marker.setZIndex(selected ? SELECTED_ZINDEX : BASE_ZINDEX)

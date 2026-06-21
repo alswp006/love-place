@@ -38,6 +38,9 @@ const mapListeners: Record<string, Array<() => void>> = {}
 // 단일 마커에 등록된 'click' 리스너를 등록 순서대로 모은다(마커 탭 디스패치용).
 const markerClickHandlers: Array<() => void> = []
 let mapObj: unknown
+// 맵 컨테이너 element(NaverMap이 keydown 위임을 거는 대상) — 마커 content를 여기에 append해야
+// closest('[data-place-id]')가 잡히고 위임 listener가 발화한다(e2e 하베스 _node→map._el과 동일 경로).
+let mapEl: HTMLElement | null = null
 // addListener가 마커 인스턴스를 식별하도록 Marker 생성 시 이 집합에 등록한다.
 const markerInstances = new Set<unknown>()
 
@@ -45,8 +48,9 @@ function makeNaverStub() {
   return {
     maps: {
       Map: class {
-        constructor() {
+        constructor(el: HTMLElement) {
           mapObj = this
+          mapEl = el
         }
         getZoom() {
           return 11
@@ -62,6 +66,7 @@ function makeNaverStub() {
       Marker: class {
         zIndex: number
         opts: Record<string, unknown>
+        _node: HTMLElement | null = null
         constructor(opts: Record<string, unknown>) {
           this.opts = opts
           this.zIndex = (opts.zIndex as number) ?? 0
@@ -79,8 +84,24 @@ function makeNaverStub() {
             },
           }
           markers.push(rec)
+          // content(HTML 문자열)를 맵 컨테이너에 append → 위임 keydown이 닿는 실제 DOM 노드 생성.
+          if ((opts.map ?? null) !== null) this._render()
         }
-        setMap() {}
+        _render() {
+          const content = (this.opts.icon as { content?: string } | undefined)?.content
+          if (typeof content === 'string' && mapEl) {
+            const tmp = document.createElement('div')
+            tmp.innerHTML = content
+            this._node = (tmp.firstElementChild as HTMLElement) ?? null
+            if (this._node) mapEl.appendChild(this._node)
+          }
+        }
+        setMap(map: unknown) {
+          if (map === null || map === undefined) {
+            if (this._node && this._node.parentNode) this._node.parentNode.removeChild(this._node)
+            this._node = null
+          }
+        }
         setPosition() {}
         getPosition() {
           return new (window.naver.maps.LatLng as unknown as { new (a: number, b: number): unknown })(0, 0)
@@ -150,6 +171,7 @@ describe('NaverMap 선택 강조가 pan/zoom 재렌더에서 유지(R1.6)', () =
     markerInstances.clear()
     for (const k of Object.keys(mapListeners)) delete mapListeners[k]
     mapObj = undefined
+    mapEl = null
     loadNaverMaps.mockReset()
     window.naver = makeNaverStub()
   })
@@ -171,6 +193,7 @@ describe('NaverMap 선택 강조가 pan/zoom 재렌더에서 유지(R1.6)', () =
       label: visual.label,
       selected: true,
       badge: visual.badge,
+      id: 'p1', // 단일 마커는 키 활성화 가능(role=button+tabindex+data-place-id, Task 17/R4.4).
     })
 
     // 처음엔 선택 없음으로 마운트(render 효과는 selectedId=null로 클로저를 캡처).
@@ -204,5 +227,45 @@ describe('NaverMap 선택 강조가 pan/zoom 재렌더에서 유지(R1.6)', () =
     markerClickHandlers[0]!()
     expect(onSelect).toHaveBeenCalledWith('p1')
     expect(haptic).toHaveBeenCalledTimes(1)
+  })
+
+  it('마커 포커스 후 Enter keydown(위임) → onSelect(id) + haptic(click 경로와 동등, R4.4)', async () => {
+    vi.mocked(haptic).mockClear()
+    const places = [place('p1', 35.0, 127.0), place('p2', 37.5, 126.9)]
+    const onSelect = vi.fn()
+    render(<NaverMap places={places} snap="peek" selectedId={null} onSelect={onSelect} />)
+    // 마커 content가 맵 컨테이너에 append됐는지(data-place-id 노드) 대기.
+    await waitFor(() => expect(document.querySelector('[data-place-id="p1"]')).not.toBeNull())
+    const hit = document.querySelector('[data-place-id="p1"]') as HTMLElement
+    expect(hit.getAttribute('role')).toBe('button')
+    expect(hit.getAttribute('tabindex')).toBe('0')
+    // 위임 keydown: 마커 노드에서 버블 → 맵 컨테이너 리스너가 잡아 onSelect+haptic.
+    hit.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    expect(onSelect).toHaveBeenCalledWith('p1')
+    expect(haptic).toHaveBeenCalledTimes(1)
+  })
+
+  it('마커에서 Space keydown(위임)도 선택을 활성화한다(키보드 동등)', async () => {
+    vi.mocked(haptic).mockClear()
+    const places = [place('p1', 35.0, 127.0), place('p2', 37.5, 126.9)]
+    const onSelect = vi.fn()
+    render(<NaverMap places={places} snap="peek" selectedId={null} onSelect={onSelect} />)
+    await waitFor(() => expect(document.querySelector('[data-place-id="p2"]')).not.toBeNull())
+    const hit = document.querySelector('[data-place-id="p2"]') as HTMLElement
+    hit.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }))
+    expect(onSelect).toHaveBeenCalledWith('p2')
+    expect(haptic).toHaveBeenCalledTimes(1)
+  })
+
+  it('마커 외 다른 키(예: Tab)는 선택을 활성화하지 않는다(위임 키 가드)', async () => {
+    vi.mocked(haptic).mockClear()
+    const places = [place('p1', 35.0, 127.0), place('p2', 37.5, 126.9)]
+    const onSelect = vi.fn()
+    render(<NaverMap places={places} snap="peek" selectedId={null} onSelect={onSelect} />)
+    await waitFor(() => expect(document.querySelector('[data-place-id="p1"]')).not.toBeNull())
+    const hit = document.querySelector('[data-place-id="p1"]') as HTMLElement
+    hit.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(haptic).not.toHaveBeenCalled()
   })
 })
