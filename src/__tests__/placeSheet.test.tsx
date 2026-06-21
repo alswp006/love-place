@@ -291,15 +291,22 @@ describe('PlaceSheet (드래그 시트)', () => {
     Object.defineProperty(window, 'innerHeight', { value: orig, configurable: true, writable: true })
   })
 
-  it('half/full 확장 시 백드롭이 뜨고 탭하면 peek로 접힌다', () => {
-    // 장소가 있으면 auto-half(T14) 미발화 → peek에서 시작(백드롭 없음 → 핸들만 /시트/ 매칭).
+  it('백드롭은 항상 마운트되고 peek=투명/비활성, half/full=불투명/활성, 탭하면 peek로 접힌다', () => {
+    // 백드롭은 이제 조건부 마운트가 아니라 항상 렌더(드래그 진행형 딤, T13). peek에서는 opacity=0 +
+    // pointerEvents=none으로 사실상 비활성. 장소가 있으면 auto-half(T14) 미발화 → peek에서 시작.
     renderSheet({ places: [aPlace] })
+    const backdrop = screen.getByRole('button', { name: '시트 접기' })
+    // peek: progress=0 → 딤 투명·클릭 비활성.
+    expect(backdrop.style.opacity).toBe('0')
+    expect(backdrop.style.pointerEvents).toBe('none')
     const handle = screen.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
     fireEvent.click(handle) // peek→half
-    const backdrop = screen.getByRole('button', { name: '시트 접기' })
-    expect(backdrop).toBeInTheDocument()
-    fireEvent.click(backdrop)
-    expect(screen.queryByRole('button', { name: '시트 접기' })).toBeNull()
+    // half: progress>0 → 딤 보임·클릭 활성.
+    expect(Number(backdrop.style.opacity)).toBeGreaterThan(0)
+    expect(backdrop.style.pointerEvents).toBe('auto')
+    fireEvent.click(backdrop) // 탭 → peek로 접힘.
+    expect(backdrop.style.opacity).toBe('0')
+    expect(backdrop.style.pointerEvents).toBe('none')
   })
 
   it('빈 상태(0곳·연결됨)면 마운트 시 시트가 half로 자동 오픈', () => {

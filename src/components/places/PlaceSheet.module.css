@@ -119,14 +119,16 @@
   text-decoration: none;
 }
 
-/* full/half 확장 시 지도 위 백드롭 — 탭하면 collapse. 탭바(46)·시트(45) 아래(44). */
+/* 지도 위 백드롭 — 항상 마운트, 드래그 진행을 인라인 opacity가 구동(0..0.28까지). 탭하면 collapse.
+   배경은 불투명 검정(1)으로 두고 인라인 opacity(progress*0.28)가 실제 딤 세기를 결정 — peek=0, full=0.28.
+   탭바(46)·시트(45) 아래(44). 정착 전이는 transition; 드래그 중엔 JS가 transition을 'none'으로 억제. */
 .backdrop {
   position: fixed;
   left: 0;
   right: 0;
   top: 0;
   bottom: calc(var(--tabbar-h) + var(--safe-bottom));
-  background: rgba(0, 0, 0, 0.28);
+  background: rgba(0, 0, 0, 1);
   z-index: 44;
   border: none;
   cursor: pointer;

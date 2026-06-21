@@ -15,7 +15,7 @@ import { useConflict } from '@/lib/sync/useConflict'
 import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WithWish } from '@/lib/places/wishStatus'
-import { nextSnap, prevSnap, snapForFlick, translateYFor, type SnapStop } from '@/lib/places/sheetSnap'
+import { nextSnap, prevSnap, snapForFlick, translateYFor, dimProgress, type SnapStop } from '@/lib/places/sheetSnap'
 import { sheetTravelHeight, setAppVh } from '@/lib/layout/appViewport'
 import { readPxVar } from '@/lib/layout/cssOffsets'
 import { haptic } from '@/lib/haptics'
@@ -82,6 +82,8 @@ export function PlaceSheet({
   const setSnap = onSnapChange
   const [dragY, setDragY] = useState<number | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
+  // 백드롭도 드래그 중엔 transition을 끈다(딤이 손가락 1:1 추종, 정착 시 복원). 시트 ref와 동일 수명.
+  const backdropRef = useRef<HTMLButtonElement>(null)
   const DRAG_THRESHOLD = 6 // px — 탭 vs 드래그
   const dragInfo = useRef<{
     pointerY: number
@@ -126,6 +128,10 @@ export function PlaceSheet({
   const travel = sheetTravelHeight(vh, tabbarH, safeBottom)
   const restY = translateYFor(snap, travel, peekPx)
   const translateY = dragY ?? restY
+  // 백드롭 딤은 peek/full 정지 좌표가 둘 다 필요(드래그 진행 0..1로 opacity 구동, 이진 토글 아님).
+  const peekRestY = translateYFor('peek', travel, peekPx)
+  const fullRestY = translateYFor('full', travel, peekPx)
+  const progress = dimProgress(translateY, peekRestY, fullRestY) // 0(peek정지)..1(full정지)
 
   // 마커 클릭/리스트 탭으로 selectedId가 생기고 시트가 peek면 half로 살짝 올린다(§6 (c)).
   // 이미 half/full이면 사용자가 펼친 상태를 존중(강제로 더 올리거나 내리지 않음).
@@ -176,6 +182,7 @@ export function PlaceSheet({
     if (!d.moved) {
       d.moved = true
       sheetRef.current?.style.setProperty('transition', 'none')
+      backdropRef.current?.style.setProperty('transition', 'none') // 딤도 손가락 1:1 추종
     }
     const dt = Math.max(1, e.timeStamp - d.lastT)
     d.velocity = (e.clientY - d.lastY) / dt
@@ -187,6 +194,7 @@ export function PlaceSheet({
   const onHeaderPointerUp = () => {
     const d = dragInfo.current
     sheetRef.current?.style.removeProperty('transition')
+    backdropRef.current?.style.removeProperty('transition') // 정착 시 딤 transition 복원
     if (d && d.moved && dragY != null) {
       setSnap(snapForFlick(dragY, d.velocity, travel, peekPx))
       // 드래그였음을 표시 → 뒤이어 오는 synthetic click(cycleSnap)을 1회 무시.
@@ -228,15 +236,16 @@ export function PlaceSheet({
 
   return (
     <>
-      {/* full/half 확장 시 지도 위 백드롭 — 탭하면 peek로 collapse(z 44, 시트 45 아래·탭바 46 아래). */}
-      {snap !== 'peek' ? (
-        <button
-          type="button"
-          className={styles.backdrop}
-          aria-label="시트 접기"
-          onClick={() => setSnap('peek')}
-        />
-      ) : null}
+      {/* 지도 위 백드롭 — 항상 렌더해 드래그 진행(progress 0..1)으로 딤이 페이드(이진 토글 아님).
+          탭하면 peek로 collapse(z 44, 시트 45 아래·탭바 46 아래). peek 정지(progress=0)면 클릭 비활성. */}
+      <button
+        ref={backdropRef}
+        type="button"
+        className={styles.backdrop}
+        aria-label="시트 접기"
+        onClick={() => setSnap('peek')}
+        style={{ opacity: progress * 0.28, pointerEvents: progress > 0 ? 'auto' : 'none' }}
+      />
       <div
         ref={sheetRef}
         className={styles.sheet}

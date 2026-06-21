@@ -47,6 +47,13 @@ export function snapForOffset(translateY: number, travelHeight: number, peekPx: 
   return best
 }
 
+// 시트 translateY → 백드롭 딤 진행(0..1). peek 정지=0, full 정지=1. 드래그 1:1 추종용.
+export function dimProgress(translateY: number, peekRestY: number, fullRestY: number): number {
+  if (peekRestY === fullRestY) return 0
+  const t = (peekRestY - translateY) / (peekRestY - fullRestY)
+  return Math.max(0, Math.min(1, t))
+}
+
 /** 플릭 속도(px/ms; 아래로 +, 위로 -)를 반영한 스냅. |v|<임계는 위치 기반과 동일. */
 export function snapForFlick(
   translateY: number,

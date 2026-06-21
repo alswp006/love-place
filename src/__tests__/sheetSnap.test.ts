@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { SNAPS, nextSnap, prevSnap, snapForOffset, snapForFlick, translateYFor } from '@/lib/places/sheetSnap'
+import { SNAPS, nextSnap, prevSnap, snapForOffset, snapForFlick, translateYFor, dimProgress } from '@/lib/places/sheetSnap'
 
 describe('sheetSnap (시트 스냅 전이 — 탭바 제외)', () => {
   it('SNAPS는 peek<half<full 순으로 비율을 정의한다', () => {
@@ -65,5 +65,35 @@ describe('sheetSnap (시트 스냅 전이 — 탭바 제외)', () => {
     const peekPx = 128
     // peek(600) 근처에서 빠르게 위로 → nextSnap(peek)=half.
     expect(snapForFlick(600, -0.8, travel, peekPx)).toBe('half')
+  })
+
+  // dimProgress: 시트 translateY → 백드롭 딤 진행(0..1). 드래그 중 손가락 1:1 추종용(이진 토글 아님).
+  it('dimProgress: peek 정지에서 0, full 정지에서 1', () => {
+    const peekRestY = 600
+    const fullRestY = 58.24
+    expect(dimProgress(peekRestY, peekRestY, fullRestY)).toBe(0)
+    expect(dimProgress(fullRestY, peekRestY, fullRestY)).toBe(1)
+  })
+
+  it('dimProgress: peek~full 사이는 선형 보간', () => {
+    const peekRestY = 600
+    const fullRestY = 100
+    // 정중간(350) → 0.5.
+    expect(dimProgress(350, peekRestY, fullRestY)).toBeCloseTo(0.5, 5)
+    // peek에서 1/4 진행(475) → 0.25.
+    expect(dimProgress(475, peekRestY, fullRestY)).toBeCloseTo(0.25, 5)
+  })
+
+  it('dimProgress: 범위 밖은 0..1로 클램프 — peek 아래(translateY>peekRestY)면 0', () => {
+    const peekRestY = 600
+    const fullRestY = 100
+    // peek 아래로 더 끌어내림(오버스크롤) → 0.
+    expect(dimProgress(700, peekRestY, fullRestY)).toBe(0)
+    // full 위로 더 끌어올림 → 1로 클램프.
+    expect(dimProgress(0, peekRestY, fullRestY)).toBe(1)
+  })
+
+  it('dimProgress: peekRestY===fullRestY(0높이) 가드 → 0(0 나눗셈 방지)', () => {
+    expect(dimProgress(100, 200, 200)).toBe(0)
   })
 })
