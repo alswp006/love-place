@@ -1,0 +1,42 @@
+/*
+ * Chip 프리미티브(마시멜로 R2) — pill 칩(라벨/배지/필터).
+ * 마시멜로 1급 토큰만 사용(--c-* 별칭 금지). 그라데이션·검정 그림자 금지.
+ * 색만으로 의미 구분하지 않음(시맨틱 tone은 아이콘/텍스트 병기는 호출부 책임).
+ */
+.base {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* pink(기본 · 브랜드) — 핑크 소프트 표면 + 핑크 잉크. */
+.pink {
+  background: var(--pink-100);
+  color: var(--pink-ink);
+}
+
+/* ok(시맨틱) — 확정/성공. 소프트 표면 + ok 잉크. */
+.ok {
+  background: var(--ok-soft);
+  color: var(--ok-ink);
+}
+
+/* danger(시맨틱) — 경고/충돌. 소프트 표면 + danger 잉크. */
+.danger {
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+}
+
+/* neutral — 약한 표면 + 약한 잉크(보조 메타). */
+.neutral {
+  background: var(--surface-soft);
+  color: var(--ink-muted);
+}
