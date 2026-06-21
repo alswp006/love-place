@@ -1,0 +1,81 @@
+/*
+ * LikeButton 프리미티브(마시멜로 R2) — 단일 ❤️ 좋아요 토글(reactions 1:1).
+ * 마시멜로 1급 토큰만 사용(--c-* 별칭 금지). 그라데이션·검정 그림자 금지.
+ * --like(좋아요 색)는 형태(채운 하트 글리프) 이중화에만 쓰고 텍스트 색으로 쓰지 않는다.
+ * 의미(좋아요 N개)는 aria-label/텍스트가 전달 — 색만으로 상태 구분하지 않음(§a11y).
+ */
+.base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  min-height: 44px; /* HIG 터치 타깃(§1) */
+  padding: var(--sp-1) var(--sp-3);
+  border: none;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink); /* 카운트 등 텍스트는 잉크(좋아요 색 금지) */
+  font-family: inherit;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: transform var(--motion-fast) var(--ease);
+}
+
+/* 탭 피드백(Reduce Motion은 전역 토큰 캡으로 transition 무력화). */
+.base:active {
+  transform: scale(0.97);
+}
+
+/* 포커스 가시(:focus-visible) — 마시멜로 포커스 링 토큰. */
+.base:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* 비활성 — 시각(opacity) + 의미(button[disabled]). */
+.base:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.base:disabled:active {
+  transform: none;
+}
+
+/* 하트 글리프 — 좋아요 색은 형태(채운 하트)로만 이중화, 텍스트(카운트)에는 적용 안 함. */
+.glyph {
+  font-size: 1.05em;
+  line-height: 1;
+}
+
+/* liked일 때만 통통 팝 애니메이션(transform scale 1→1.15→1, 짧게). */
+.base.liked .glyph {
+  animation: likePop var(--motion-base) var(--ease);
+}
+
+@keyframes likePop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Reduce Motion — 장식 팝 모션 생략(§5). 전역 토큰 캡과 별개로 명시 차단. */
+@media (prefers-reduced-motion: reduce) {
+  .base,
+  .base:active {
+    transform: none;
+  }
+  .base.liked .glyph {
+    animation: none;
+  }
+}
