@@ -12,9 +12,6 @@ export type SeedTables = {
   reactions?: unknown[]
   profiles?: unknown[]
   events?: unknown[]
-  // 'unconsented' → self 프로필의 동의 시각을 null로 응답해 RequireAuth(가드)가 /onboarding/steps에
-  //   머물게 한다(위저드 비주얼 스모크용). 기본 'consented' → 탭으로 통과.
-  consent?: 'consented' | 'unconsented'
 }
 
 function jsonRoute(body: unknown) {
@@ -39,13 +36,12 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
   await page.route('**/e2e.supabase.co/rest/v1/couples**', jsonRoute({
     id: 'c1', status: 'ACTIVE', user_a: USER_A, user_b: '00000000-0000-4000-8000-000000000a02', connected_at: '2020-01-01T00:00:00Z',
   }))
-  // profiles: 동의 가드(RequireAuth)가 보는 self 프로필 쿼리(consent select)는 "동의 완료" 행으로 응답해
-  //   ACTIVE 시드 사용자가 /onboarding/steps로 튕기지 않게 한다. 그 외 profiles 쿼리는 시드값(기본 빈 배열).
-  const unconsented = tables.consent === 'unconsented'
+  // profiles: 동의 게이트는 제거됐다(연결=공유 기본값 §1). self 프로필 쿼리(useMyProfile)는
+  //   이름·색·version을 담은 행으로 응답한다. 0014 동의 컬럼은 무해하게 잔존(채워둠).
   await page.route('**/e2e.supabase.co/rest/v1/profiles**', (route) => {
     const url = route.request().url()
-    // 프로필 자가 수정(useUpdateProfile/useUpdateConsent) — PATCH ... .select('id'). 낙관적 락이
-    //   0행을 충돌로 보므로 영향 행(id)을 1개 돌려줘 위저드 ②→③ 진행이 가능하게 한다.
+    // 프로필 자가 수정(useUpdateProfile) — PATCH ... .select('id'). 낙관적 락이
+    //   0행을 충돌로 보므로 영향 행(id)을 1개 돌려줘 저장이 통과하게 한다.
     if (route.request().method() === 'PATCH') {
       return route.fulfill({
         status: 200,
@@ -63,8 +59,8 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
             display_name: '나',
             color: '#3b6db5',
             version: 1,
-            location_consent_at: unconsented ? null : '2020-01-01T00:00:00Z',
-            photo_consent_at: unconsented ? null : '2020-01-01T00:00:00Z',
+            location_consent_at: '2020-01-01T00:00:00Z',
+            photo_consent_at: '2020-01-01T00:00:00Z',
           },
         ]),
       })

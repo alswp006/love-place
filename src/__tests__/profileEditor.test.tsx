@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
-// useUpdateProfile / useMyProfile / useToast 모킹 — 에디터의 UI·상호작용 계약만 검증.
+// useUpdateProfile / useMyProfile / useCouple / useToast 모킹 — 에디터의 UI·상호작용 계약만 검증.
 const { updateProfile, showToast, myProfile } = vi.hoisted(() => ({
   updateProfile: vi.fn(),
   showToast: vi.fn(),
@@ -21,6 +21,10 @@ vi.mock('@/hooks/useUpdateProfile', () => ({
 }))
 vi.mock('@/hooks/useMyProfile', () => ({
   useMyProfile: () => ({ data: myProfile, isLoading: false }),
+}))
+// 색 기본값은 역할(myRole)에서 도출 — 에디터가 useCouple로 내 역할을 읽는다(동의 단계 제거 후 대비 기본색).
+vi.mock('@/hooks/useCouple', () => ({
+  useCouple: () => ({ data: { coupleId: 'c1', status: 'ACTIVE', myRole: 'user_a' }, isLoading: false }),
 }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ show: showToast }) }))
 

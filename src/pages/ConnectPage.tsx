@@ -73,8 +73,8 @@ export default function ConnectPage() {
     setAcceptError(null)
     acceptInvite.mutate(code, {
       onSuccess: (r) => {
-        // 연결 직후 ②③ 동의 위저드로(가드도 보내지만 / 플래시 방지). ConnectPage는 위저드를 호스팅하지 않음.
-        if (r.ok) navigate('/onboarding/steps', { replace: true })
+        // 연결=공유 기본값(§1) — 동의 단계 없이 곧장 앱으로(가드도 보내지만 / 플래시 방지).
+        if (r.ok) navigate('/', { replace: true })
         else setAcceptError(inviteReasonMessage(r.reason))
       },
       onError: () => setAcceptError('일시적인 오류예요. 잠시 후 다시 시도해 주세요.'),
@@ -90,7 +90,7 @@ export default function ConnectPage() {
         <h1 className={styles.title}>둘이 연결해요</h1>
         <p className={styles.subtitle}>한 명이 코드를 만들어 보내고, 다른 한 명이 입력하면 끝.</p>
 
-        {/* 브랜드뉴/PENDING(미연결) 사용자에게 둘이 쓰는 가치 미리보기(spec R3 line 51). ACTIVE면 가드가 /onboarding/steps로 보냄 → 숨김. */}
+        {/* 브랜드뉴/PENDING(미연결) 사용자에게 둘이 쓰는 가치 미리보기(spec R3 line 51). ACTIVE면 가드가 앱(/)으로 보냄 → 숨김. */}
         {couple?.status !== 'ACTIVE' && <ValuePreview />}
 
         {/* A. 내 코드 만들기 / 공유 */}

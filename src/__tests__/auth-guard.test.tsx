@@ -8,9 +8,6 @@ const state = vi.hoisted(() => ({
   session: null as { user: { id: string } } | null,
   coupleStatus: null as 'PENDING' | 'ACTIVE' | 'DISCONNECTED' | null,
   coupleLoading: false,
-  // 동의 가드(T8a)는 ACTIVE에서만 발사 — 여기선 ACTIVE 경로가 보호 화면을 보이도록 동의 완료로 둔다.
-  consentRecorded: true,
-  consentLoading: false,
 }))
 vi.mock('@/state/auth', () => ({
   useAuth: () => ({
@@ -26,10 +23,6 @@ vi.mock('@/hooks/useCouple', () => ({
     isLoading: state.coupleLoading,
   }),
 }))
-vi.mock('@/hooks/useConsent', () => ({
-  useConsent: () => ({ consentRecorded: state.consentRecorded, isLoading: state.consentLoading }),
-}))
-
 const { RequireAuth } = await import('@/components/auth/RequireAuth')
 
 // MemoryRouter는 redirect를 동기 렌더로 처리 → jsdom+undici AbortSignal 버그 회피.
@@ -52,8 +45,6 @@ beforeEach(() => {
   state.session = null
   state.coupleStatus = null
   state.coupleLoading = false
-  state.consentRecorded = true
-  state.consentLoading = false
 })
 
 describe('RequireAuth 보호 라우트', () => {

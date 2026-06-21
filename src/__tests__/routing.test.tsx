@@ -33,11 +33,6 @@ vi.mock('@/hooks/useCouple', () => ({
   }),
 }))
 
-// RequireAuth(T8a)는 ACTIVE에서 동의 게이트도 본다 — 탭 렌더 테스트에선 동의 완료로 모킹(앱 진입).
-vi.mock('@/hooks/useConsent', () => ({
-  useConsent: () => ({ consentRecorded: true, isLoading: false }),
-}))
-
 // 추천/지도 탭은 데이터 로딩 중이면 스켈레톤을 보여준다(R4 T9). 라우팅 렌더 테스트는 '빈 상태' CTA를
 // 검증하므로 장소/방문 쿼리를 로딩 완료-빈 상태로 모킹한다(다른 export는 importOriginal로 보존).
 vi.mock('@/hooks/usePlaces', async (importOriginal) => ({

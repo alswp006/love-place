@@ -20,8 +20,6 @@ const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const AuthCallbackPage = lazy(() => import('@/pages/auth/AuthCallbackPage'))
 // 커플 연결(온보딩) — 가드 안, 단 탭바 없는 풀스크린(AppLayout 밖).
 const ConnectPage = lazy(() => import('@/pages/ConnectPage'))
-// 온보딩 ②색상 ③상호동의 위저드 — 연결 후 가드가 보내는 풀스크린(named export는 테스트 유지).
-const OnboardingSteps = lazy(() => import('@/components/onboarding/OnboardingSteps'))
 
 function lazyRoute(node: ReactNode) {
   return <Suspense fallback={<RouteFallback />}>{node}</Suspense>
@@ -55,8 +53,6 @@ export const routes: RouteObject[] = [
     children: [
       // 온보딩(커플 연결) — 탭바 없는 풀스크린. AppLayout과 형제.
       { path: 'onboarding', element: lazyRoute(<ConnectPage />), errorElement: <RouteError /> },
-      // 온보딩 ②색상 ③상호동의 — 연결 후 동의 미기록이면 가드가 강제(우회 차단).
-      { path: 'onboarding/steps', element: lazyRoute(<OnboardingSteps />), errorElement: <RouteError /> },
       {
         element: <AppLayout />,
         children: [
