@@ -38,6 +38,17 @@ vi.mock('@/hooks/useConsent', () => ({
   useConsent: () => ({ consentRecorded: true, isLoading: false }),
 }))
 
+// 추천/지도 탭은 데이터 로딩 중이면 스켈레톤을 보여준다(R4 T9). 라우팅 렌더 테스트는 '빈 상태' CTA를
+// 검증하므로 장소/방문 쿼리를 로딩 완료-빈 상태로 모킹한다(다른 export는 importOriginal로 보존).
+vi.mock('@/hooks/usePlaces', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/usePlaces')>()),
+  usePlaces: () => ({ data: [], isLoading: false }),
+}))
+vi.mock('@/hooks/useVisits', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/useVisits')>()),
+  useVisits: () => ({ data: [], isLoading: false }),
+}))
+
 // 라우트는 모킹 후 import해야 가드가 모킹된 useAuth를 본다.
 const { routes } = await import('@/app/router')
 const { TABS } = await import('@/app/tabs')
