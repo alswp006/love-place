@@ -11,6 +11,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // 자동 주입 끄고 main.tsx의 registerPwa()로 수동 등록 — 네이티브(Capacitor)에선 미등록(src/lib/pwa.ts).
+      injectRegister: null,
       // 정적 셸만 캐시. Supabase 데이터 쓰기는 §4.3 오프라인 큐가 담당(Workbox가 mutation 큐를 대신하지 않음 — web-stack.md §1).
       // globPatterns가 public/의 아이콘·매니페스트를 이미 잡으므로 includeAssets는 불필요(중복 프리캐시 방지).
       workbox: {
