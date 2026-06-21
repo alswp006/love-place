@@ -51,4 +51,40 @@ describe('PlaceDetail (선택 장소 시트 상세 — React)', () => {
     render(<PlaceDetail {...base()} />)
     expect(screen.queryByRole('button', { name: /길찾기/ })).toBeNull()
   })
+
+  it('컬렉션 props가 없으면 목록 섹션을 렌더하지 않는다(기존 호출부 무회귀)', () => {
+    render(<PlaceDetail {...base()} />)
+    expect(screen.queryByRole('button', { name: '목록 관리' })).toBeNull()
+  })
+
+  it('컬렉션 props가 있으면 목록 칩을 렌더하고 토글 시 onToggleCollection(id)을 부른다', () => {
+    const p = base()
+    const onToggleCollection = vi.fn()
+    render(
+      <PlaceDetail
+        {...p}
+        collections={[{ id: 'c1', name: '데이트', version: 1 }]}
+        memberCollIds={new Set()}
+        onToggleCollection={onToggleCollection}
+        onManageCollections={vi.fn()}
+      />,
+    )
+    // 미소속이면 '담기' 라벨(+ 글리프). 클릭 시 토글.
+    fireEvent.click(screen.getByRole('button', { name: '데이트 목록에 담기' }))
+    expect(onToggleCollection).toHaveBeenCalledWith('c1')
+  })
+
+  it('이미 담긴 컬렉션은 aria-pressed=true + "빼기" 라벨로 표시(색만 의존 금지)', () => {
+    const p = base()
+    render(
+      <PlaceDetail
+        {...p}
+        collections={[{ id: 'c1', name: '데이트', version: 1 }]}
+        memberCollIds={new Set(['c1'])}
+        onToggleCollection={vi.fn()}
+      />,
+    )
+    const chip = screen.getByRole('button', { name: '데이트 목록에서 빼기' })
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+  })
 })

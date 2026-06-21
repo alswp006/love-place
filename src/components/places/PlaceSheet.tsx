@@ -19,6 +19,17 @@ import { nextSnap, prevSnap, snapForFlick, translateYFor, dimProgress, type Snap
 import { sheetTravelHeight, setAppVh } from '@/lib/layout/appViewport'
 import { readPxVar } from '@/lib/layout/cssOffsets'
 import { haptic } from '@/lib/haptics'
+import {
+  useCreateCollection,
+  useRenameCollection,
+  useDeleteCollection,
+  useAddPlaceToCollection,
+  useRemovePlaceFromCollection,
+  type CollectionRow,
+  type PlaceCollectionRow,
+} from '@/hooks/useCollections'
+import { memberPlaceIdSet, memberCollectionIdSet } from '@/lib/places/collectionFilter'
+import { CollectionManager } from './CollectionManager'
 import styles from './PlaceSheet.module.css'
 
 // 통합 화면 하단 드래그 시트 — 검색 + 필터 + PlaceList + Trips + 휴지통. peek/half/full 스냅.
@@ -39,6 +50,8 @@ export function PlaceSheet({
   onCloseDetail,
   snap,
   onSnapChange,
+  collections = [],
+  placeCollections = [],
 }: {
   coupleId: string | null
   myId: string | null
@@ -55,6 +68,8 @@ export function PlaceSheet({
   onCloseDetail: () => void
   snap: SnapStop
   onSnapChange: (s: SnapStop) => void
+  collections?: CollectionRow[]
+  placeCollections?: PlaceCollectionRow[]
 }) {
   const toast = useToast()
   const conflict = useConflict()
@@ -65,16 +80,33 @@ export function PlaceSheet({
   const { restorePlace } = useRestorePlace(coupleId, myId, conflict.flag)
   // 시트 소유 리액션 토글(말풍선 폐지). 끄기는 version 조건부 softDelete — 충돌 시 conflict.flag로 배너.
   const toggleReaction = useToggleReaction(coupleId, myId, conflict.flag)
+  // 컬렉션(저장 목록) 쓰기 — 데이터(collections/placeCollections)는 상위(MapPage)에서 props로,
+  // 쓰기 mutation만 시트가 보유(다른 mutation과 동일 패턴). 변경계는 conflict.flag로 충돌 배너.
+  const createCollection = useCreateCollection(coupleId, myId)
+  const renameCollection = useRenameCollection(coupleId, myId, conflict.flag)
+  const deleteCollection = useDeleteCollection(coupleId, myId, conflict.flag)
+  const addToCollection = useAddPlaceToCollection(coupleId, myId)
+  const removeFromCollection = useRemovePlaceFromCollection(coupleId, myId, conflict.flag)
   const selectedPlace = selectedId ? places.find((p) => p.id === selectedId) ?? null : null
   const [placeFilter, setPlaceFilter] = useState<'all' | 'wish' | 'visited'>('all')
+  // 활성 컬렉션 필터(내장 칩과 별개) + 목록 관리 모달. 삭제된 컬렉션을 가리키면 'all'로 폴백.
+  const [activeCollId, setActiveCollId] = useState<string | null>(null)
+  const [managerOpen, setManagerOpen] = useState(false)
+  const effectiveCollId =
+    activeCollId && collections.some((c) => c.id === activeCollId) ? activeCollId : null
   // 상세 모드(마커/카드 탭) — 상세를 주요로 두고 목록·필터 칩을 숨긴다(R1.6, T18). 닫으면 목록 복귀.
   const detailMode = Boolean(selectedPlace || previewHit)
 
+  const collMembers = useMemo(
+    () => (effectiveCollId ? memberPlaceIdSet(placeCollections, effectiveCollId) : null),
+    [effectiveCollId, placeCollections],
+  )
   const visible = useMemo(() => {
+    if (collMembers) return places.filter((p) => collMembers.has(p.id))
     if (placeFilter === 'wish') return places.filter((p) => !visitedIds.has(p.id))
     if (placeFilter === 'visited') return places.filter((p) => visitedIds.has(p.id))
     return places
-  }, [places, placeFilter, visitedIds])
+  }, [places, placeFilter, visitedIds, collMembers])
 
   // 스냅 상태 + 드래그 — transform: translateY로 위치. JS 드래그는 애니메이션이 아니라 즉시 반영,
   // 손 뗀 뒤 정착만 CSS transition(reduce-motion이 0으로 만듦, ux §5).
@@ -292,17 +324,46 @@ export function PlaceSheet({
                 ['wish', '가고싶은'],
                 ['visited', '가본'],
               ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                className={`${styles.filterChip} ${placeFilter === key ? styles.filterOn : ''}`}
-                aria-pressed={placeFilter === key}
-                onClick={() => setPlaceFilter(key)}
-              >
-                {label}
-              </button>
-            ))}
+            ).map(([key, label]) => {
+              const on = effectiveCollId === null && placeFilter === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className={`${styles.filterChip} ${on ? styles.filterOn : ''}`}
+                  aria-pressed={on}
+                  onClick={() => {
+                    setPlaceFilter(key)
+                    setActiveCollId(null)
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+            {/* 사용자 정의 컬렉션 칩(가산) — 내장 칩과 같은 행. 탭하면 그 목록으로 필터(토글). */}
+            {collections.map((c) => {
+              const on = effectiveCollId === c.id
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`${styles.filterChip} ${on ? styles.filterOn : ''}`}
+                  aria-pressed={on}
+                  onClick={() => setActiveCollId(on ? null : c.id)}
+                >
+                  {c.name}
+                </button>
+              )
+            })}
+            <button
+              type="button"
+              className={styles.manageChip}
+              aria-label="목록 관리"
+              onClick={() => setManagerOpen(true)}
+            >
+              ＋ 목록
+            </button>
           </div>
         ) : null}
       </div>
@@ -386,6 +447,16 @@ export function PlaceSheet({
                     toggleReaction.mutate({ placeId: selectedPlace.id })
                     haptic() // 낙관적 시점 — 시각(하트 칩 토글) 피드백 병행(ux §1).
                   }}
+                  collections={collections}
+                  memberCollIds={memberCollectionIdSet(placeCollections, selectedPlace.id)}
+                  onToggleCollection={(collId) => {
+                    const inIt = memberCollectionIdSet(placeCollections, selectedPlace.id).has(collId)
+                    if (inIt)
+                      removeFromCollection.mutate({ placeId: selectedPlace.id, collectionId: collId })
+                    else addToCollection.mutate({ placeId: selectedPlace.id, collectionId: collId })
+                    haptic() // 낙관적 시점 — 시각(목록 칩 토글) 피드백 병행(ux §1).
+                  }}
+                  onManageCollections={() => setManagerOpen(true)}
                   onClose={onCloseDetail}
                 />
               ) : null}
@@ -401,7 +472,7 @@ export function PlaceSheet({
                 wishes={wishes}
                 visitedIds={visitedIds}
                 placesLoading={placesLoading}
-                placeFilter={placeFilter}
+                placeFilter={effectiveCollId ? 'collection' : placeFilter}
                 selectedId={selectedId}
                 onSelect={onSelect}
                 setPriority={setPriority}
@@ -432,6 +503,17 @@ export function PlaceSheet({
         </div>
       )}
       </div>
+      <CollectionManager
+        open={managerOpen}
+        onClose={() => setManagerOpen(false)}
+        collections={collections}
+        onCreate={(name) => createCollection.mutate({ name })}
+        onRename={(id, version, name) => renameCollection.mutate({ id, version, name })}
+        onDelete={(id, version) => deleteCollection.mutate({ id, version })}
+        busy={
+          createCollection.isPending || renameCollection.isPending || deleteCollection.isPending
+        }
+      />
     </>
   )
 }

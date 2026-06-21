@@ -608,3 +608,30 @@ describe('PlaceSheet — 저장·방문 토글 햅틱 배선(R4.1: 성공/제거
     expect(haptic).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('PlaceSheet — 사용자 정의 컬렉션 칩(가산 필터)', () => {
+  const coll = [{ id: 'col1', name: '데이트코스', version: 1 }]
+  const placeCols = [{ id: 'pc1', collection_id: 'col1', place_id: 'p1', version: 1 }]
+  const p2 = { ...aPlace, id: 'p2', name: '다른곳', kakao_place_id: 'k2' } as typeof aPlace
+
+  it('내장 칩(전체/가고싶은/가본) 뒤에 컬렉션 칩과 [목록 관리] 버튼을 렌더한다', () => {
+    renderSheet({ places: [aPlace, p2], collections: coll, placeCollections: placeCols })
+    const group = screen.getByRole('group', { name: '장소 필터' })
+    expect(within(group).getByRole('button', { name: '데이트코스' })).toBeInTheDocument()
+    expect(within(group).getByRole('button', { name: '목록 관리' })).toBeInTheDocument()
+  })
+
+  it('컬렉션 칩을 누르면 그 목록에 담긴 장소만 보인다(내장 가고싶음/가본과 별개의 가산 필터)', () => {
+    renderSheet({ places: [aPlace, p2], collections: coll, placeCollections: placeCols })
+    fireEvent.click(screen.getByRole('button', { name: '데이트코스' }))
+    const list = screen.getByRole('region', { name: '장소 목록' })
+    expect(within(list).getByText('칠성조선소')).toBeInTheDocument() // col1 멤버(p1)
+    expect(within(list).queryByText('다른곳')).toBeNull() // 비멤버(p2) 숨김
+  })
+
+  it('[목록 관리] 버튼을 누르면 관리 모달(dialog)이 열린다', () => {
+    renderSheet({ places: [aPlace], collections: coll, placeCollections: [] })
+    fireEvent.click(screen.getByRole('button', { name: '목록 관리' }))
+    expect(screen.getByRole('dialog', { name: '목록 관리' })).toBeInTheDocument()
+  })
+})

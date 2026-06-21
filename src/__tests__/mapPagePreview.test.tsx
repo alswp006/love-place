@@ -37,6 +37,11 @@ vi.mock('@/hooks/useReactions', () => ({
   useToggleReaction: () => ({ mutate: vi.fn() }),
 }))
 vi.mock('@/hooks/useRealtimePlaces', () => ({ useRealtimePlaces: () => {} }))
+vi.mock('@/hooks/useCollections', () => ({
+  useCollections: () => ({ data: [] }),
+  usePlaceCollections: () => ({ data: [] }),
+}))
+vi.mock('@/hooks/useRealtimeCollections', () => ({ useRealtimeCollections: () => {} }))
 vi.mock('@/hooks/useSavePlace', () => ({ useSavePlace: () => ({ mutate: saveMutate }) }))
 // 햅틱은 온라인 저장 성공(r 진실)에만 — 오프라인 큐(r===null)엔 미발화. vibrate 자체를 모킹해 호출 단언(ux §1).
 vi.mock('@/lib/haptics', () => ({ haptic: vi.fn() }))

@@ -29,6 +29,11 @@ vi.mock('@/hooks/useReactions', () => ({
   useToggleReaction: () => ({ mutate: vi.fn() }),
 }))
 vi.mock('@/hooks/useRealtimePlaces', () => ({ useRealtimePlaces: () => {} }))
+vi.mock('@/hooks/useCollections', () => ({
+  useCollections: () => ({ data: [] }),
+  usePlaceCollections: () => ({ data: [] }),
+}))
+vi.mock('@/hooks/useRealtimeCollections', () => ({ useRealtimeCollections: () => {} }))
 vi.mock('@/hooks/useSavePlace', () => ({ useSavePlace: () => ({ mutate: vi.fn() }) }))
 vi.mock('@/lib/haptics', () => ({ haptic: vi.fn() }))
 vi.mock('@/lib/naver/loadNaverMaps', () => ({ isNaverMapConfigured: () => true }))

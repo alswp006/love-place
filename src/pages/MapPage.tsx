@@ -16,6 +16,8 @@ import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { UpcomingFeed } from '@/components/common/UpcomingFeed'
 import { useReactions } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
+import { useCollections, usePlaceCollections } from '@/hooks/useCollections'
+import { useRealtimeCollections } from '@/hooks/useRealtimeCollections'
 import { attachAndSortWishes } from '@/lib/places/wishStatus'
 import { resolveDeepLinkPlace } from '@/lib/places/deepLinkPlace'
 import { useSavePlace } from '@/hooks/useSavePlace'
@@ -39,7 +41,10 @@ export default function MapPage() {
   const { data: wishes } = useWishes(coupleId, myId)
   const { data: visits } = useVisits(coupleId)
   const { data: reactions } = useReactions(coupleId, myId)
+  const { data: collections } = useCollections(coupleId)
+  const { data: placeCollections } = usePlaceCollections(coupleId)
   useRealtimePlaces(coupleId) // 상대가 추가하면 지도/시트 즉시 갱신(여기 한 곳에서만 구독)
+  useRealtimeCollections(coupleId) // 컬렉션/장소-목록 변경도 즉시 전파(여기 한 곳에서만 구독)
 
   const enriched = useMemo(
     () => attachAndSortWishes(places ?? [], wishes?.byPlace ?? {}, myId),
@@ -185,6 +190,8 @@ export default function MapPage() {
           }}
           snap={snap}
           onSnapChange={setSnap}
+          collections={collections ?? []}
+          placeCollections={placeCollections ?? []}
         />
       ) : null}
     </ScreenScaffold>

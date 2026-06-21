@@ -45,3 +45,40 @@
 }
 /* 가봤음 — 색+텍스트 상태 표시(§8). 허위 disabled(opacity/cursor) 제거: 정상 토글. */
 .actionDone { color: var(--c-success); font-weight: 600; }
+
+/* 목록(컬렉션) 토글 섹션 — 가산 기능. 색만 의존 금지: ✓/+ 글리프 + 텍스트 라벨 병기(§8). */
+.collSection { margin-top: var(--sp-3); }
+.collLabel {
+  display: block;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--c-text-weak);
+  margin-bottom: var(--sp-1);
+}
+.collChips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.collChip {
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-weak);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 44px;
+}
+.collOn {
+  background: var(--c-surface-2);
+  color: var(--c-brand);
+  font-weight: 600;
+  border-color: var(--c-brand);
+}
+.collManage {
+  border: 1px dashed var(--c-border);
+  background: transparent;
+  color: var(--c-text-weak);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 44px;
+}

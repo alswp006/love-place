@@ -35,7 +35,7 @@ export function PlaceList({
   wishes: WishData | undefined
   visitedIds: Set<string>
   placesLoading: boolean
-  placeFilter: 'all' | 'wish' | 'visited'
+  placeFilter: 'all' | 'wish' | 'visited' | 'collection'
   selectedId: string | null
   onSelect: (id: string) => void
   setPriority: (v: { wishId: string; expectedVersion: number; priority: number }) => void
@@ -65,11 +65,19 @@ export function PlaceList({
       ) : visible.length === 0 ? (
         <EmptyState
           emoji="📍"
-          title={placeFilter === 'visited' ? '아직 가본 곳이 없어요' : '첫 가고싶은 장소를 추가해보세요'}
+          title={
+            placeFilter === 'collection'
+              ? '이 목록엔 아직 장소가 없어요'
+              : placeFilter === 'visited'
+                ? '아직 가본 곳이 없어요'
+                : '첫 가고싶은 장소를 추가해보세요'
+          }
           hint={
-            placeFilter === 'visited'
-              ? '장소 카드의 "다녀왔어요"를 누르면 가본 곳으로 기록돼요.'
-              : '위 검색창에 장소 이름을 입력하면 후보가 떠요.'
+            placeFilter === 'collection'
+              ? '장소를 선택해 상세의 "목록"에서 이 목록에 담아보세요.'
+              : placeFilter === 'visited'
+                ? '장소 카드의 "다녀왔어요"를 누르면 가본 곳으로 기록돼요.'
+                : '위 검색창에 장소 이름을 입력하면 후보가 떠요.'
           }
         />
       ) : (

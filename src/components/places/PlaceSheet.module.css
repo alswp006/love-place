@@ -106,6 +106,20 @@
   border-color: var(--c-brand);
 }
 
+/* 목록 관리(＋ 목록) 칩 — 점선 테두리로 '추가/관리' 의도 구분(필터 칩과 시각 분리). */
+.manageChip {
+  border: 1px dashed var(--c-border);
+  background: transparent;
+  color: var(--c-text-weak);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 44px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* 미연결 빈 상태의 행동 유도 링크 — 버튼형(CTA 토큰, ≥44px). '우리' 탭으로 이동(ux §7). */
 .emptyAction {
   display: inline-flex;

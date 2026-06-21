@@ -1,0 +1,117 @@
+.title {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+}
+
+.newRow {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-body);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2);
+  background: var(--c-surface);
+}
+
+.list {
+  list-style: none;
+  margin: 0 0 var(--sp-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.primary {
+  border: none;
+  background: var(--c-brand);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ghost {
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  flex-shrink: 0;
+}
+
+/* 삭제 트리거(평소) — 텍스트 라벨로 의도 표시(색만 의존 금지 §8). */
+.dangerGhost {
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-danger, #d33);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  flex-shrink: 0;
+}
+
+/* 삭제 확인(파괴적 강조) — 채운 danger 배경 + 텍스트. */
+.danger {
+  border: none;
+  background: var(--c-danger, #d33);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.close {
+  width: 100%;
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+  font-weight: 600;
+}
