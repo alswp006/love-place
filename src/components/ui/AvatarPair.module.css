@@ -1,0 +1,74 @@
+/*
+ * AvatarPair 시그니처 프리미티브(마시멜로 R2) — 겹친 2인 아바타 + caption 슬롯.
+ * 아바타페어 4색(핑크/옐로/민트/라벤더) 소프트 표면 + 각 ink 텍스트. 마시멜로 1급 토큰만 사용(--c-* 별칭 금지).
+ * 그라데이션·검정 그림자 금지. 색만으로 사람을 구분하지 않음(이니셜/이미지 + aria-label 병기는 컴포넌트가 보장).
+ */
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.stack {
+  display: inline-flex;
+  align-items: center;
+  /* 아바타가 위로 겹칠 때 뒤 아바타가 앞 아바타에 가려지지 않도록 흐름 순서 유지. */
+  isolation: isolate;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  /* 겹칠 때 경계가 보이도록 표면색 링(검정 테두리 금지). */
+  border: 2px solid var(--surface);
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  line-height: 1;
+  flex-shrink: 0;
+  overflow: hidden;
+  /* 폴백 표면/잉크(color prop 미지정·5번째 이상). 4색 클래스가 덮어씀. */
+  background: var(--surface-soft);
+  color: var(--ink-muted);
+}
+
+/* 겹침 — 두 번째(이후) 아바타는 앞 아바타 위로 8px 겹친다. */
+.overlap {
+  margin-left: -8px;
+}
+
+/* 아바타페어 4색 — 소프트 표면 + 각 ink 텍스트(색만 의존 금지: 이니셜/이미지 동반). */
+.pink {
+  background: var(--pink-100);
+  color: var(--pink-ink);
+}
+.yellow {
+  background: var(--yellow-100);
+  color: var(--yellow-ink);
+}
+.mint {
+  background: var(--mint);
+  color: var(--mint-ink);
+}
+.lavender {
+  background: var(--lavender);
+  color: var(--lavender-ink);
+}
+
+.img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* caption — "둘 다 저장함" 같은 출처 설명. 약한 잉크 메타 텍스트. */
+.caption {
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  color: var(--ink-muted);
+  line-height: 1.2;
+}
