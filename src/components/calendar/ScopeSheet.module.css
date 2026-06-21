@@ -8,11 +8,19 @@
   justify-content: center;
   z-index: 60;
   padding-bottom: var(--safe-bottom);
+  /* 모달 뒤 배경 스크롤 차단. */
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .sheet {
   width: 100%;
   max-width: 480px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: var(--c-surface);
   border-radius: var(--radius) var(--radius) 0 0;
   padding: var(--sp-4);

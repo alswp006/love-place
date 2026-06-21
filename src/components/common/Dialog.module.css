@@ -7,13 +7,18 @@
   justify-content: center;
   z-index: 60;
   padding-bottom: var(--safe-bottom);
+  /* 모달 뒤 배경 스크롤 차단. */
+  touch-action: none;
+  overscroll-behavior: none;
 }
 .sheet {
   width: 100%;
   max-width: 480px;
   /* 내용이 길어도 뷰포트를 넘지 않고 시트 안에서 스크롤되게 한다(공용 Dialog도 동일 잠재 버그). */
+  max-height: 90vh;
   max-height: 90dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   background: var(--c-surface);
   border-radius: 16px 16px 0 0;
