@@ -2,6 +2,9 @@ import { useEffect, useRef } from 'react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Skeleton } from '@/components/common/Skeleton'
 import { Heart } from '@/components/nav/icons'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Chip } from '@/components/ui/Chip'
 import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { UseMutationResult } from '@tanstack/react-query'
@@ -87,7 +90,8 @@ export function PlaceList({
             const visited = visitedIds.has(p.id)
             const isSelected = p.id === selectedId
             return (
-              <li
+              <Card
+                as="li"
                 key={p.id}
                 data-place-id={p.id}
                 className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}
@@ -122,18 +126,18 @@ export function PlaceList({
                   ) : null}
                   {visited ? (
                     // 방문 토글(spec §3.3): 다시 누르면 가봤음 취소(soft-delete). 색+텍스트 이중화(§8).
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
                       className={styles.visitedBadge}
                       onClick={() => onUnvisit(p.id)}
                       disabled={unvisitPending}
                       aria-label={`${p.name} 가봤음 기록 취소`}
                     >
-                      ✅ 가봤음 (취소)
-                    </button>
+                      <span aria-hidden="true">✅</span> 가봤음 (취소)
+                    </Button>
                   ) : (
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
                       className={styles.visitBtn}
                       onClick={() =>
                         markVisited.mutate(
@@ -145,12 +149,16 @@ export function PlaceList({
                       aria-label={`${p.name} 다녀왔어요`}
                     >
                       다녀왔어요
-                    </button>
+                    </Button>
                   )}
                   {/* 편차: 장소 카드 출처 아바타 제거(ux §2 "모든 공유 항목 출처" 예외 — 사용자 결정, spec §3.2). */}
-                  {p.region_label ? <span className={styles.badge}>{p.region_label}</span> : null}
-                  <button
-                    type="button"
+                  {p.region_label ? (
+                    <Chip tone="neutral" className={styles.badge}>
+                      {p.region_label}
+                    </Chip>
+                  ) : null}
+                  <Button
+                    variant="ghost"
                     className={styles.deleteBtn}
                     onClick={() =>
                       deletePlace(
@@ -170,10 +178,10 @@ export function PlaceList({
                     disabled={deletePending}
                     aria-label={`${p.name} 휴지통으로 보내기`}
                   >
-                    🗑
-                  </button>
+                    <span aria-hidden="true">🗑</span>
+                  </Button>
                 </div>
-              </li>
+              </Card>
             )
           })}
         </ul>
@@ -182,20 +190,21 @@ export function PlaceList({
   )
 }
 
-// 찜 상태 — 색 + 텍스트 라벨 이중화(§8 색각 이상 대응).
+// 찜 상태 — 색 + 텍스트 라벨 이중화(§8 색각 이상 대응). 트랙색(나/상대/함께)은 아바타페어 팔레트와 일관.
 function WishBadge({ wish }: { wish: WishStatus }) {
   if (wish.wishCount === 0) return null
   const label = wish.bothWished ? '둘 다 찜' : wish.wishedByMe ? '나만 찜' : '상대만 찜'
   const cls = wish.bothWished ? styles.wishBoth : wish.wishedByMe ? styles.wishMine : styles.wishPartner
   return (
     <span className={`${styles.wishBadge} ${cls}`}>
-      {wish.bothWished ? '💑 ' : ''}
+      {wish.bothWished ? <span aria-hidden="true">💑 </span> : null}
       {label}
     </span>
   )
 }
 
-// 내 우선순위 하트 — 탭하면 0→1→2→3→0 순환(낙관적 락 저장). 하트≠리액션(ux §2).
+// 내 우선순위 스텝퍼 — 탭하면 0→1→2→3→0 순환(낙관적 락 저장). '강도 인디케이터'(단계 채움)로,
+// ❤️ 리액션(LikeButton)과 형태·위치·라벨로 분리한다(ux §2 하트≠리액션). --like 단색을 쓰지 않는다.
 function PriorityStepper({
   priority,
   disabled,
@@ -214,7 +223,11 @@ function PriorityStepper({
       aria-label={`내 우선순위 ${priority}단계 (눌러서 변경)`}
     >
       {Array.from({ length: MAX_PRIORITY }, (_, i) => (
-        <Heart key={i} filled={i < priority} className={styles.heart} />
+        <Heart
+          key={i}
+          filled={i < priority}
+          className={`${styles.heart} ${i < priority ? styles.heartOn : styles.heartOff}`}
+        />
       ))}
     </button>
   )
