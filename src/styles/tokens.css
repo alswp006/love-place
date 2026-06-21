@@ -120,6 +120,11 @@ body,
 #root {
   height: 100%;
   margin: 0;
+  /* 셸 외부(문서)는 절대 스크롤·바운스하지 않는다 — 스크롤은 .content 한 곳에서만.
+     이게 없으면 시트 드래그 시 문서 러버밴드(overscroll)가 고정 크롬(검색바·탭바)을
+     끌어올렸다 손 떼면 제자리로 튀는 버그가 난다(모바일 Safari). */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {

@@ -1,6 +1,8 @@
 .tabbar {
   position: relative;
   z-index: 46;
+  /* 셸(비스크롤) 하단에 고정된 flex 자식 — 절대 줄어들거나 스크롤로 밀리지 않는다. */
+  flex-shrink: 0;
   display: flex;
   justify-content: space-around;
   align-items: stretch;

@@ -1,6 +1,7 @@
-/* 지도 위 상단 검색 오버레이 — 시트(z-index 45)보다 위, Toast(60) 아래. 시트 스냅과 무관하게 항상 보임. */
+/* 지도 위 상단 검색 오버레이 — 시트(z-index 45)보다 위, Toast(60) 아래. 시트 스냅과 무관하게 항상 보임.
+   position: fixed로 뷰포트에 앵커 — 시트 드래그/문서 스크롤과 무관하게 절대 움직이지 않는다(고정 크롬). */
 .overlay {
-  position: absolute;
+  position: fixed;
   top: calc(var(--safe-top) + var(--sp-2));
   left: var(--sp-3);
   right: var(--sp-3);

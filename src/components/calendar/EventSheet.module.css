@@ -12,6 +12,10 @@
 .sheet {
   width: 100%;
   max-width: 480px;
+  /* 뷰포트를 넘지 않게 상한을 두고 flex 컬럼으로 — 핸들은 고정, .form만 내부 스크롤(아래). */
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
   background: var(--c-surface);
   border-radius: var(--radius) var(--radius) 0 0;
   padding: var(--sp-4);
@@ -37,6 +41,7 @@
   margin: calc(-1 * var(--sp-2)) 0 var(--sp-1);
   cursor: grab;
   touch-action: none;
+  flex-shrink: 0; /* 스크롤 시에도 핸들은 상단에 고정 */
 }
 
 .grip {
@@ -59,6 +64,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
+  /* 폼 본문만 내부 스크롤 — 내용이 시트(max-height:90dvh)를 넘으면 여기서 스크롤되어
+     하단 필드/저장 버튼에 도달 가능(min-height:0이 flex 자식의 스크롤 높이를 풀어줌). */
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .input {

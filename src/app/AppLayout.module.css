@@ -1,9 +1,11 @@
 .shell {
   display: flex;
   flex-direction: column;
+  /* 셸은 정확히 가시 뷰포트 높이 — height:100%는 폴백, height:100dvh는 지원 브라우저에서
+     동적 뷰포트(주소창 show/hide)를 추종. min-height:100dvh를 쓰면 셸이 #root보다 살짝 커져
+     문서 스크롤이 생기고(러버밴드) 고정 크롬이 흔들리므로 두 개의 height 선언으로 대체. */
   height: 100%;
-  /* iOS 100vh 버그 회피 */
-  min-height: 100dvh;
+  height: 100dvh;
 }
 
 /* 셸 콘텐츠 영역 — flex 컬럼으로 만들어 풀블리드(지도) 자식이 flex:1로 높이를 얻게 한다.
@@ -14,6 +16,8 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  /* 내부 스크롤이 문서로 전파(체이닝)돼 바운스되지 않게 한다(고정 크롬 흔들림 방지). */
+  overscroll-behavior: contain;
   padding-top: var(--safe-top);
   -webkit-overflow-scrolling: touch;
 }
