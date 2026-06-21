@@ -32,6 +32,7 @@
 /* 탭 피드백 — 누르는 동안 글리프 확대. transition만 쓰므로 reduce-motion에서 자동 무력화(ux §5). */
 .pinHit:active .pin {
   transform: scale(1.2);
+  transform-origin: 50% 100%;
   transition: transform var(--motion-fast) var(--ease);
 }
 
@@ -81,6 +82,7 @@
    tip 위치는 .pinHit가 담당하므로 translate 없이 scale만(중심 기준 확대). */
 .pinSelected {
   transform: scale(1.5);
+  transform-origin: 50% 100%;
   filter: drop-shadow(0 0 0 var(--c-brand));
   text-shadow:
     0 0 0 var(--c-brand),
