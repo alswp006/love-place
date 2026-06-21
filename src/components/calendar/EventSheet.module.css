@@ -12,8 +12,11 @@
 .sheet {
   width: 100%;
   max-width: 480px;
-  /* 뷰포트를 넘지 않게 상한을 두고 flex 컬럼으로 — 핸들은 고정, .form만 내부 스크롤(아래). */
+  /* 뷰포트를 넘지 않게 상한을 두고 flex 컬럼으로 — 핸들은 고정, .form만 내부 스크롤(아래).
+     90vh 폴백(dvh 미지원에서도 상한 적용) + 90dvh(지원 시 동적 뷰포트). overflow:hidden으로 스크롤은 .form만. */
+  max-height: 90vh;
   max-height: 90dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background: var(--c-surface);
@@ -64,8 +67,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  /* 폼 본문만 내부 스크롤 — 내용이 시트(max-height:90dvh)를 넘으면 여기서 스크롤되어
-     하단 필드/저장 버튼에 도달 가능(min-height:0이 flex 자식의 스크롤 높이를 풀어줌). */
+  /* 폼 본문만 내부 스크롤 — 시트(max-height) 안에서 남는 높이를 채우고(flex:1) 넘치면 스크롤한다.
+     flex:1 + min-height:0이 핵심(수정 모드처럼 내용이 길어도 하단 필드/저장 버튼에 스크롤로 도달). */
+  flex: 1;
   overflow-y: auto;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
