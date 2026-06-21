@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
 import { NaverMap } from '@/components/map/NaverMap'
@@ -16,6 +17,7 @@ import { UpcomingFeed } from '@/components/common/UpcomingFeed'
 import { useReactions } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
 import { attachAndSortWishes } from '@/lib/places/wishStatus'
+import { resolveDeepLinkPlace } from '@/lib/places/deepLinkPlace'
 import { useSavePlace } from '@/hooks/useSavePlace'
 import { useToast } from '@/components/common/ToastProvider'
 import { haptic } from '@/lib/haptics'
@@ -54,6 +56,8 @@ export default function MapPage() {
   const [snap, setSnap] = useState<SnapStop>('peek')
   const savePlace = useSavePlace(coupleId)
   const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const placeParam = searchParams.get('place')
 
   const conflict = useConflict()
 
@@ -101,6 +105,24 @@ export default function MapPage() {
       }
     }
   }, [previewHit, savedKakaoIds, enriched])
+
+  // ?place= 딥링크 수신(R4.3) — 아젠다 장소칩이 /?place=<id>로 내비. enriched에 있으면 선택.
+  // NaverMap 선택 effect(panTo+아이콘 강조)와 PlaceSheet의 peek→half 승격을 자동 트리거 — 별도 pan/snap 불필요.
+  // 처리 후 param을 제거(replace)해 새로고침/뒤로가기 시 재선택·히스토리 오염을 막는다.
+  useEffect(() => {
+    const target = resolveDeepLinkPlace(placeParam, enriched.map((p) => p.id))
+    if (!target) return
+    setPreviewHit(null)
+    setSelectedId(target)
+    setSearchParams(
+      (prev) => {
+        const sp = new URLSearchParams(prev)
+        sp.delete('place')
+        return sp
+      },
+      { replace: true },
+    )
+  }, [placeParam, enriched, setSearchParams])
 
   return (
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId} fullBleed>
