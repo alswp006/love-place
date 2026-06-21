@@ -1,4 +1,4 @@
-import { weekMatrix, diffDays, ymdKey, type DayCell } from '@/lib/calendar/eventDays'
+import { weekMatrix, ymdKey, type DayCell } from '@/lib/calendar/eventDays'
 import styles from '@/pages/CalendarPage.module.css'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
@@ -31,7 +31,6 @@ export function WeekStrip({
       </button>
       <div className={styles.weekStripDays} role="group" aria-label="주 날짜 선택">
         {cells.map((c) => {
-          const dowIdx = ((diffDays(todayKey, c.key) % 7) + 7) % 7
           const sel = c.key === selected
           const today = c.key === todayKey
           const classes = [
@@ -51,7 +50,7 @@ export function WeekStrip({
               aria-pressed={sel}
               aria-label={`${c.key}${hasEventsByKey(c.key) ? ' · 일정 있음' : ''}`}
               onClick={() => onSelect(c.key)}
-              data-dow={dowIdx}
+              data-dow={labelIdx}
             >
               <span className={styles.weekChipDow} aria-hidden>
                 {DOW[labelIdx]}
