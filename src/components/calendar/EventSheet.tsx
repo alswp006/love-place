@@ -4,6 +4,7 @@ import type { ProfileMap } from '@/hooks/useProfiles'
 import type { NewEvent, EventPatch } from '@/hooks/useEventMutations'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import { dayKey, formatTime, DISPLAY_TZ } from '@/lib/calendar/eventDays'
+import { tzNote } from '@/lib/calendar/tzLabel'
 import { parseRule, buildRule, type Freq } from '@/lib/calendar/rrule'
 import { buildEventTimes } from '@/lib/calendar/eventTimes'
 import { PlacePicker } from './PlacePicker'
@@ -33,12 +34,14 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, places,
     editing && initial != null && initial.visibility === 'PERSONAL' && myId != null && initial.owner_id !== myId
   const canEdit = !isPartnerPersonal
   const ownerName = initial ? (profiles[initial.owner_id]?.displayName ?? '상대') : ''
+  // 이벤트가 다른 tz로 저장됐으면 그 tz로 날짜/시각을 표시(여행 현지시각). 신규 생성은 DISPLAY_TZ.
+  const evTz = initial?.time_zone || DISPLAY_TZ
   const [title, setTitle] = useState(initial?.title ?? '')
-  const [date, setDate] = useState(initial ? dayKey(initial.start) : defaultDate)
+  const [date, setDate] = useState(initial ? dayKey(initial.start, evTz) : defaultDate)
   const [allDay, setAllDay] = useState(initial?.is_all_day ?? false)
-  const [endDate, setEndDate] = useState(initial ? dayKey(initial.end) : defaultDate)
-  const [startTime, setStartTime] = useState(initial && !initial.is_all_day ? formatTime(initial.start) : '10:00')
-  const [endTime, setEndTime] = useState(initial && !initial.is_all_day ? formatTime(initial.end) : '11:00')
+  const [endDate, setEndDate] = useState(initial ? dayKey(initial.end, evTz) : defaultDate)
+  const [startTime, setStartTime] = useState(initial && !initial.is_all_day ? formatTime(initial.start, evTz) : '10:00')
+  const [endTime, setEndTime] = useState(initial && !initial.is_all_day ? formatTime(initial.end, evTz) : '11:00')
   const [timeError, setTimeError] = useState<string | null>(null)
   const [visibility, setVisibility] = useState<'SHARED' | 'PERSONAL'>(initial?.visibility ?? 'SHARED')
   // place_id를 state로 승격(Task 8) — Task 5의 임시 상수 대체. 저장된 장소 피커가 set/clear.
@@ -126,7 +129,9 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, places,
     const t = title.trim()
     if (!t) return
     // 시간 검증(buildEventTimes, Task 1) — 동일/역전이면 인라인 에러 + 입력 보존, DB 도달 차단(§5.2).
-    const times = buildEventTimes({ date, allDay, startTime, endTime, endDate })
+    // 저장 tz = 표시 tz(evTz). 표시 경로(L40-44)가 evTz로 벽시계를 채우므로 저장도 evTz로 해석해야
+    // 대칭 — 비-DISPLAY_TZ 이벤트를 손대지 않고 저장해도 무음 드리프트(LWW 금지, §4)가 없다.
+    const times = buildEventTimes({ date, allDay, startTime, endTime, endDate, timeZone: evTz })
     if (!times.ok) {
       setTimeError(
         times.reason === 'same'
@@ -151,6 +156,9 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, places,
         start,
         end,
         is_all_day: allDay,
+        // 이벤트 tz를 그대로 기록(여행 현지시각 보존) — start/end가 evTz 벽시계로 빌드됐으므로 tz 컬럼도 일치시켜야
+        // 다음 표시/저장 round-trip이 동일하다(컬럼 드리프트 방지).
+        time_zone: evTz,
         visibility,
         memo: cleanMemo,
         place_id: placeId,
@@ -212,6 +220,11 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, places,
             <span>날짜</span>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="날짜" disabled={!canEdit} />
           </label>
+
+          {/* 이벤트 tz가 표시 tz와 다르면 현지시각 노트(여행 tz). 텍스트 — 색 비의존(§a11y). */}
+          {editing && initial && tzNote(initial.start, evTz, DISPLAY_TZ) ? (
+            <p className={styles.tzNote}>{tzNote(initial.start, evTz, DISPLAY_TZ)}</p>
+          ) : null}
 
           <label className={styles.checkRow}>
             <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} disabled={!canEdit} />

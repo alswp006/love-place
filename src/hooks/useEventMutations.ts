@@ -29,6 +29,7 @@ export type EventPatch = Partial<{
   start: string
   end: string
   is_all_day: boolean
+  time_zone: string
   visibility: 'SHARED' | 'PERSONAL'
   place_id: string | null
   memo: string | null

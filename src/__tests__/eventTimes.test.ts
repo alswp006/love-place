@@ -46,4 +46,29 @@ describe('buildEventTimes', () => {
     const r = buildEventTimes({ date: '2026-06-16', allDay: true, endDate: '2026-06-14' })
     expect(r).toEqual({ ok: false, reason: 'range' })
   })
+
+  // tz 스루(Task 20 후속): 표시 evTz로 빌드하면 그 tz 벽시계 → 정확한 UTC ISO.
+  it('timeZone=UTC: 벽시계 01:00→03:00을 UTC로 해석(드리프트 0)', () => {
+    const r = buildEventTimes({ date: '2026-06-20', allDay: false, startTime: '01:00', endTime: '03:00', timeZone: 'UTC' })
+    expect(r).toEqual({
+      ok: true,
+      start: '2026-06-20T01:00:00.000Z',
+      end: '2026-06-20T03:00:00.000Z',
+    })
+  })
+
+  it('timeZone 명시 없으면 DISPLAY_TZ(+09:00)로 해석(하위호환)', () => {
+    const r = buildEventTimes({ date: '2026-06-16', allDay: false, startTime: '10:00', endTime: '12:00' })
+    expect(r).toEqual({
+      ok: true,
+      start: '2026-06-16T01:00:00.000Z',
+      end: '2026-06-16T03:00:00.000Z',
+    })
+  })
+
+  it('timeZone=Asia/Tokyo(+09): Seoul과 동일 오프셋이라 UTC 결과 동일', () => {
+    const seoul = buildEventTimes({ date: '2026-06-16', allDay: false, startTime: '10:00', endTime: '12:00', timeZone: 'Asia/Seoul' })
+    const tokyo = buildEventTimes({ date: '2026-06-16', allDay: false, startTime: '10:00', endTime: '12:00', timeZone: 'Asia/Tokyo' })
+    expect(tokyo).toEqual(seoul)
+  })
 })

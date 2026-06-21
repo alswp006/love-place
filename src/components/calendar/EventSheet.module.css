@@ -89,6 +89,13 @@
   padding: var(--sp-2);
 }
 
+/* 이벤트별 타임존 노트(여행 현지시각). 색 비의존 텍스트(§a11y). */
+.tzNote {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
 .field {
   display: flex;
   align-items: center;
