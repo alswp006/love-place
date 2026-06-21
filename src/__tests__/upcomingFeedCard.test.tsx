@@ -64,7 +64,8 @@ describe('UpcomingFeed 카드(Task 15)', () => {
   })
 
   it('imminent(곧 시작) 항목: N분 뒤 라벨 + 🔔 아이콘 + aria-live="polite"', () => {
-    eventsState = { data: [makeEvent({ id: 'soon', title: '곧 만나요', start: '2026-06-20T12:10:00+09:00', end: '2026-06-20T13:10:00+09:00' })] }
+    // 리마인더 점화 imminent(soft 아님) → 🔔. (리마인더 없는 60분 이내는 soft → ⏱ 별도 케이스)
+    eventsState = { data: [makeEvent({ id: 'soon', title: '곧 만나요', start: '2026-06-20T12:10:00+09:00', end: '2026-06-20T13:10:00+09:00', reminders: [{ userId: 'u1', offsetMinutes: 10 }] })] }
     render(<UpcomingFeed coupleId="c1" myId="u1" />)
     expect(screen.getByText('곧 만나요')).toBeInTheDocument()
     expect(screen.getByText('10분 뒤')).toBeInTheDocument()
@@ -74,6 +75,26 @@ describe('UpcomingFeed 카드(Task 15)', () => {
     const live = document.querySelector('[aria-live="polite"]')
     expect(live).not.toBeNull()
     expect(live?.textContent).toContain('곧 만나요')
+  })
+
+  it('soft imminent(리마인더 없음, 60분 이내): "곧 시작" 텍스트 + ⏱ 아이콘(색 단독 금지)', () => {
+    // 리마인더 없음 → soft 점화(60분 이내). 30분 뒤.
+    eventsState = { data: [makeEvent({ id: 'soft', title: '카페 데이트', start: '2026-06-20T12:30:00+09:00', end: '2026-06-20T13:30:00+09:00', reminders: [] })] }
+    render(<UpcomingFeed coupleId="c1" myId="u1" />)
+    expect(screen.getByText('카페 데이트')).toBeInTheDocument()
+    // soft는 ⏱ 글리프(리마인더 점화 🔔와 구분).
+    expect(screen.getByText('⏱')).toBeInTheDocument()
+    // soft 라벨 텍스트 이중화("곧 시작" 안내 — 색 단독 금지).
+    expect(screen.getByText(/곧 시작/)).toBeInTheDocument()
+    // 리마인더 점화 아이콘(🔔)은 없다.
+    expect(screen.queryByText('🔔')).toBeNull()
+  })
+
+  it('비-soft imminent(내 리마인더 점화): 🔔 아이콘(⏱ 아님)', () => {
+    eventsState = { data: [makeEvent({ id: 'fired', title: '리마인더 점화', start: '2026-06-20T12:10:00+09:00', end: '2026-06-20T13:10:00+09:00', reminders: [{ userId: 'u1', offsetMinutes: 10 }] })] }
+    render(<UpcomingFeed coupleId="c1" myId="u1" />)
+    expect(screen.getByText('🔔')).toBeInTheDocument()
+    expect(screen.queryByText('⏱')).toBeNull()
   })
 
   it('dday 항목: D-3 라벨 + 📅 아이콘(다가오는 일정)', () => {
@@ -91,7 +112,8 @@ describe('UpcomingFeed 카드(Task 15)', () => {
 
   it('prefers-reduced-motion이면 라벨이 즉시 최종값(카운트업 생략, 깨지지 않음)', () => {
     reduceMotion = true
-    eventsState = { data: [makeEvent({ id: 'soon', title: '곧 만나요', start: '2026-06-20T12:10:00+09:00', end: '2026-06-20T13:10:00+09:00' })] }
+    // 리마인더 점화 imminent(soft 아님) → 라벨 그대로 'N분 뒤'(soft 접두 없음).
+    eventsState = { data: [makeEvent({ id: 'soon', title: '곧 만나요', start: '2026-06-20T12:10:00+09:00', end: '2026-06-20T13:10:00+09:00', reminders: [{ userId: 'u1', offsetMinutes: 10 }] })] }
     render(<UpcomingFeed coupleId="c1" myId="u1" />)
     // 즉시 최종 라벨(애니메이션 중간 상태 없이).
     expect(screen.getByText('10분 뒤')).toBeInTheDocument()

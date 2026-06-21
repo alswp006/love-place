@@ -11,6 +11,7 @@ export type FeedItem = {
   startIso: string
   label: string // 'D-3' | '오늘' | '내일' | '10분 뒤'
   minutesUntil?: number
+  soft?: boolean // imminent 중 '리마인더 없이 60분 이내(곧 시작)' soft 점화 — 리마인더 점화와 구분(라벨/아이콘 이중화)
 }
 
 const DAY_MS = 86400000
@@ -31,11 +32,12 @@ export function buildUpcomingFeed(
     const offsets = myReminders.map((r) => r.offsetMinutes)
     // 내 리마인더 점화창 또는 60분 이내 soft
     const minUntil = Math.round((startMs - nowMs) / 60000)
-    const fired = offsets.some((off) => nowMs >= startMs - off * 60000) || minUntil <= 60
-    if (fired) {
+    const reminderFired = offsets.some((off) => nowMs >= startMs - off * 60000)
+    const softImminent = !reminderFired && minUntil <= 60
+    if (reminderFired || softImminent) {
       imminent.push({
-        id: `${e.id}:${e.start}`, kind: 'imminent', title: e.title, startIso: e.start,
-        label: `${minUntil}분 뒤`, minutesUntil: minUntil,
+        id: `${e.id}:${e.start}`, kind: 'imminent', soft: softImminent,
+        title: e.title, startIso: e.start, label: `${minUntil}분 뒤`, minutesUntil: minUntil,
       })
     }
   }

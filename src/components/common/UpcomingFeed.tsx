@@ -22,9 +22,11 @@ export function UpcomingFeed({ coupleId, myId }: { coupleId: string | null; myId
         {items.map((i) => (
           <li key={i.id} className={styles.item} {...(i.kind === 'imminent' ? { 'aria-live': 'polite' } : {})}>
             <span className={styles.badge} aria-hidden>
-              {i.kind === 'imminent' ? '🔔' : '📅'}
+              {i.kind === 'imminent' ? (i.soft ? '⏱' : '🔔') : '📅'}
             </span>
-            <span className={styles.label}>{i.label}</span>
+            <span className={styles.label}>
+              {i.kind === 'imminent' && i.soft ? `곧 시작 · ${i.label}` : i.label}
+            </span>
             <span className={styles.title}>{i.title}</span>
           </li>
         ))}

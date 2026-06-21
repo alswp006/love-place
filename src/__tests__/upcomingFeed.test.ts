@@ -118,6 +118,45 @@ describe('buildUpcomingFeed', () => {
     expect(feed).toHaveLength(5)
   })
 
+  it('soft 태그: 내 리마인더 점화 시 soft falsey(리마인더 점화 imminent)', () => {
+    const start = new Date(nowMs + 10 * MIN).toISOString()
+    const feed = buildUpcomingFeed(
+      [
+        ev({
+          id: 'fired',
+          title: '리마인더 점화',
+          start,
+          end: new Date(nowMs + 70 * MIN).toISOString(),
+          reminders: [{ userId: 'me', offsetMinutes: 10 }],
+        }),
+      ],
+      NOW,
+      'me',
+    )
+    const item = feed.find((i) => i.kind === 'imminent')
+    expect(item).toBeDefined()
+    expect(item!.soft).toBeFalsy()
+  })
+
+  it('soft 태그: 리마인더 없고 60분 이내면 soft:true(곧 시작 soft)', () => {
+    const start = new Date(nowMs + 30 * MIN).toISOString() // 30분 뒤, 리마인더 없음
+    const feed = buildUpcomingFeed(
+      [
+        ev({
+          id: 'soft',
+          title: '곧 시작 soft',
+          start,
+          end: new Date(nowMs + 90 * MIN).toISOString(),
+        }),
+      ],
+      NOW,
+      'me',
+    )
+    const item = feed.find((i) => i.kind === 'imminent')
+    expect(item).toBeDefined()
+    expect(item!.soft).toBe(true)
+  })
+
   it('dedupe: 같은 이벤트가 imminent이자 today면 imminent만(중복 1회)', () => {
     const start = new Date(nowMs + 10 * MIN).toISOString() // 오늘 + 곧 시작
     const feed = buildUpcomingFeed(
