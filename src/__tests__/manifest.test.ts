@@ -42,8 +42,17 @@ describe('PWA manifest', () => {
 
   it('theme_color가 디자인 토큰(--c-brand 라이트값)과 일치한다', () => {
     // 브랜드색 단일 출처 표류 방지: tokens.css의 --c-brand와 manifest theme_color를 묶어 검증.
+    // --c-brand는 별칭(var(--pink-600))일 수 있으므로 var() 체인을 hex까지 해석한다.
     const tokens = readFileSync(resolve(root, 'src/styles/tokens.css'), 'utf-8')
-    const brand = tokens.match(/--c-brand:\s*(#[0-9a-fA-F]{6})/)?.[1]?.toLowerCase()
+    const resolveVar = (name: string, depth = 0): string | undefined => {
+      if (depth > 5) return undefined
+      const raw = tokens.match(new RegExp(`${name}:\\s*([^;]+);`))?.[1]?.trim()
+      if (!raw) return undefined
+      const ref = raw.match(/var\((--[\w-]+)\)/)
+      if (ref) return resolveVar(ref[1]!, depth + 1)
+      return raw.match(/#[0-9a-fA-F]{6}/)?.[0]?.toLowerCase()
+    }
+    const brand = resolveVar('--c-brand')
     expect(brand).toBeTruthy()
     expect(manifest.theme_color?.toLowerCase()).toBe(brand)
   })
