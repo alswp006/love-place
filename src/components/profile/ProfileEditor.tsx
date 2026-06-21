@@ -5,6 +5,8 @@ import { useCouple } from '@/hooks/useCouple'
 import { useToast } from '@/hooks/useToast'
 import { ColorPicker } from './ColorPicker'
 import { defaultColorForRole } from '@/lib/profileColor'
+import { Button } from '@/components/ui/Button'
+import { Field } from '@/components/ui/Field'
 import styles from './ProfileEditor.module.css'
 
 type Props = { coupleId: string | null }
@@ -49,17 +51,13 @@ export function ProfileEditor({ coupleId }: Props) {
 
   return (
     <div className={styles.editor}>
-      <label className={styles.field}>
-        <span className={styles.fieldLabel}>표시 이름</span>
-        <input
-          className={styles.input}
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="이름"
-          disabled={isPending}
-        />
-      </label>
+      <Field
+        label="표시 이름"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="이름"
+        disabled={isPending}
+      />
 
       <ColorPicker value={color} onChange={setColor} />
 
@@ -69,9 +67,9 @@ export function ProfileEditor({ coupleId }: Props) {
         </p>
       ) : null}
 
-      <button className={styles.saveBtn} type="button" onClick={() => void onSave()} disabled={isPending}>
+      <Button variant="primary" onClick={() => void onSave()} disabled={isPending}>
         {isPending ? '저장 중…' : '저장'}
-      </button>
+      </Button>
     </div>
   )
 }
