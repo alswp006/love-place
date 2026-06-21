@@ -89,4 +89,34 @@ describe('DayTimeline(Task 12 — 시간축 배치 + 종일 밴드)', () => {
     expect(onEdit).toHaveBeenCalledTimes(1)
     expect(onEdit.mock.calls[0]?.[0]).toMatchObject({ id: 'e1', start: morning.start })
   })
+
+  it('Task 16(R4.4): 시간 이벤트 버튼이 트랙명 포함 aria-label, 심볼은 aria-hidden 유지', () => {
+    // SHARED=함께, 내 PERSONAL=나, 상대 PERSONAL=상대. 트랙은 색+심볼로만 전달되어 SR 미고지였음 → 버튼 라벨로 고지.
+    const shared = occ('e1', '함께 저녁', '18:00', '19:00')
+    const mine: Occurrence<EventRow> = { ...occ('e2', '내 회의', '10:00', '11:00'), visibility: 'PERSONAL', owner_id: 'u1' }
+    const partner: Occurrence<EventRow> = { ...occ('e3', '상대 약속', '14:00', '15:00'), visibility: 'PERSONAL', owner_id: 'u2' }
+    render(<DayTimeline dateKey={day} occurrences={[shared, mine, partner]} myId="u1" onEdit={() => {}} onAdd={() => {}} />)
+
+    const sharedBtn = screen.getByText('함께 저녁').closest('[data-occ]') as HTMLElement
+    const mineBtn = screen.getByText('내 회의').closest('[data-occ]') as HTMLElement
+    const partnerBtn = screen.getByText('상대 약속').closest('[data-occ]') as HTMLElement
+
+    expect(sharedBtn.getAttribute('aria-label')).toMatch(/^함께 일정 · 함께 저녁/)
+    expect(mineBtn.getAttribute('aria-label')).toMatch(/^나 일정 · 내 회의/)
+    expect(partnerBtn.getAttribute('aria-label')).toMatch(/^상대 일정 · 상대 약속/)
+
+    // 트랙 심볼 span(●/▲/■)은 SR에서 숨김 유지(버튼 라벨이 고지).
+    for (const sym of ['●', '▲', '■']) {
+      const symEl = screen.queryByText(sym)
+      if (symEl) expect(symEl.getAttribute('aria-hidden')).not.toBeNull()
+    }
+  })
+
+  it('Task 16(R4.4): 종일 이벤트 버튼도 트랙명 포함 aria-label(시각 미포함)', () => {
+    const allDay = occ('e3', '기념일', '00:00', '23:59', true)
+    render(<DayTimeline dateKey={day} occurrences={[allDay]} myId="u1" onEdit={() => {}} onAdd={() => {}} />)
+    const btn = screen.getByText('기념일').closest('[data-occ]') as HTMLElement
+    // SHARED 종일 → '함께 일정 · 기념일'. 종일은 시각 없이 제목만.
+    expect(btn.getAttribute('aria-label')).toBe('함께 일정 · 기념일')
+  })
 })
