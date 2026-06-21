@@ -19,7 +19,7 @@
   background: var(--c-text);
   color: var(--c-bg);
   font-size: var(--fs-caption);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-floating);
   animation: toastIn var(--motion-base) var(--ease);
 }
 

@@ -51,11 +51,12 @@
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   font-size: var(--fs-caption);
-  background: var(--badge-bg, var(--c-surface-2));
-  color: var(--badge-fg, var(--c-text));
-  border: 1px solid var(--badge-fg, var(--c-border));
+  /* 마시멜로 2색 — 단일 핑크 칩(무지개 제거). 구분은 심볼+라벨. */
+  background: var(--pink-100);
+  color: var(--pink-ink);
+  border: 1px solid var(--pink-200);
 }
 
 .itemBody {

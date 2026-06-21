@@ -116,6 +116,6 @@
   padding: var(--sp-2) var(--sp-4);
   border-radius: 999px;
   font-size: var(--fs-caption);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-floating);
   z-index: 50;
 }

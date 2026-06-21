@@ -8,9 +8,9 @@ describe('markerVisual (마커 모양 이중화)', () => {
     expect(v.kind).toBe('wish')
     expect(v.label).toContain('가고싶음')
   })
-  it('둘 다 찜 = 하트 ♥', () => {
+  it('둘 다 찜 = 4점 별 ✦(하트 아님 — 하트는 좋아요 전용)', () => {
     const v = markerVisual({ visited: false, bothWished: true, name: '카페' })
-    expect(v.glyph).toBe('♥')
+    expect(v.glyph).toBe('✦')
     expect(v.kind).toBe('both')
     expect(v.label).toContain('둘 다 찜')
   })

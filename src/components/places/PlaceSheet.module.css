@@ -10,7 +10,7 @@
   margin: 0 auto;
   background: var(--c-surface);
   border-radius: var(--radius) var(--radius) 0 0;
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-floating);
   display: flex;
   flex-direction: column;
   z-index: 45;

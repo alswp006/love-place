@@ -14,10 +14,10 @@ describe('profileColor — 사람 색 팔레트 + 역할 기본색', () => {
     }
   })
 
-  it('블루(#3b6db5)와 핑크(#c25d86) 트랙색을 포함한다', () => {
+  it('아바타페어 라벤더(#6e5aa8)와 핑크(#b85a78)를 포함한다(마시멜로 4색)', () => {
     const hexes = PROFILE_PALETTE.map((e) => e.hex)
-    expect(hexes).toContain('#3b6db5')
-    expect(hexes).toContain('#c25d86')
+    expect(hexes).toContain('#6e5aa8')
+    expect(hexes).toContain('#b85a78')
   })
 
   it('hex 값은 서로 다르다(구분 가능한 팔레트)', () => {
@@ -25,8 +25,8 @@ describe('profileColor — 사람 색 팔레트 + 역할 기본색', () => {
     expect(new Set(hexes).size).toBe(hexes.length)
   })
 
-  it("defaultColorForRole('user_a') → #3b6db5(블루), 'user_b') → #c25d86(핑크)", () => {
-    expect(defaultColorForRole('user_a')).toBe('#3b6db5')
-    expect(defaultColorForRole('user_b')).toBe('#c25d86')
+  it("defaultColorForRole('user_a') → #6e5aa8(라벤더), 'user_b') → #b85a78(핑크)", () => {
+    expect(defaultColorForRole('user_a')).toBe('#6e5aa8')
+    expect(defaultColorForRole('user_b')).toBe('#b85a78')
   })
 })

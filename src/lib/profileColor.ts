@@ -1,13 +1,13 @@
 export type PaletteEntry = { hex: string; label: string }
-// 사람 색(아바타·출처점·마커) 팔레트 — 색+이름 라벨 이중화(§8). 캘린더 3트랙 색과는 별개(track.ts).
+// 사람 색(아바타·출처점) 팔레트 — 마시멜로 아바타페어 4색(핑크/옐로/민트/라벤더), 색+이름 라벨 이중화(§8).
+// 2인 앱이라 실사용은 2명. 출처점은 색 단독이 아니라 이니셜/아바타 동반. 캘린더 트랙 색과 일관(track.ts).
 export const PROFILE_PALETTE: PaletteEntry[] = [
-  { hex: '#3b6db5', label: '블루' },
-  { hex: '#c25d86', label: '핑크' },
-  { hex: '#7a5bb0', label: '퍼플' },
-  { hex: '#3f9e7c', label: '그린' },
-  { hex: '#d08a3e', label: '앰버' },
-  { hex: '#5b6b7a', label: '슬레이트' },
+  { hex: '#6e5aa8', label: '라벤더' },
+  { hex: '#b85a78', label: '핑크' },
+  { hex: '#3e8e70', label: '민트' },
+  { hex: '#b0852a', label: '옐로' },
 ]
 export function defaultColorForRole(role: 'user_a' | 'user_b'): string {
-  return role === 'user_a' ? '#3b6db5' : '#c25d86'
+  // user_a=라벤더, user_b=핑크(트랙색과의 충돌 회피 배정, 마시멜로 도입 spec §3).
+  return role === 'user_a' ? '#6e5aa8' : '#b85a78'
 }

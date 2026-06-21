@@ -9,7 +9,7 @@ const { updateProfile, showToast, myProfile } = vi.hoisted(() => ({
   myProfile: {
     id: 'u1',
     display_name: '민제',
-    color: '#3b6db5',
+    color: '#6e5aa8',
     version: 4,
     location_consent_at: null,
     photo_consent_at: null,
@@ -48,14 +48,14 @@ describe('ProfileEditor (이름·색 편집, 색+라벨 이중화)', () => {
 
   it('현재 색 스와치는 aria-pressed/aria-checked로 선택 표시된다', () => {
     render(<ProfileEditor coupleId="c1" />)
-    const blue = PROFILE_PALETTE.find((e) => e.hex === '#3b6db5')!
-    const swatch = screen.getByRole('radio', { name: blue.label })
+    const lavender = PROFILE_PALETTE.find((e) => e.hex === '#6e5aa8')!
+    const swatch = screen.getByRole('radio', { name: lavender.label })
     expect(swatch.getAttribute('aria-checked') === 'true' || swatch.getAttribute('aria-pressed') === 'true').toBe(true)
   })
 
   it('색 선택 + 이름 수정 + 저장 → updateProfile({ display_name, color, expectedVersion })', async () => {
     render(<ProfileEditor coupleId="c1" />)
-    const pink = PROFILE_PALETTE.find((e) => e.hex === '#c25d86')!
+    const pink = PROFILE_PALETTE.find((e) => e.hex === '#b85a78')!
     fireEvent.click(screen.getByRole('radio', { name: pink.label }))
 
     const input = screen.getByLabelText(/이름|표시/)
@@ -66,7 +66,7 @@ describe('ProfileEditor (이름·색 편집, 색+라벨 이중화)', () => {
     await waitFor(() => expect(updateProfile).toHaveBeenCalledTimes(1))
     expect(updateProfile).toHaveBeenCalledWith({
       display_name: '하늘',
-      color: '#c25d86',
+      color: '#b85a78',
       expectedVersion: 4,
     })
   })

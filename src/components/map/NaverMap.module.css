@@ -142,7 +142,7 @@
   background: var(--c-surface);
   color: var(--c-text);
   font-size: 1.25rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-raised);
   cursor: pointer;
   z-index: 40;
 }
@@ -181,7 +181,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #4285f4;
+  background: var(--pink-600);
   border: 2px solid #fff;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
   transform: translate(-50%, -50%);
@@ -200,7 +200,7 @@
   padding: var(--sp-2) var(--sp-4);
   border-radius: 999px;
   font-size: var(--fs-caption);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-floating);
   z-index: 41;
 }
 
