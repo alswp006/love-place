@@ -224,6 +224,16 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  outline: 1.5px solid rgba(255, 255, 255, 0.9);
   transform: translate(-50%, -50%);
   cursor: pointer;
+}
+
+/* 다크 타일/오버레이에서 count 대비 AA — 색만이 아닌 outline+텍스트 이중화(§8). */
+@media (prefers-color-scheme: dark) {
+  .cluster {
+    background: var(--c-surface-2);
+    color: var(--c-text);
+    outline: 1.5px solid var(--c-brand);
+  }
 }
