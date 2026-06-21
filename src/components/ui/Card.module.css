@@ -1,0 +1,17 @@
+/*
+ * Card 프리미티브(마시멜로 R2) — 표면 컨테이너.
+ * 마시멜로 1급 토큰만 사용(--c-* 별칭 금지). 그라데이션·검정 그림자 금지.
+ * 색만으로 의미를 구분하지 않음(soft는 표면 톤 차이일 뿐, 의미 전달은 호출부 라벨/aria 책임).
+ */
+.base {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-raised);
+  padding: var(--sp-4);
+}
+
+/* soft — 더 부드러운 표면 톤(핑크크림). 깊이/테두리는 base와 동일. */
+.soft {
+  background: var(--surface-soft);
+}
