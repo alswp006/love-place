@@ -6,6 +6,7 @@ import { dayKey, formatTime, DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import { tzNote } from '@/lib/calendar/tzLabel'
 import { parseRule, buildRule, type Freq } from '@/lib/calendar/rrule'
 import { buildEventTimes } from '@/lib/calendar/eventTimes'
+import { Button } from '@/components/ui/Button'
 import styles from './EventSheet.module.css'
 
 type Props = {
@@ -325,33 +326,27 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, conflic
           <div className={styles.actions}>
             {canEdit && editing && initial ? (
               confirmingDelete ? (
-                <button
-                  type="button"
-                  className={styles.confirmDelete}
+                <Button
+                  variant="danger"
                   onClick={() => onDelete(initial.id, expectedVersion)}
                   disabled={busy}
                 >
                   정말 삭제할까요?
-                </button>
+                </Button>
               ) : (
-                <button
-                  type="button"
-                  className={styles.delete}
-                  onClick={() => setConfirmingDelete(true)}
-                  disabled={busy}
-                >
+                <Button variant="danger" onClick={() => setConfirmingDelete(true)} disabled={busy}>
                   삭제
-                </button>
+                </Button>
               )
             ) : null}
             <span className={styles.spacer} />
-            <button type="button" className={styles.cancel} onClick={onClose}>
+            <Button variant="ghost" onClick={onClose}>
               {canEdit ? '취소' : '닫기'}
-            </button>
+            </Button>
             {canEdit ? (
-              <button type="submit" className={styles.save} disabled={busy || !title.trim()}>
+              <Button type="submit" variant="primary" disabled={busy || !title.trim()}>
                 {editing ? '수정' : '저장'}
-              </button>
+              </Button>
             ) : null}
           </div>
         </form>

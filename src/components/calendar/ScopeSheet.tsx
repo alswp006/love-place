@@ -1,4 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Button } from '@/components/ui/Button'
 import styles from './ScopeSheet.module.css'
 
 // 반복 일정 범위 선택 시트(R2.3) — occurrence를 편집/삭제할 때 적용 범위를 묻는다.
@@ -14,11 +15,11 @@ type Props = {
 
 export function ScopeSheet({ mode, onPick, onCancel }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null)
-  const firstRef = useRef<HTMLButtonElement>(null)
   const verb = mode === 'delete' ? '삭제' : '수정'
 
+  // 진입 시 첫 옵션에 포커스(§8). Button 프리미티브는 ref를 노출하지 않으므로 시트 내 첫 button을 쿼리한다.
   useEffect(() => {
-    firstRef.current?.focus()
+    sheetRef.current?.querySelector<HTMLButtonElement>('button')?.focus()
   }, [])
 
   // ESC로 닫기(취소 대체 경로, §8 — 제스처/버튼 단독 의존 금지).
@@ -61,19 +62,19 @@ export function ScopeSheet({ mode, onPick, onCancel }: Props) {
       >
         <p className={styles.title}>이 반복 일정을 어디까지 {verb}할까요?</p>
         <div className={styles.options}>
-          <button ref={firstRef} type="button" className={styles.option} onClick={() => onPick('this')}>
+          <Button variant="ghost" className={styles.option} onClick={() => onPick('this')}>
             이 일정만
-          </button>
-          <button type="button" className={styles.option} onClick={() => onPick('following')}>
+          </Button>
+          <Button variant="ghost" className={styles.option} onClick={() => onPick('following')}>
             이후 모두
-          </button>
-          <button type="button" className={styles.option} onClick={() => onPick('all')}>
+          </Button>
+          <Button variant="ghost" className={styles.option} onClick={() => onPick('all')}>
             전체
-          </button>
+          </Button>
         </div>
-        <button type="button" className={styles.cancel} onClick={onCancel}>
+        <Button variant="ghost" className={styles.cancel} onClick={onCancel}>
           취소
-        </button>
+        </Button>
       </div>
     </div>
   )

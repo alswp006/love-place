@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildCoursePlan, type CoursePlace, type CourseStop } from '@/lib/route/coursePlan'
 import { formatTime } from '@/lib/calendar/eventDays'
+import { Button } from '@/components/ui/Button'
 import styles from './CourseSheet.module.css'
 
 type Props = {
@@ -93,17 +94,17 @@ export function CourseSheet({ regionLabel, places, defaultDate, busy, onCancel, 
           ))}
         </ol>
         <div className={styles.actions}>
-          <button type="button" className={styles.cancel} onClick={onCancel}>
+          <Button variant="ghost" onClick={onCancel}>
             취소
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="cta"
             className={styles.save}
             onClick={handleConfirm}
             disabled={busy || stops.length < 2}
           >
             {busy ? '추가 중…' : '함께 캘린더에 추가'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

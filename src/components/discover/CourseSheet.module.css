@@ -85,7 +85,7 @@
   width: 1.6rem;
   height: 1.6rem;
   border-radius: 50%;
-  background: var(--c-brand);
+  background: var(--pink-600);
   color: #fff;
   font-size: var(--fs-caption);
   font-weight: 600;
@@ -116,29 +116,8 @@
   margin-top: var(--sp-2);
 }
 
-.cancel {
-  border: 1px solid var(--c-border);
-  background: transparent;
-  color: var(--c-text);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  min-height: 44px;
-  padding: 0 var(--sp-4);
-}
-
+/* 취소·확인 버튼은 공용 Button 프리미티브로 통합(R6) — ghost(취소) / cta(함께 캘린더에 추가, 큰 액션).
+   여기선 레이아웃만 보정: 확인 버튼을 행 우측으로 민다(margin-left:auto). */
 .save {
-  border: none;
-  background: var(--c-brand);
-  color: #fff;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  min-height: 44px;
-  padding: 0 var(--sp-4);
-  font-weight: 600;
   margin-left: auto;
-}
-
-.save:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
