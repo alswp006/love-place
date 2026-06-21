@@ -22,7 +22,7 @@
 
 .title {
   font-size: var(--fs-title);
-  font-weight: 700;
+  font-weight: 600;
   margin: 0;
 }
 
@@ -77,7 +77,7 @@
 
 .code {
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.15em;
   color: var(--c-brand);
   font-variant-numeric: tabular-nums;

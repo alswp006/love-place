@@ -1,8 +1,8 @@
 .detail { position: relative; background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border); border-radius: var(--radius); padding: var(--sp-3); margin-bottom: var(--sp-3); }
 .close { position: absolute; top: var(--sp-1); right: var(--sp-1); width: 44px; height: 44px; border: none; background: transparent; color: var(--c-text-weak); cursor: pointer; font-size: 0.9rem; line-height: 1; }
 .head { display: flex; align-items: center; gap: var(--sp-2); padding-right: var(--sp-6); }
-.glyph { font-size: 1.1rem; color: var(--c-cta-bg); font-weight: 700; }
-.name { font-weight: 700; }
+.glyph { font-size: 1.1rem; color: var(--c-cta-bg); font-weight: 600; }
+.name { font-weight: 600; }
 .sub { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); font-size: var(--fs-caption); color: var(--c-text-weak); flex-wrap: wrap; }
 .meta { overflow: hidden; text-overflow: ellipsis; }
 .actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }

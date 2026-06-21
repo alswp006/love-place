@@ -22,7 +22,7 @@
 }
 .head { display: flex; align-items: center; gap: var(--sp-2); padding-right: var(--sp-6); }
 .glyph { font-size: 1.1rem; color: var(--c-brand); }
-.name { font-weight: 700; }
+.name { font-weight: 600; }
 .sub { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); font-size: var(--fs-caption); color: var(--c-text-weak); flex-wrap: wrap; }
 .status { font-weight: 600; color: var(--c-brand); }
 .meta { overflow: hidden; text-overflow: ellipsis; }

@@ -67,7 +67,7 @@
 /* 프리뷰(미저장 검색 후보) 핀 — ＋ 글리프 + 점선 링으로 저장 핀(★/♥)과 모양 구분(§8). */
 .pinPreview {
   color: var(--c-cta-bg);
-  font-weight: 700;
+  font-weight: 600;
   border: 2px dashed var(--c-cta-bg);
   border-radius: 50%;
   width: 28px;
@@ -220,7 +220,7 @@
   border-radius: 999px;
   background: var(--c-brand);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.875rem;
   display: inline-flex;
   align-items: center;

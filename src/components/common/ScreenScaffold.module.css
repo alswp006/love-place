@@ -15,7 +15,7 @@
 .title {
   /* 라지 타이틀(iOS 감성). rem으로 Dynamic Type 존중 */
   font-size: var(--fs-title);
-  font-weight: 700;
+  font-weight: 600;
   margin: 0;
   letter-spacing: -0.01em;
 }
