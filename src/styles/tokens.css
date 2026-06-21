@@ -1,9 +1,18 @@
 /*
- * 디자인 토큰 (설계서 §8 / ux-and-accessibility.md §4-5)
- * - 따뜻한 어스톤 + 사진 중심(ourmap/.impeccable.md 방향 차용).
- * - 색은 전부 CSS 변수 → 다크 모드(prefers-color-scheme) 대응.
+ * 디자인 토큰 — 마시멜로 디자인 시스템(docs/superpowers/specs/2026-06-21-marshmallow-design-adoption.md)
+ * - 핑크크림+옐로 2색(표면/버튼) + 시맨틱 + 아바타페어(트랙/프로필). 그라데이션·검정 그림자 금지.
+ * - 색은 전부 CSS 변수 → 다크 모드(prefers-color-scheme) 대응(잠정 다크값, 진짜 다크는 후속 라운드).
  * - 트랙/상태는 색만으로 구분하지 않는다(색 + 패턴/라벨, 색각 이상 대응).
+ * - 마시멜로 1급 토큰 + 호환 별칭(--c-*) 레이어(R7에서 별칭 삭제).
  */
+
+/* Cafe24 Ssurround(OFL) — public/fonts/에 woff2를 두면 디스플레이 폰트로 사용, 없으면 Quicksand/Pretendard 폴백. */
+@font-face {
+  font-family: 'Cafe24Ssurround';
+  src: url('/fonts/Cafe24Ssurround.woff2') format('woff2');
+  font-weight: 400 600;
+  font-display: swap;
+}
 
 :root {
   color-scheme: light dark;

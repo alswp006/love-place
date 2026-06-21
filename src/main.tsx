@@ -7,6 +7,11 @@ import { queryClient } from '@/lib/queryClient'
 import { router } from '@/app/router'
 import { registerPwa } from '@/lib/pwa'
 import { initNativeAuthDeepLink } from '@/lib/native/authDeepLink'
+// self-host 웹폰트(OFL) — 본문 Pretendard, 디스플레이 Quicksand(400/500/600만). Cafe24는 tokens.css @font-face.
+import 'pretendard/dist/web/static/pretendard.css'
+import '@fontsource/quicksand/400.css'
+import '@fontsource/quicksand/500.css'
+import '@fontsource/quicksand/600.css'
 import './styles/tokens.css'
 
 const rootEl = document.getElementById('root')
