@@ -8,31 +8,75 @@
 :root {
   color-scheme: light dark;
 
-  /* 브랜드(따뜻한 테라코타) */
-  --c-brand: #b5654a;
-  --c-brand-weak: #d8a18d;
-  /* CTA(행동 유도 버튼) — 흰 글자와 대비 AA≥4.5 보장 */
-  --c-cta-bg: #9c4f37;
+  /* ── 마시멜로 1급 토큰(정본) ── */
+  /* 표면 */
+  --bg: #fff1f4;
+  --surface: #ffffff;
+  --surface-soft: #fff7f3;
+  /* 잉크(검정 금지·자두). ink-muted=대비 보정값, ink-faint=텍스트 금지(구분선/장식만) */
+  --ink: #6b4a52;
+  --ink-muted: #8e6b74;
+  --ink-faint: #c9b2b8;
+  /* 라인 */
+  --line: #fad9e0;
+  --line-strong: #f3c4d0;
+  /* 핑크(브랜드) */
+  --pink-100: #ffe0e8;
+  --pink-200: #ffc9d6;
+  --pink-400: #ff93ac;
+  --pink-600: #e2638a;
+  --pink-ink: #b23a60;
+  /* 옐로(액센트) */
+  --yellow-100: #fff0c2;
+  --yellow-300: #ffd86b;
+  --yellow-ink: #9a7a1e;
+  /* 아바타페어(트랙·프로필 4색의 채도 버전) */
+  --mint: #dcf1ea;
+  --mint-ink: #2f7d62; /* ok 민트(#4fb58a)와 명도 분리 — 더 진하게 */
+  --lavender: #ece4fb;
+  --lavender-ink: #6e5aa8;
+  /* 좋아요(텍스트 색 금지 — 형태 이중화 전용) */
+  --like: #ff7c97;
+  /* 시맨틱(소프트 + ink) */
+  --ok: #4fb58a;
+  --ok-soft: #def3ea;
+  --ok-ink: #2e7a5c;
+  --danger: #e06b6b;
+  --danger-soft: #fbe4e2;
+  --danger-ink: #b23a3a;
+  /* 그림자(핑크틴트 3단계 — 회색/검정 금지) */
+  --shadow-raised: 0 2px 10px rgba(255, 150, 180, 0.1);
+  --shadow-floating: 0 10px 28px rgba(255, 150, 180, 0.18);
+  --focus-ring: 0 0 0 3px rgba(255, 150, 180, 0.28);
+  /* 반경 6단계(마시멜로 --r-* — 기존 --radius/--radius-sm와 충돌 없음) */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* ── 호환 별칭(마이그레이션 동안만 — R7에서 삭제) ── */
+  --c-brand: var(--pink-600);
+  --c-brand-weak: var(--pink-200);
+  --c-cta-bg: var(--pink-600); /* pink-600+흰글자=3.29:1 → 큰 CTA 버튼 전용(spec §5) */
   --c-cta-fg: #ffffff;
+  --c-track-mine: var(--mint-ink); /* 나 = 민트 */
+  --c-track-partner: var(--pink-600); /* 상대 = 핑크 */
+  --c-track-shared: var(--lavender-ink); /* 함께 = 라벤더 */
+  --c-bg: var(--bg);
+  --c-surface: var(--surface);
+  --c-surface-2: var(--surface-soft);
+  --c-text: var(--ink);
+  --c-text-weak: var(--ink-muted);
+  --c-border: var(--line);
+  --c-danger: var(--danger);
+  --c-success: var(--ok);
+  --c-accent: var(--pink-600); /* 미정의였던 accent(포커스 아웃라인/선택) → 핑크로 정의(R6에서 정리) */
 
-  /* 캘린더 3트랙(설계서 §5.1) — 색+라벨 이중화 전제 */
-  --c-track-mine: #3b6db5; /* 나(블루) */
-  --c-track-partner: #c25d86; /* 상대(핑크) */
-  --c-track-shared: #7a5bb0; /* 함께(퍼플) */
-
-  /* 표면/텍스트 (라이트) */
-  --c-bg: #faf6f2;
-  --c-surface: #ffffff;
-  --c-surface-2: #f1e9e2;
-  --c-text: #2c2420;
-  --c-text-weak: #6f635b;
-  --c-border: #e3d8cf;
-  --c-danger: #c0392b;
-  --c-success: #3f7a52;
-
-  /* 타이포 — 상대단위(Dynamic Type 존중, 고정 px 금지) */
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
+  /* 타이포 — Pretendard 우선(self-host, R1 Task4) + 디스플레이 스택. 상대단위(Dynamic Type 존중). */
+  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-display: 'Quicksand', 'Cafe24Ssurround', 'Pretendard', sans-serif;
   --fs-h1: 1.75rem; /* 페이지 라지 타이틀 상향 */
   --fs-title: 1.5rem;
   --fs-h2: 1.125rem; /* 섹션 <h2> */
@@ -46,10 +90,10 @@
   --sp-2: 0.5rem;
   --sp-3: 0.75rem;
   --sp-4: 1rem;
-  --sp-5: 1.25rem;
   --sp-6: 1.5rem;
-  --radius: 14px;
-  --radius-sm: 8px;
+  /* 반경 별칭(시각 무회귀): --radius=14=r-md, --radius-sm=8=r-xs. 신규 프리미티브는 --r-* 사용. */
+  --radius: var(--r-md);
+  --radius-sm: var(--r-xs);
 
   /* safe-area(노치/홈 인디케이터, §8) */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -75,23 +119,34 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --c-bg: #1a1614;
-    --c-surface: #241e1b;
-    --c-surface-2: #2f2723;
-    --c-text: #f2ebe5;
-    --c-text-weak: #b3a79f;
-    --c-border: #3a302b;
-    /* 트랙 색은 다크에서 대비 유지(WCAG AA 본문 4.5:1 지향) */
-    --c-track-mine: #6ea0e0;
-    --c-track-partner: #e58bb0;
-    --c-track-shared: #a98fe0;
-    --c-brand: #d98a6f;
-    /* 다크: 밝은 테라코타 배경 + 어두운 글자(대비 AA) */
-    --c-cta-bg: #d98a6f;
-    --c-cta-fg: #241e1b;
-    /* 다크에서 success/danger를 밝게 올려 어두운 표면(--c-surface #241e1b) 위 AA 대비(≥4.5:1) 확보 */
-    --c-success: #6fb98a;
-    --c-danger: #e87a6d;
+    /* 마시멜로 잠정 다크(어두운 자두/로즈 — 라이트 단순반전 금지, 진짜 팔레트는 후속 라운드).
+       1급 토큰을 override → 호환 별칭(--c-*)이 자동 추종. 다크=라이트 평탄화 금지(스냅샷 게이트). */
+    --bg: #241016;
+    --surface: #2e1820;
+    --surface-soft: #3a2129;
+    --ink: #ffe3ea;
+    --ink-muted: #d7a9b4;
+    --ink-faint: #9c7782;
+    --line: #4a2c36;
+    --line-strong: #5e3b46;
+    --pink-100: #4a2230;
+    --pink-200: #5e2c3d;
+    --pink-400: #ff9db4;
+    --pink-600: #ff9db4;
+    --pink-ink: #ffc2d2;
+    --yellow-300: #ffd86b;
+    --yellow-ink: #ffe6a6;
+    --mint-ink: #7fd3b3;
+    --lavender-ink: #c3aef0;
+    --like: #ff8fa6;
+    --ok: #6fb98a;
+    --ok-ink: #a8e6c6;
+    --danger: #e87a6d;
+    --danger-ink: #ffb3aa;
+    /* 다크 그림자는 어두운 표면 위 깊이 표현용으로 검정 알파 허용(라이트 '검정 금지'는 밝은 표면 전용). */
+    --shadow-raised: 0 2px 10px rgba(0, 0, 0, 0.4);
+    --shadow-floating: 0 10px 28px rgba(0, 0, 0, 0.55);
+    --c-cta-fg: #2e1820; /* 다크: 밝은 핑크 위 어두운 글자 */
   }
 }
 
