@@ -64,12 +64,19 @@
 }
 
 .building,
-.retro,
-.seed {
+.retro {
   font-size: var(--fs-caption);
   color: var(--c-text-weak);
   padding: var(--sp-2) var(--sp-3);
   border: 1px dashed var(--c-border);
   border-radius: var(--radius-sm);
   margin: 0 0 var(--sp-2);
+}
+
+/* "곧 제공" 배지 — 색 비의존(텍스트), 초소형 토큰. retro는 aria-disabled로 탭 불가 명시. */
+.soonBadge {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--c-brand);
+  white-space: nowrap;
 }

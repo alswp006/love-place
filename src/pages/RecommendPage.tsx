@@ -141,8 +141,9 @@ export default function RecommendPage() {
           <section aria-label="다시 가보기">
             <h2 className={styles.sectionTitle}>다시 가보기</h2>
             {visitedClusters.slice(0, 3).map((c) => (
-              <p key={c.regionCode ?? 'label:' + c.regionLabel} className={styles.retro}>
-                📷 지난 <strong>{c.regionLabel}</strong> {c.count}곳 다시 보기
+              <p key={c.regionCode ?? 'label:' + c.regionLabel} className={styles.retro} aria-disabled="true">
+                📷 지난 <strong>{c.regionLabel}</strong> {c.count}곳 다시 보기 ·{' '}
+                <span className={styles.soonBadge}>곧 제공</span>
               </p>
             ))}
           </section>
@@ -158,9 +159,9 @@ export default function RecommendPage() {
             <CtaLink to="/">가고싶은 곳 추가하기</CtaLink>
             <h2 className={styles.sectionTitle}>이런 여행은 어때요?</h2>
             {SEED.map((s) => (
-              <p key={s.regionLabel} className={styles.seed}>
-                ✨ <strong>{s.regionLabel}</strong> · {s.hint}
-              </p>
+              <CtaLink key={s.regionLabel} to={`/?q=${encodeURIComponent(s.regionLabel)}`}>
+                ✨ {s.regionLabel} · {s.hint}
+              </CtaLink>
             ))}
           </section>
         ) : null}
