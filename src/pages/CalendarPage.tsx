@@ -39,9 +39,9 @@ export default function CalendarPage() {
   const coupleId = couple?.coupleId ?? null
   const { data: events, isLoading: eventsLoading } = useEvents(coupleId)
   const { data: profiles } = useProfiles(coupleId)
-  // 저장된 장소(place_id 연결 피커, Task 8) — EventSheet에 props로 주입(focus-trap 안).
-  // Task 13: 아젠다 장소 칩(place_id→이름·지도 링크)에도 같은 목록을 id로 인덱싱해 쓴다.
-  const { data: places, isLoading: placesLoading } = usePlaces(coupleId)
+  // 저장된 장소 목록 — Task 13: 아젠다 장소 칩(place_id→이름·지도 링크)에 id로 인덱싱해 쓴다.
+  // (일정 폼은 '일정만' 관리 — 장소 연결 피커 제거. place_id는 추천 코스→일정·아젠다 칩에서만.)
+  const { data: places } = usePlaces(coupleId)
   const conflict = useConflict()
   // 권한거부(상대 PERSONAL 수정 시도) — 버전충돌과 분리해 별도 배너로 안내(Task 7). 시트는 유지.
   const permission = useConflict()
@@ -410,8 +410,6 @@ export default function CalendarPage() {
           myId={myId}
           busy={busy}
           profiles={profiles ?? {}}
-          places={places ?? []}
-          placesLoading={placesLoading}
           conflictRefresh={conflictRefresh}
           onClose={closeSheet}
           onCreate={onCreate}

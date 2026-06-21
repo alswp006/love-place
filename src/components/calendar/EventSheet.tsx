@@ -2,12 +2,10 @@ import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent as Reac
 import type { EventRow } from '@/hooks/useEvents'
 import type { ProfileMap } from '@/hooks/useProfiles'
 import type { NewEvent, EventPatch } from '@/hooks/useEventMutations'
-import type { PlaceRow } from '@/hooks/usePlaces'
 import { dayKey, formatTime, DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import { tzNote } from '@/lib/calendar/tzLabel'
 import { parseRule, buildRule, type Freq } from '@/lib/calendar/rrule'
 import { buildEventTimes } from '@/lib/calendar/eventTimes'
-import { PlacePicker } from './PlacePicker'
 import styles from './EventSheet.module.css'
 
 type Props = {
@@ -16,8 +14,6 @@ type Props = {
   myId: string | null // 사용자별 리마인더 소유자
   busy: boolean
   profiles: ProfileMap // 소유자 이름 표시(상대 PERSONAL 라벨)
-  places: PlaceRow[] // 저장된 장소(place_id 연결 피커, RLS-scope) — focus-trap 안에 들어가야 함(§a11y).
-  placesLoading: boolean
   // 버전충돌 후 부모가 재조회한 최신 서버 행(Task 7). version 재시드 + 메모 append-merge에 쓴다.
   conflictRefresh?: { version: number; memo: string | null } | null
   onClose: () => void
@@ -26,7 +22,7 @@ type Props = {
   onDelete: (id: string, expectedVersion: number) => void
 }
 
-export function EventSheet({ initial, defaultDate, myId, busy, profiles, places, placesLoading, conflictRefresh, onClose, onCreate, onUpdate, onDelete }: Props) {
+export function EventSheet({ initial, defaultDate, myId, busy, profiles, conflictRefresh, onClose, onCreate, onUpdate, onDelete }: Props) {
   const editing = initial != null
   // 상대 PERSONAL 일정은 읽기 전용(canEdit 가드, 조사03 §4 — RLS USING 미러).
   // canEdit = visibility==='SHARED' || owner_id===myId. 상대 PERSONAL이면 입력·저장·삭제 차단.
@@ -44,8 +40,8 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, places,
   const [endTime, setEndTime] = useState(initial && !initial.is_all_day ? formatTime(initial.end, evTz) : '11:00')
   const [timeError, setTimeError] = useState<string | null>(null)
   const [visibility, setVisibility] = useState<'SHARED' | 'PERSONAL'>(initial?.visibility ?? 'SHARED')
-  // place_id를 state로 승격(Task 8) — Task 5의 임시 상수 대체. 저장된 장소 피커가 set/clear.
-  const [placeId, setPlaceId] = useState<string | null>(initial?.place_id ?? null)
+  // 일정 폼은 '일정만' 관리한다 — 장소 연결 필드 없음. 기존 place_id(추천 코스→일정 addCourse·지도 연동)는
+  // 폼이 건드리지 않는다: 수정 시 EventPatch에서 place_id를 생략하면 서버 값이 그대로 보존된다(map linkage 유지).
   const [memo, setMemo] = useState(initial?.memo ?? '')
   // 낙관적 락 기준 버전 — 기본은 원본 version, 버전충돌 후엔 재조회 버전으로 재시드(다음 저장이 같은 충돌 반복 방지).
   const [expectedVersion, setExpectedVersion] = useState(initial?.version ?? 0)
@@ -161,7 +157,6 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, places,
         time_zone: evTz,
         visibility,
         memo: cleanMemo,
-        place_id: placeId,
         recurrence_rule: recurrenceRule,
         reminders,
       })
@@ -174,7 +169,6 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, places,
         timeZone: DISPLAY_TZ,
         visibility,
         memo: cleanMemo,
-        placeId,
         recurrenceRule,
         reminders,
       })
@@ -311,10 +305,6 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, places,
               <option value={1440}>1일 전</option>
             </select>
           </label>
-
-          {canEdit ? (
-            <PlacePicker places={places} loading={placesLoading} selectedId={placeId} onPick={setPlaceId} />
-          ) : null}
 
           <textarea
             className={styles.memo}

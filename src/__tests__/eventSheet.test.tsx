@@ -40,8 +40,6 @@ function setup(overrides: Partial<Parameters<typeof EventSheet>[0]> = {}) {
       myId="u1"
       busy={false}
       profiles={{}}
-      places={[]}
-      placesLoading={false}
       onClose={onClose}
       onCreate={onCreate}
       onUpdate={onUpdate}
@@ -91,6 +89,28 @@ describe('EventSheet 시간 검증·인라인 에러·입력 보존(R2, Task 5)'
     expect(new Date(payload.start).getTime()).toBeLessThan(new Date(payload.end).getTime())
     // 에러는 사라진다.
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+})
+
+describe('EventSheet 일정-전용 폼(장소 연결 필드 제거)', () => {
+  // "일정은 말그대로 일정만 관리" — 추가/수정 폼에서 장소 연결(PlacePicker) 필드를 없앤다.
+  // 장소→일정 자동 결합은 원래 없었고, 폼의 선택적 PlacePicker가 유일한 장소 진입점이었다.
+  it('추가 모드에서 장소 검색/연결 필드를 렌더하지 않는다', () => {
+    setup()
+    expect(screen.queryByLabelText('장소 검색')).toBeNull()
+    expect(screen.queryByPlaceholderText('저장된 장소 연결(선택)')).toBeNull()
+    expect(screen.queryByText(/저장된 장소가 없어요/)).toBeNull()
+  })
+
+  it('저장 시 payload에 place_id/placeId가 없다(일정만 생성)', () => {
+    const { onCreate } = setup()
+    fireEvent.change(screen.getByLabelText('일정 제목'), { target: { value: '카페 가기' } })
+    fireEvent.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(onCreate).toHaveBeenCalledTimes(1)
+    const payload = onCreate.mock.calls[0]![0]
+    expect(payload).not.toHaveProperty('placeId')
+    expect(payload).not.toHaveProperty('place_id')
   })
 })
 
