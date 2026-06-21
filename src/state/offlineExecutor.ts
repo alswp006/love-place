@@ -8,9 +8,25 @@ import type { FlushOutcome } from './offlineQueue'
 // 아웃박스 항목 → 실제 Supabase op. 큐 매니저(offlineQueue)가 재연결 시 이 함수로 재생한다.
 // 반환: 'ok'(적용) | 'conflict'(서버가 더 최신 — 제거+보고). 네트워크 오류는 throw → 큐가 잔류시키고 재시도.
 
+// 휴지통 delete/restore가 가능한 테이블 집합 — useTrash의 TrashKind와 1:1 정렬(드리프트 방지).
+const TRASH_TABLES = ['places', 'events', 'visits', 'photos', 'trips', 'itineraries'] as const
+type TrashTable = typeof TRASH_TABLES[number]
+// 토큰(정규식 캡처) → 실제 테이블. 일반형(plural)은 그대로, 레거시 단수 alias(usePlaceTrash/useRestoreEvent가
+// enqueue하는 'place'/'event')는 plural 테이블로 매핑 → 둘 다 재생 보장(유실 0).
+const TRASH_TABLE_BY_TOKEN: Record<string, TrashTable> = {
+  ...Object.fromEntries(TRASH_TABLES.map((t) => [t, t])),
+  place: 'places',
+  event: 'events',
+}
+
+// 레거시 단수 alias(현재 코드가 실제로 enqueue 중) — 일반형과 함께 OutboxKind에 포함.
+type LegacyTrashAlias = 'place' | 'event'
+
 export type OutboxKind =
-  | 'wish.setPriority' | 'place.delete' | 'place.restore' | 'place.save'
-  | 'visit.add' | 'visit.remove' | 'reaction.toggle' | 'event.restore'
+  | 'wish.setPriority' | 'place.save'
+  | 'visit.add' | 'visit.remove' | 'reaction.toggle'
+  | `${TrashTable}.delete` | `${TrashTable}.restore` // = 6×2(place/event/visit/photo/trip/itinerary delete·restore)
+  | `${LegacyTrashAlias}.delete` | `${LegacyTrashAlias}.restore` // 레거시 단수(place/event) — 매핑 후 재생
 
 type SetPriorityPayload = { wishId: string; expectedVersion: number; priority: number; myId: string }
 type VersionedTargetPayload = { id: string; expectedVersion: number; myId: string }
@@ -28,18 +44,6 @@ export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
         updated_by: p.myId,
       })
       return r.status
-    }
-    case 'place.delete': {
-      const p = entry.payload as VersionedTargetPayload
-      return (await softDelete('places', p.id, p.expectedVersion, p.myId)).status
-    }
-    case 'place.restore': {
-      const p = entry.payload as VersionedTargetPayload
-      return (await restore('places', p.id, p.expectedVersion, p.myId)).status
-    }
-    case 'event.restore': {
-      const p = entry.payload as VersionedTargetPayload
-      return (await restore('events', p.id, p.expectedVersion, p.myId)).status
     }
     case 'place.save': {
       const p = entry.payload as SavePayload
@@ -90,7 +94,15 @@ export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
       if (error) throw new Error(error.message)
       return 'ok'
     }
-    default:
-      return 'ok' // 알 수 없는 종류 — 무시하고 제거
+    default: {
+      const m = /^([a-z_]+)\.(delete|restore)$/.exec(entry.kind)
+      const table = m ? TRASH_TABLE_BY_TOKEN[m[1]!] : undefined
+      if (m && table) {
+        const p = entry.payload as VersionedTargetPayload
+        const fn = m[2] === 'delete' ? softDelete : restore
+        return (await fn(table, p.id, p.expectedVersion, p.myId)).status
+      }
+      return 'ok' // 진짜 미지의 종류 — 무시+제거
+    }
   }
 }
