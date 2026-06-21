@@ -47,6 +47,26 @@ describe('useSignInWithOtp - sendMagicLink', () => {
     })
     expect(result.current.error).toBe('알 수 없는 오류')
   })
+
+  // VITE_PUBLIC_SITE_URL이 설정되면 emailRedirectTo가 그 사이트의 /auth/callback을 가리킨다
+  // (네이티브 WebView의 로컬 origin이 매직링크 redirect로 새는 것을 방지).
+  it('VITE_PUBLIC_SITE_URL이 있으면 그 사이트/auth/callback로 emailRedirectTo를 보낸다', async () => {
+    vi.stubEnv('VITE_PUBLIC_SITE_URL', 'https://love.example.app')
+    signInWithOtp.mockResolvedValue({ error: null })
+    const { result } = renderHook(() => useSignInWithOtp())
+    await act(async () => {
+      await result.current.sendMagicLink('a@b.com')
+    })
+    expect(signInWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'a@b.com',
+        options: expect.objectContaining({
+          emailRedirectTo: 'https://love.example.app/auth/callback',
+        }),
+      }),
+    )
+    vi.unstubAllEnvs()
+  })
 })
 
 describe('useSignInWithOtp - verifyCode', () => {

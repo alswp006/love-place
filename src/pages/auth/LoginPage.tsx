@@ -6,6 +6,7 @@ import { useSignInWithGoogle } from '@/hooks/useSignInWithGoogle'
 import { useSignInWithPassword } from '@/hooks/useSignInWithPassword'
 import { useResendCooldown } from '@/hooks/useResendCooldown'
 import { GoogleIcon } from '@/components/auth/GoogleIcon'
+import { isNativePlatform } from '@/lib/platform'
 import styles from './LoginPage.module.css'
 
 // 로그인 화면(§10.3). 구글(권장, 메일 한도 없음) + 이메일 매직링크.
@@ -19,6 +20,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
   const [verifying, setVerifying] = useState(false)
+  // 네이티브(Capacitor)에선 매직링크가 외부 브라우저로 열려 PKCE가 끊기므로, 발송 후 6자리 코드 입력을 1차로 안내.
+  const native = isNativePlatform()
 
   // 메일 발송 성공(sent) 진입 시 재전송 쿨다운 30초 시작(R3.6). 한 번만 발사.
   const wasSent = useRef(false)
@@ -70,11 +73,19 @@ export default function LoginPage() {
           </div>
         ) : status === 'sent' ? (
           <div className={styles.sent} role="status" aria-live="polite">
-            <p className={styles.sentTitle}>📬 메일을 확인하세요</p>
+            <p className={styles.sentTitle}>{native ? '🔑 코드를 입력하세요' : '📬 메일을 확인하세요'}</p>
             <p className={styles.sentHint}>
-              <strong>{email}</strong> 으로 로그인 링크를 보냈어요.
-              <br />
-              메일의 링크를 누르면 로그인됩니다.
+              {native ? (
+                <>
+                  메일로 받은 <strong>6자리 코드</strong>를 입력해 로그인하세요.
+                </>
+              ) : (
+                <>
+                  <strong>{email}</strong> 으로 로그인 링크를 보냈어요.
+                  <br />
+                  메일의 링크를 누르면 로그인됩니다.
+                </>
+              )}
             </p>
 
             {/* 6자리 코드 폴백 — 메일이 다른 브라우저에서 열렸을 때 같은 화면에서 로그인(PKCE 교차컨텍스트 완화, dossier 01 §6) */}

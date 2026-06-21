@@ -33,7 +33,10 @@ export function useSignInWithOtp() {
     }
 
     setStatus('sending')
-    const redirectTo = `${window.location.origin}/auth/callback`
+    // 네이티브 WebView의 로컬 origin(capacitor://·https://localhost)이 매직링크 redirect로 새지 않도록,
+    // 배포된 사이트 URL이 있으면 그걸 베이스로 한다(없으면 기존처럼 현재 origin).
+    const base = import.meta.env.VITE_PUBLIC_SITE_URL?.trim() || window.location.origin
+    const redirectTo = `${base}/auth/callback`
     const { error: err } = await supabase.auth.signInWithOtp({
       email: trimmed,
       options: { emailRedirectTo: redirectTo },
