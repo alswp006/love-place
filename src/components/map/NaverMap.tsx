@@ -213,7 +213,7 @@ export function NaverMap({
                 badge: visual.badge,
                 id: p.id, // 포커스·키 활성화 가능(role=button+tabindex+data-place-id, Task 17/R4.4).
               }),
-              anchor: new nv.maps.Point(12, 24),
+              anchor: new nv.maps.Point(22, 44),
             },
           })
           const handle = nv.maps.Event.addListener(marker, 'click', () => {
@@ -389,7 +389,7 @@ export function NaverMap({
       const selected = id === selectedId
       marker.setIcon({
         content: markerIconHtml({ glyph: visual.glyph, pinClass, label: visual.label, selected, badge: visual.badge, id }),
-        anchor: new nv.maps.Point(12, 24),
+        anchor: new nv.maps.Point(22, 44),
       })
       marker.setZIndex(selected ? SELECTED_ZINDEX : BASE_ZINDEX)
     }
@@ -429,7 +429,7 @@ export function NaverMap({
             label: `${previewHit.name} 미리보기`,
             selected: false,
           }),
-          anchor: new nv.maps.Point(12, 24),
+          anchor: new nv.maps.Point(22, 44),
         },
       })
     }

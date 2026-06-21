@@ -15,7 +15,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  transform: translate(-50%, -100%);
+  /* 위치는 SDK anchor 한 곳에서만(Point(22,44)=박스 하단중앙) — CSS translate 병용 금지(이중 오프셋→줌마다 핀이 어긋남). */
   cursor: pointer;
 }
 

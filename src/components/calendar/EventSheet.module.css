@@ -7,6 +7,9 @@
   justify-content: center;
   z-index: 50;
   padding-bottom: var(--safe-bottom);
+  /* 모달 열렸을 때 뒤 배경 스크롤 차단 — 백드롭 위 터치가 페이지를 스크롤하지 않게(탭 닫기는 click이라 유지). */
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .sheet {
@@ -73,6 +76,9 @@
   overflow-y: auto;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
+  /* 폼 스크롤이 뒤 배경(.content)으로 체이닝되지 않게 — 모달 뒤 배경 스크롤 차단. */
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .input {
