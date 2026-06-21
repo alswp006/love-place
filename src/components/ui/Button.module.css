@@ -1,0 +1,77 @@
+/*
+ * Button 프리미티브(마시멜로 R2) — 4 variant 공용 버튼/링크.
+ * 마시멜로 1급 토큰만 사용(--c-* 별칭 금지). 그라데이션·검정 그림자 금지.
+ * 가중치 400/500/600 범위. 색만으로 의미 구분하지 않음(라벨/aria 병기는 호출부 책임).
+ */
+.base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: 44px; /* HIG 터치 타깃(§1) */
+  padding: var(--sp-2) var(--sp-5);
+  border: none;
+  border-radius: var(--r-pill);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition:
+    transform var(--motion-fast) var(--ease),
+    opacity var(--motion-fast) var(--ease);
+}
+
+/* 탭 피드백(Reduce Motion은 전역 토큰 캡으로 transition 무력화). */
+.base:active {
+  transform: scale(0.97);
+}
+
+/* 포커스 가시(:focus-visible) — 마시멜로 포커스 링 토큰. */
+.base:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* 비활성 — 시각(opacity) + 의미(button[disabled]/aria-disabled). */
+.base:disabled,
+.base[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.base[aria-disabled='true']:active {
+  transform: none;
+}
+
+/* primary — 핑크 표면 + 자두 글자(검정 금지), pill. */
+.primary {
+  background: var(--pink-400);
+  color: #5a2438; /* 자두 — pink-400 위 대비 확보 */
+}
+
+/* cta — 큰 버튼 전용(진한 핑크 + 흰 글자). 큰 면적 전제이므로 높이/사이즈 상향. */
+.cta {
+  background: var(--pink-600);
+  color: #fff;
+  min-height: 48px;
+  font-size: 1rem;
+  padding: var(--sp-3) var(--sp-6);
+}
+
+/* ghost — 투명 배경 + 강조 라인 테두리, pill. */
+.ghost {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+}
+
+/* danger — 위험 소프트 표면 + 위험 잉크, pill. */
+.danger {
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+}
