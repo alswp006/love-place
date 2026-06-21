@@ -159,4 +159,80 @@ describe.skipIf(!ready)('RLS 커플 격리 (라이브 통합)', () => {
     })
     expect(error).not.toBeNull()
   })
+
+  // ── 컬렉션(0015) — 가산 저장 목록. 커플 격리 + couple_id 위조 차단(0004 places와 동형 RLS).
+  it('A는 B 커플의 collections를 못 본다 (교차 SELECT 0건)', async () => {
+    const { data: bC } = await cb.from('collections').select('id').is('deleted_at', null).limit(1)
+    const someBId = bC?.[0]?.id
+    if (!someBId) {
+      expect(true).toBe(true)
+      return
+    }
+    const { data: leaked } = await ca.from('collections').select('id').eq('id', someBId)
+    expect(leaked ?? []).toHaveLength(0)
+  })
+
+  it('A는 couple_id를 B로 위조해 collection을 만들 수 없다 (WITH CHECK 거부)', async () => {
+    const { data: bCouple } = await cb.rpc('current_couple_id')
+    const { error } = await ca.from('collections').insert({
+      couple_id: bCouple,
+      name: '위조 목록',
+      created_by: aUserId,
+      updated_by: aUserId,
+    })
+    expect(error).not.toBeNull()
+  })
+
+  it('A는 자기 커플 collection을 본인 명의로 만들 수 있다', async () => {
+    const { data: aCouple } = await ca.rpc('current_couple_id')
+    const { data: inserted, error } = await ca
+      .from('collections')
+      .insert({
+        couple_id: aCouple,
+        name: `테스트목록-${Date.now()}`,
+        created_by: aUserId,
+        updated_by: aUserId,
+      })
+      .select('id')
+    expect(error).toBeNull()
+    // 정리 — soft-delete(테스트 격리 유지).
+    const newId = inserted?.[0]?.id
+    if (newId) {
+      await ca
+        .from('collections')
+        .update({ deleted_at: new Date().toISOString(), updated_by: aUserId })
+        .eq('id', newId)
+    }
+  })
+
+  it('A는 B 커플의 place_collections를 못 본다 (교차 SELECT 0건)', async () => {
+    const { data: bPC } = await cb.from('place_collections').select('id').is('deleted_at', null).limit(1)
+    const someBId = bPC?.[0]?.id
+    if (!someBId) {
+      expect(true).toBe(true)
+      return
+    }
+    const { data: leaked } = await ca.from('place_collections').select('id').eq('id', someBId)
+    expect(leaked ?? []).toHaveLength(0)
+  })
+
+  it('A는 couple_id를 B로 위조해 place_collection을 만들 수 없다 (WITH CHECK 거부)', async () => {
+    const { data: bCouple } = await cb.rpc('current_couple_id')
+    const { data: bColl } = await cb.from('collections').select('id').is('deleted_at', null).limit(1)
+    const { data: bPlaces } = await cb.from('places').select('id').limit(1)
+    const collectionId = bColl?.[0]?.id
+    const placeId = bPlaces?.[0]?.id
+    if (!collectionId || !placeId) {
+      expect(true).toBe(true)
+      return
+    }
+    const { error } = await ca.from('place_collections').insert({
+      couple_id: bCouple,
+      collection_id: collectionId,
+      place_id: placeId,
+      created_by: aUserId,
+      updated_by: aUserId,
+    })
+    expect(error).not.toBeNull()
+  })
 })

@@ -133,6 +133,38 @@ export type Database = {
         Update: Partial<{ priority: number; updated_by: string; deleted_at: string | null; version: number }>
         Relationships: []
       }
+      collections: {
+        Row: {
+          id: string
+          couple_id: string
+          name: string
+        } & Audit
+        Insert: {
+          couple_id: string
+          name: string
+          created_by: string
+          updated_by: string
+        }
+        Update: Partial<{ name: string; updated_by: string; deleted_at: string | null; version: number }>
+        Relationships: []
+      }
+      place_collections: {
+        Row: {
+          id: string
+          couple_id: string
+          collection_id: string
+          place_id: string
+        } & Audit
+        Insert: {
+          couple_id: string
+          collection_id: string
+          place_id: string
+          created_by: string
+          updated_by: string
+        }
+        Update: Partial<{ updated_by: string; deleted_at: string | null; version: number }>
+        Relationships: []
+      }
     }
     Views: {
       v_place_status: {

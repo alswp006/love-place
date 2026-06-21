@@ -17,6 +17,8 @@ export const EXPORT_TABLES = [
   'events',
   'itineraries',
   'reactions',
+  'collections',
+  'place_collections',
 ] as const
 export type ExportTable = (typeof EXPORT_TABLES)[number]
 
