@@ -30,7 +30,10 @@ export default function UsPage() {
   const [confirming, setConfirming] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
-  const [exported, setExported] = useState(false)
+  // JSON 내보냄 표시(카드 affordance용) — 해제 게이트는 zipExported만 사용.
+  const [, setExported] = useState(false)
+  // 해제 게이트는 ZIP(원본 사진 포함) 전용으로만 충족 — JSON-only 내보내기가 게이트를 우회하지 못하게(§10.4).
+  const [zipExported, setZipExported] = useState(false)
   const cancelRef = useRef<HTMLButtonElement>(null)
   const myId = user?.id ?? null
   const conflict = useConflict()
@@ -93,6 +96,7 @@ export default function UsPage() {
       const zip = buildExportZip(data, blobs)
       downloadBlob(`love_place_${dayKey(new Date().toISOString())}.zip`, zip)
       setExported(true)
+      setZipExported(true)
     } catch (e) {
       setExportError(e instanceof Error ? e.message : '내보내기에 실패했어요.')
     } finally {
@@ -253,7 +257,7 @@ export default function UsPage() {
               {/* 정직 카피 + 해제 전 내보내기 필수 게이트(§10.4, security-privacy §5.1) */}
               <DisconnectConfirm
                 exporting={exporting}
-                exported={exported}
+                exported={zipExported}
                 onExportZip={() => void onExportZip()}
                 onDisconnect={onDisconnect}
                 onCancel={() => setConfirming(false)}

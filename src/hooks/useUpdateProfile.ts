@@ -25,6 +25,7 @@ export function useUpdateProfile(coupleId: string | null) {
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ['couple', user?.id] })
+      if (user?.id) void qc.invalidateQueries({ queryKey: ['myProfile', user.id] })
       if (coupleId) void qc.invalidateQueries({ queryKey: ['profiles', coupleId] })
     },
   })

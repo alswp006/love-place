@@ -66,6 +66,7 @@ describe('UsPage 연결 해제 게이트 — 정직 카피 + 내보내기 필수
   beforeEach(() => {
     fetchCoupleExport.mockReset()
     fetchPhotoBlobs.mockReset()
+    downloadJson.mockReset()
     downloadBlob.mockReset()
     buildExportZip.mockReset()
     disconnectMutate.mockReset()
@@ -117,6 +118,20 @@ describe('UsPage 연결 해제 게이트 — 정직 카피 + 내보내기 필수
 
     fireEvent.click(confirm)
     expect(disconnectMutate).toHaveBeenCalledWith('c1', expect.anything())
+  })
+
+  it('JSON-only 내보내기(카드의 "내 데이터 내보내기")로는 해제 게이트가 열리지 않는다 — ZIP 전용', async () => {
+    renderUs()
+    // 카드의 JSON 내보내기만 수행(ZIP 아님)
+    fireEvent.click(screen.getByRole('button', { name: '내 데이터 내보내기' }))
+    await waitFor(() => expect(downloadJson).toHaveBeenCalled())
+    expect(downloadBlob).not.toHaveBeenCalled()
+
+    // 그래도 해제 다이얼로그의 ack/확정 버튼은 여전히 비활성(zipExported=false)
+    openDialog()
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('checkbox')).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: '연결 해제' })).toBeDisabled()
   })
 
   it('ESC를 누르면 다이얼로그가 닫힌다', () => {
