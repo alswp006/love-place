@@ -10,6 +10,7 @@ export const NAVER_STUB_JS = `
   function LatLng(lat, lng) { this._lat = lat; this._lng = lng; }
   LatLng.prototype.lat = function () { return this._lat; };
   LatLng.prototype.lng = function () { return this._lng; };
+  // LatLngBounds(sw, ne) — 2-arg 생성자(앱 showSelf/폴백/클러스터 fitBounds가 사용). 스텁은 인자 무시.
   function LatLngBounds() {}
   LatLngBounds.prototype.extend = function () { return this; };
   function Circle() {}
@@ -43,7 +44,7 @@ export const NAVER_STUB_JS = `
   Map.prototype.getCenter = function () { return this._opts.center; };
   Map.prototype.setCenter = function (c) { this._opts.center = c; };
   Map.prototype.panTo = function (c) { this._opts.center = c; };
-  Map.prototype.fitBounds = function () {};
+  Map.prototype.fitBounds = function (b) { this._lastFitBounds = b; };
   var Event = {
     addListener: function (t, name, fn) { var h = { target: t, name: name, fn: fn }; return h; },
     removeListener: function () {},

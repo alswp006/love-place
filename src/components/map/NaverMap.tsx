@@ -4,6 +4,7 @@ import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WishStatus } from '@/lib/places/wishStatus'
 import { markerVisual } from '@/lib/places/markerVisual'
 import { clusterPlaces, type ClusterPoint } from '@/lib/places/clusterPlaces'
+import { clusterMemberPts, boundsSpanTiny } from '@/lib/places/clusterBounds'
 import { markerIconHtml, BASE_ZINDEX, SELECTED_ZINDEX } from '@/lib/places/selectedMarker'
 import { escapeHtml } from '@/lib/places/infoWindowHtml'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
@@ -218,9 +219,20 @@ export function NaverMap({
             },
           })
           const pos = new nv.maps.LatLng(g.lat, g.lng)
+          const memberPts = clusterMemberPts(g.ids, pts)
           const handle = nv.maps.Event.addListener(cluster, 'click', () => {
-            m.setCenter(pos)
-            m.setZoom(Math.min(m.getZoom() + 3, 19))
+            haptic(8)
+            if (memberPts.length === 0 || boundsSpanTiny(memberPts)) {
+              m.setCenter(pos)
+              m.setZoom(Math.min(m.getZoom() + 3, 19))
+              return
+            }
+            const b = new nv.maps.LatLngBounds(
+              new nv.maps.LatLng(memberPts[0]!.lat, memberPts[0]!.lng),
+              new nv.maps.LatLng(memberPts[0]!.lat, memberPts[0]!.lng),
+            )
+            for (const pt of memberPts) b.extend(new nv.maps.LatLng(pt.lat, pt.lng))
+            m.fitBounds(b)
           })
           listenersRef.current.push(handle)
           clusterMarkersRef.current.push(cluster)
