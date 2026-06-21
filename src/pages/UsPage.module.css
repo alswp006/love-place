@@ -94,6 +94,7 @@ img.avatar {
   white-space: nowrap;
 }
 
+/* DisconnectConfirm(다이얼로그 내 보조 버튼)에서 계속 사용 — UsPage 본문은 Button(ghost) 프리미티브로 이전. */
 .ghostBtn {
   min-height: 44px;
   padding: var(--sp-2) var(--sp-4);
@@ -101,16 +102,6 @@ img.avatar {
   border-radius: var(--radius-sm);
   background: var(--c-surface);
   color: var(--c-text);
-  cursor: pointer;
-}
-
-.dangerGhost {
-  min-height: 44px;
-  padding: var(--sp-2) var(--sp-4);
-  border: 1px solid var(--c-danger);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--c-danger);
   cursor: pointer;
 }
 

@@ -18,6 +18,7 @@ import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { ProfileEditor } from '@/components/profile/ProfileEditor'
 import { DisconnectConfirm } from '@/components/profile/DisconnectConfirm'
+import { Button } from '@/components/ui/Button'
 import styles from './UsPage.module.css'
 
 // 💑 우리 — 프로필·연결·내보내기(§3, §10). 연결 후 상대 표시 + 연결 해제.
@@ -180,14 +181,14 @@ export default function UsPage() {
                   aria-label="상대 별명"
                   maxLength={20}
                 />
-                <button
-                  className={styles.ghostBtn}
+                <Button
+                  variant="ghost"
                   type="button"
                   onClick={onSaveNick}
                   disabled={!nickDraft.trim()}
                 >
                   저장
-                </button>
+                </Button>
               </div>
             ) : null}
           </section>
@@ -201,9 +202,9 @@ export default function UsPage() {
           </div>
           {/* 내 프로필(이름·색) 편집 — 색+라벨 이중화(§8), 낙관적 락 저장(Task 6/7) */}
           {couple?.coupleId ? <ProfileEditor coupleId={couple.coupleId} /> : null}
-          <button className={styles.ghostBtn} type="button" onClick={() => void signOut()}>
+          <Button variant="ghost" type="button" onClick={() => void signOut()}>
             로그아웃
-          </button>
+          </Button>
         </section>
 
         {/* 내보내기(§10.4 회수권) — 둘 다 동등하게 내 커플 데이터 전체를 가져갈 수 있다 */}
@@ -213,13 +214,13 @@ export default function UsPage() {
               <span className={styles.label}>내보내기</span>
               <span className={styles.value}>우리 데이터 전체(JSON·사진 ZIP)</span>
             </div>
-            <button className={styles.ghostBtn} type="button" onClick={() => void onExport()} disabled={exporting}>
+            <Button variant="ghost" type="button" onClick={() => void onExport()} disabled={exporting}>
               {exporting ? '내보내는 중…' : '내 데이터 내보내기'}
-            </button>
+            </Button>
             {/* 관계종료 회수용(§10.4) — 원본 사진 blob 포함 ZIP, 양측 동등 */}
-            <button className={styles.ghostBtn} type="button" onClick={() => void onExportZip()} disabled={exporting}>
+            <Button variant="ghost" type="button" onClick={() => void onExportZip()} disabled={exporting}>
               {exporting ? '내보내는 중…' : '사진·데이터 ZIP 내보내기'}
-            </button>
+            </Button>
             {exportError ? (
               <p className={styles.exportError} role="alert">
                 {exportError}
@@ -245,9 +246,9 @@ export default function UsPage() {
         {/* 연결 해제 */}
         {couple?.status === 'ACTIVE' ? (
           <section className={styles.card} aria-label="연결 관리">
-            <button className={styles.dangerGhost} onClick={() => setConfirming(true)}>
+            <Button variant="danger" type="button" onClick={() => setConfirming(true)}>
               연결 해제
-            </button>
+            </Button>
             <Dialog
               open={confirming}
               onClose={() => setConfirming(false)}

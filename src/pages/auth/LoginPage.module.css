@@ -104,23 +104,10 @@
   color: var(--c-text);
 }
 
+/* 제출 버튼은 Button(variant=cta) 프리미티브가 외형을 담당. 여기선 폼 내 간격/전폭만 보정. */
 .submit {
   margin-top: var(--sp-2);
-  min-height: 48px;
-  padding: var(--sp-3);
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: #fff;
-  background: var(--c-brand);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: opacity var(--motion-fast) var(--ease);
-}
-
-.submit:disabled {
-  opacity: 0.6;
-  cursor: default;
+  width: 100%;
 }
 
 .hint {

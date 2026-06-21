@@ -6,6 +6,7 @@ import { useSignInWithGoogle } from '@/hooks/useSignInWithGoogle'
 import { useSignInWithPassword } from '@/hooks/useSignInWithPassword'
 import { useResendCooldown } from '@/hooks/useResendCooldown'
 import { GoogleIcon } from '@/components/auth/GoogleIcon'
+import { Button } from '@/components/ui/Button'
 import { isNativePlatform } from '@/lib/platform'
 import styles from './LoginPage.module.css'
 
@@ -107,9 +108,9 @@ export default function LoginPage() {
                   {error}
                 </p>
               ) : null}
-              <button type="submit" className={styles.submit} disabled={verifying}>
+              <Button type="submit" variant="cta" className={styles.submit} disabled={verifying}>
                 {verifying ? '로그인 중…' : '코드로 로그인'}
-              </button>
+              </Button>
             </form>
             <p className={styles.sentHint}>
               메일이 다른 브라우저에서 열렸다면, 이 화면에 6자리 코드를 입력해 같은 곳에서
@@ -170,9 +171,9 @@ export default function LoginPage() {
                   {error}
                 </p>
               ) : null}
-              <button type="submit" className={styles.submit} disabled={status === 'sending'}>
+              <Button type="submit" variant="cta" className={styles.submit} disabled={status === 'sending'}>
                 {status === 'sending' ? '보내는 중…' : '로그인 링크 받기'}
-              </button>
+              </Button>
             </form>
 
             {/* 개발용 비밀번호 로그인 — 운영 빌드엔 노출 안 함(자동 검증·테스트 안전망). 위 이메일 칸을 그대로 사용. */}
@@ -201,14 +202,15 @@ export default function LoginPage() {
                     {pw.error}
                   </p>
                 ) : null}
-                <button
+                <Button
                   type="submit"
+                  variant="cta"
                   className={styles.submit}
                   disabled={pw.status === 'signing'}
                   data-testid="dev-password-submit"
                 >
                   {pw.status === 'signing' ? '로그인 중…' : '비밀번호로 로그인 (개발용)'}
-                </button>
+                </Button>
               </form>
             ) : null}
           </>
