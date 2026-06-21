@@ -15,18 +15,13 @@
   background: var(--c-surface);
 }
 
+/* 그라데이션 스윕 대신 플랫 핑크 펄스(마시멜로 — 그라데이션 금지·AI 냄새 차단). */
 .lineWide,
 .lineNarrow {
   height: 0.9rem;
-  border-radius: 6px;
-  background: linear-gradient(
-    90deg,
-    var(--c-surface-2) 25%,
-    var(--c-border) 37%,
-    var(--c-surface-2) 63%
-  );
-  background-size: 400% 100%;
-  animation: shimmer 1.4s ease infinite;
+  border-radius: var(--r-xs);
+  background: var(--surface-soft);
+  animation: pulse 1.2s ease-in-out infinite alternate;
 }
 
 .lineWide {
@@ -37,12 +32,12 @@
   width: 45%;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: 100% 0;
+@keyframes pulse {
+  from {
+    opacity: 1;
   }
-  100% {
-    background-position: 0 0;
+  to {
+    opacity: 0.5;
   }
 }
 
