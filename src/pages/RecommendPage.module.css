@@ -10,11 +10,8 @@
   margin: 0 0 var(--sp-2);
 }
 
+/* 표면은 Card 프리미티브(--surface·--line·--r-lg·raised). 카드 간 간격만 여기서. */
 .card {
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  background: var(--c-surface);
-  padding: var(--sp-3);
   margin-bottom: var(--sp-2);
 }
 
@@ -26,50 +23,38 @@
 
 .count {
   font-size: var(--fs-caption);
-  color: var(--c-brand);
+  color: var(--pink-ink);
   font-weight: 600;
 }
 
 .names {
   font-size: var(--fs-caption);
-  color: var(--c-text-weak);
+  color: var(--ink-muted);
   margin: var(--sp-1) 0 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* 코스 CTA — 시각은 Button cta 프리미티브(pill·핑크). 레이아웃만 여기서: 카드 폭 채움 + 상단 간격. */
 .courseBtn {
   margin-top: var(--sp-2);
-  border: 1px solid var(--c-brand);
-  background: var(--c-brand);
-  color: #fff;
-  border-radius: var(--radius-sm);
-  padding: var(--sp-2) var(--sp-3);
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  cursor: pointer;
-  min-height: 44px;
-}
-
-.courseBtn:disabled {
-  opacity: 0.5;
-  cursor: default;
+  width: 100%;
 }
 
 .soon {
   font-size: var(--fs-caption);
-  color: var(--c-text-weak);
+  color: var(--ink-muted);
   margin: var(--sp-1) 0 0;
 }
 
 .building,
 .retro {
   font-size: var(--fs-caption);
-  color: var(--c-text-weak);
+  color: var(--ink-muted);
   padding: var(--sp-2) var(--sp-3);
-  border: 1px dashed var(--c-border);
-  border-radius: var(--radius-sm);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-xs);
   margin: 0 0 var(--sp-2);
 }
 
@@ -77,6 +62,6 @@
 .soonBadge {
   font-size: var(--fs-micro);
   font-weight: 600;
-  color: var(--c-brand);
+  color: var(--pink-ink);
   white-space: nowrap;
 }

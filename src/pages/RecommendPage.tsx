@@ -5,6 +5,8 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { CtaLink } from '@/components/common/CtaLink'
 import { Skeleton } from '@/components/common/Skeleton'
 import { CourseSheet } from '@/components/discover/CourseSheet'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { useToast } from '@/components/common/ToastProvider'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
@@ -197,16 +199,21 @@ function ReadyCard({
     .filter((n): n is string => Boolean(n))
     .slice(0, 5)
   return (
-    <div className={styles.card}>
+    <Card className={styles.card}>
       <div className={styles.cardHead}>
         <strong>{cluster.regionLabel}</strong>
         <span className={styles.count}>{cluster.count}곳</span>
       </div>
       <p className={styles.names}>{names.join(' · ')}</p>
-      <button type="button" className={styles.courseBtn} onClick={() => onAddCourse(cluster)} disabled={busy}>
+      <Button
+        variant="cta"
+        className={styles.courseBtn}
+        onClick={() => onAddCourse(cluster)}
+        disabled={busy}
+      >
         🗓️ 함께 일정 만들기
-      </button>
+      </Button>
       <p className={styles.soon}>거리순 자동 동선으로 내일 일정에 추가돼요 (AI 코스는 배포 후)</p>
-    </div>
+    </Card>
   )
 }

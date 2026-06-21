@@ -15,6 +15,8 @@ import {
 import { useToast } from '@/components/common/ToastProvider'
 import { RouteFallback } from '@/components/common/RouteFallback'
 import { ValuePreview } from '@/components/onboarding/ValuePreview'
+import { Button } from '@/components/ui/Button'
+import { Field } from '@/components/ui/Field'
 import styles from './ConnectPage.module.css'
 
 // 💑 커플 연결(온보딩) — 내 코드 만들기/공유 + 상대 코드 입력. 둘 다 미연결(가드) 상태에서만 도달.
@@ -102,18 +104,19 @@ export default function ConnectPage() {
                 {formatInviteCode(myCode)}
               </div>
               <p className={styles.codeHint}>48시간 안에 상대가 입력하면 연결돼요.</p>
-              <button className={styles.shareBtn} onClick={() => void onShare()}>
+              <Button variant="ghost" className={styles.shareBtn} onClick={() => void onShare()}>
                 카톡·메시지로 공유하기
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
+            <Button
+              variant="cta"
               className={styles.primaryBtn}
               onClick={onCreate}
               disabled={createInvite.isPending}
             >
               {createInvite.isPending ? '만드는 중…' : '초대 코드 만들기'}
-            </button>
+            </Button>
           )}
           {createError ? (
             <p id="create-error" className={styles.error} role="alert">
@@ -129,8 +132,8 @@ export default function ConnectPage() {
         {/* B. 상대 코드 입력 */}
         <section className={styles.section} aria-label="상대 코드 입력">
           <h2 className={styles.sectionTitle}>② 상대 코드 입력하기</h2>
-          <input
-            className={styles.input}
+          <Field
+            className={styles.inputField}
             type="text"
             inputMode="text"
             autoCapitalize="characters"
@@ -155,13 +158,14 @@ export default function ConnectPage() {
               {acceptError}
             </p>
           ) : null}
-          <button
+          <Button
+            variant="cta"
             className={styles.primaryBtn}
             onClick={() => onAccept(input)}
             disabled={!isValidInviteCode(input) || acceptInvite.isPending}
           >
             {acceptInvite.isPending ? '연결 중…' : '연결하기'}
-          </button>
+          </Button>
         </section>
 
         {couple?.status === 'PENDING' ? (

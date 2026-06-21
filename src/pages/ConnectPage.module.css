@@ -28,7 +28,7 @@
 
 .subtitle {
   margin: 0 0 var(--sp-2);
-  color: var(--c-text-weak);
+  color: var(--ink-muted);
   font-size: var(--fs-caption);
 }
 
@@ -46,23 +46,9 @@
   margin: 0;
 }
 
+/* 주요 액션 — 시각은 Button cta 프리미티브. 폼 폭 채움만 여기서. */
 .primaryBtn {
   width: 100%;
-  min-height: 48px;
-  padding: var(--sp-3);
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: #fff;
-  background: var(--c-brand);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: opacity var(--motion-fast) var(--ease);
-}
-
-.primaryBtn:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .codeBox {
@@ -71,35 +57,28 @@
   align-items: center;
   gap: var(--sp-2);
   padding: var(--sp-4);
-  background: var(--c-surface-2);
-  border-radius: var(--radius);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
 }
 
 .code {
   font-size: 2rem;
   font-weight: 600;
   letter-spacing: 0.15em;
-  color: var(--c-brand);
+  color: var(--pink-ink);
   font-variant-numeric: tabular-nums;
 }
 
 .codeHint {
   margin: 0;
   font-size: var(--fs-caption);
-  color: var(--c-text-weak);
+  color: var(--ink-muted);
 }
 
+/* 보조 액션 — 시각은 Button ghost 프리미티브. 코드 박스 폭 채움만 여기서. */
 .shareBtn {
   width: 100%;
-  min-height: 44px;
-  padding: var(--sp-2) var(--sp-3);
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--c-brand);
-  background: var(--c-surface);
-  border: 1px solid var(--c-brand-weak);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
 }
 
 .divider {
@@ -107,7 +86,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  color: var(--c-text-weak);
+  color: var(--ink-muted);
   font-size: var(--fs-caption);
 }
 
@@ -116,30 +95,25 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--c-border);
+  background: var(--line);
 }
 
-.input {
-  width: 100%;
-  padding: var(--sp-3);
+/* 코드 입력 — 표면/테두리/반경(--r-md)은 Field 프리미티브. 코드 전용 타이포만 여기서. */
+.inputField input {
   font-size: 1.25rem;
   text-align: center;
   letter-spacing: 0.1em;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  background: var(--c-surface);
-  color: var(--c-text);
   text-transform: uppercase;
 }
 
 .error {
   margin: 0;
   font-size: var(--fs-caption);
-  color: var(--c-danger);
+  color: var(--danger-ink);
 }
 
 .waiting {
   margin: var(--sp-2) 0 0;
   font-size: var(--fs-caption);
-  color: var(--c-text-weak);
+  color: var(--ink-muted);
 }
