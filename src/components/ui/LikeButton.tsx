@@ -12,6 +12,10 @@ export type LikeButtonProps = {
   count: number
   // 토글 핸들러(낙관적 업데이트/reactions 토글은 호출부 책임).
   onToggle: () => void
+  // aria-label 오버라이드(선택). 미지정 시 "좋아요 N개"가 기본.
+  // 호출부에서 장소명·맥락("○○ 하트 리액션 (총 N개)")을 병기해야 할 때 사용.
+  // 색만 의존 금지(§a11y) — label에도 반드시 개수 등 의미 텍스트를 포함할 것.
+  label?: string
   disabled?: boolean
   className?: string
   // 그 외 표준 button 속성 전달(id, data-*, onFocus 등). aria/type/onClick은 내부 고정.
@@ -24,14 +28,14 @@ function classes(liked: boolean, className?: string): string {
   return [styles.base, liked ? styles.liked : undefined, className].filter(Boolean).join(' ')
 }
 
-export function LikeButton({ liked, count, onToggle, disabled, className, ...rest }: LikeButtonProps) {
+export function LikeButton({ liked, count, onToggle, label, disabled, className, ...rest }: LikeButtonProps) {
   return (
     <button
       {...rest}
       type="button"
       className={classes(liked, className)}
       aria-pressed={liked}
-      aria-label={`좋아요 ${count}개`}
+      aria-label={label ?? `좋아요 ${count}개`}
       disabled={disabled}
       onClick={onToggle}
     >

@@ -1,84 +1,149 @@
+/*
+ * PlaceDetail — 선택 장소 상세 시트(마시멜로 R3, 시각만).
+ * 표면은 Card 프리미티브 톤(--surface, --r-lg, 1px --line, --shadow-raised). 마시멜로 1급 토큰만 사용.
+ * 액션은 Button/LikeButton, 상태/메타는 Chip 프리미티브로 — 색만 의존 금지(글리프+텍스트+aria 병기, §8).
+ */
+
+/* Card 위에 얹는 레이아웃·간격만 정의(표면 톤·패딩·반경·그림자는 Card.base가 담당). */
 .detail {
   position: relative;
-  background: var(--c-surface);
-  color: var(--c-text);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  padding: var(--sp-3);
   margin-bottom: var(--sp-3);
 }
+
+/* 닫기 — ghost Button 위 위치/형태만 보정(원형 아이콘 버튼). */
 .close {
   position: absolute;
   top: var(--sp-1);
   right: var(--sp-1);
   width: 44px;
   height: 44px;
+  min-height: 44px;
+  padding: 0;
   border: none;
   background: transparent;
-  color: var(--c-text-weak);
-  cursor: pointer;
-  font-size: 0.9rem;
-  line-height: 1;
+  color: var(--ink-muted);
+  border-radius: var(--r-pill);
+  font-size: 0.95rem;
 }
-.head { display: flex; align-items: center; gap: var(--sp-2); padding-right: var(--sp-6); }
-.glyph { font-size: 1.1rem; color: var(--c-brand); }
-.name { font-weight: 600; }
-.sub { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); font-size: var(--fs-caption); color: var(--c-text-weak); flex-wrap: wrap; }
-.status { font-weight: 600; color: var(--c-brand); }
-.meta { overflow: hidden; text-overflow: ellipsis; }
-.actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-right: var(--sp-6);
+}
+.glyph {
+  font-size: 1.1rem;
+  color: var(--pink-ink);
+}
+.name {
+  font-weight: 600;
+}
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  flex-wrap: wrap;
+}
+/* 메타 칩은 길어질 수 있어 말줄임 허용(고정 높이 금지 — Dynamic Type 존중). */
+.meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+/* 가봤어요/취소 Button은 가로로 늘려 시트 폭을 채운다. */
 .action {
   flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  border: 1px solid var(--c-border);
-  background: var(--c-surface);
-  color: var(--c-text);
-  border-radius: 999px;
-  padding: var(--sp-2) var(--sp-1);
-  font-size: var(--fs-caption);
-  cursor: pointer;
-  min-height: 44px;
   white-space: nowrap;
 }
-/* 가봤음 — 색+텍스트 상태 표시(§8). 허위 disabled(opacity/cursor) 제거: 정상 토글. */
-.actionDone { color: var(--c-success); font-weight: 600; }
+/* 리액션(LikeButton)은 자연 폭. */
+.react {
+  flex: 0 0 auto;
+}
 
 /* 목록(컬렉션) 토글 섹션 — 가산 기능. 색만 의존 금지: ✓/+ 글리프 + 텍스트 라벨 병기(§8). */
-.collSection { margin-top: var(--sp-3); }
+.collSection {
+  margin-top: var(--sp-3);
+}
 .collLabel {
   display: block;
   font-size: var(--fs-caption);
   font-weight: 600;
-  color: var(--c-text-weak);
-  margin-bottom: var(--sp-1);
+  color: var(--ink-muted);
+  margin-bottom: var(--sp-2);
 }
-.collChips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.collChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+/* 컬렉션 칩은 토글 버튼(min 44px 터치 타깃) — Chip 톤을 손으로 맞춰 칩 형태 유지. */
 .collChip {
-  border: 1px solid var(--c-border);
-  background: var(--c-surface);
-  color: var(--c-text-weak);
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  border-radius: var(--r-pill);
   padding: 6px 12px;
+  font-family: inherit;
   font-size: var(--fs-caption);
+  font-weight: 500;
   cursor: pointer;
   min-height: 44px;
+  transition: transform var(--motion-fast) var(--ease);
 }
+.collChip:active {
+  transform: scale(0.97);
+}
+.collChip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.collChip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.collChip:disabled:active {
+  transform: none;
+}
+/* 담긴 칩 — 핑크 소프트 표면 + 핑크 잉크 + 강조 라인(색만이 아니라 ✓ 글리프·"빼기" 라벨로도 구분). */
 .collOn {
-  background: var(--c-surface-2);
-  color: var(--c-brand);
+  background: var(--pink-100);
+  color: var(--pink-ink);
   font-weight: 600;
-  border-color: var(--c-brand);
+  border-color: var(--line-strong);
 }
+/* 목록 관리 — 대시 라인의 보조 칩. */
 .collManage {
-  border: 1px dashed var(--c-border);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border: 1px dashed var(--line-strong);
   background: transparent;
-  color: var(--c-text-weak);
-  border-radius: 999px;
+  color: var(--ink-muted);
+  border-radius: var(--r-pill);
   padding: 6px 12px;
+  font-family: inherit;
   font-size: var(--fs-caption);
+  font-weight: 500;
   cursor: pointer;
   min-height: 44px;
+  transition: transform var(--motion-fast) var(--ease);
+}
+.collManage:active {
+  transform: scale(0.97);
+}
+.collManage:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }

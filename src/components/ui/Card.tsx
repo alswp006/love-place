@@ -1,4 +1,5 @@
-import type { ElementType, HTMLAttributes, ReactNode } from 'react'
+import { forwardRef } from 'react'
+import type { ElementType, HTMLAttributes, ReactNode, Ref } from 'react'
 import styles from './Card.module.css'
 
 // 공용 Card 프리미티브(마시멜로 R2) — 표면 컨테이너. as 다형(기본 div), soft 변형, className 병합.
@@ -18,11 +19,16 @@ function classes(soft: boolean, className?: string): string {
   return [styles.base, soft ? styles.soft : undefined, className].filter(Boolean).join(' ')
 }
 
-export function Card({ as, soft = false, className, children, ...rest }: CardProps) {
+// forwardRef로 ref를 표면 요소에 전달(포커스 이동 등 — 예: 상세 시트 진입 시 focus()).
+// as 다형이라 ref 대상 타입은 호출부에 따라 달라지므로 generic Element로 받는다.
+export const Card = forwardRef<Element, CardProps>(function Card(
+  { as, soft = false, className, children, ...rest },
+  ref,
+) {
   const Tag = as ?? 'div'
   return (
-    <Tag {...rest} className={classes(soft, className)}>
+    <Tag {...rest} ref={ref as Ref<Element>} className={classes(soft, className)}>
       {children}
     </Tag>
   )
-}
+})
