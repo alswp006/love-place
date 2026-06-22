@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { useKakaoSearch } from '@/hooks/useKakaoSearch'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import styles from './PlaceSearch.module.css'
@@ -9,14 +9,24 @@ export function PlaceSearch({
   coupleId,
   savedKakaoIds,
   onPick,
+  initialQuery,
 }: {
   coupleId: string | null
   savedKakaoIds: Set<string>
   onPick: (hit: KakaoPlaceHit) => void
+  initialQuery?: string | null
 }) {
   const { query, setQuery, clear, status, hits, error } = useKakaoSearch()
   const inputRef = useRef<HTMLInputElement>(null)
   void coupleId // coupleId는 부모 저장 흐름에서 사용(여기선 표식만 유지).
+  // 추천 SEED 카드의 ?q= 딥링크 — 최초 1회 검색어 시드 → 디바운스 자동완성 실행(빈 값 무시).
+  const seeded = useRef(false)
+  useEffect(() => {
+    if (!seeded.current && initialQuery) {
+      seeded.current = true
+      setQuery(initialQuery)
+    }
+  }, [initialQuery, setQuery])
 
   return (
     <div className={styles.wrap} data-testid="place-search">

@@ -30,7 +30,7 @@ export function WeekStrip({
         ‹
       </button>
       <div className={styles.weekStripDays} role="group" aria-label="주 날짜 선택">
-        {cells.map((c) => {
+        {cells.map((c, labelIdx) => {
           const sel = c.key === selected
           const today = c.key === todayKey
           const classes = [
@@ -40,8 +40,7 @@ export function WeekStrip({
           ]
             .filter(Boolean)
             .join(' ')
-          // DOW 라벨은 셀 인덱스(weekMatrix는 일요일 시작)로 직접 매핑(0=일).
-          const labelIdx = cells.indexOf(c)
+          // DOW 라벨은 셀 인덱스(weekMatrix는 일요일 시작)로 직접 매핑(0=일). map 인덱스 사용(indexOf O(n²) 제거).
           return (
             <button
               key={c.key}

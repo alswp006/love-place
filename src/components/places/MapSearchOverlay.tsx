@@ -11,11 +11,13 @@ export function MapSearchOverlay({
   savedKakaoIds,
   onPick,
   snap,
+  initialQuery,
 }: {
   coupleId: string | null
   savedKakaoIds: Set<string>
   onPick: (hit: KakaoPlaceHit) => void
   snap: SnapStop
+  initialQuery?: string | null
 }) {
   const collapsed = snap !== 'peek'
   return (
@@ -26,7 +28,12 @@ export function MapSearchOverlay({
       data-hidden={collapsed ? 'true' : undefined}
       aria-hidden={collapsed}
     >
-      <PlaceSearch coupleId={coupleId} savedKakaoIds={savedKakaoIds} onPick={onPick} />
+      <PlaceSearch
+        coupleId={coupleId}
+        savedKakaoIds={savedKakaoIds}
+        onPick={onPick}
+        initialQuery={initialQuery}
+      />
     </div>
   )
 }

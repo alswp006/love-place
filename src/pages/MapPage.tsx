@@ -63,6 +63,7 @@ export default function MapPage() {
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const placeParam = searchParams.get('place')
+  const qParam = searchParams.get('q')
 
   const conflict = useConflict()
 
@@ -129,6 +130,19 @@ export default function MapPage() {
     )
   }, [placeParam, enriched, setSearchParams])
 
+  // ?q= 딥링크 수신(추천 SEED 카드) — 검색 오버레이가 initialQuery로 1회 시드(PlaceSearch). 처리 후 param 제거.
+  useEffect(() => {
+    if (!qParam) return
+    setSearchParams(
+      (prev) => {
+        const sp = new URLSearchParams(prev)
+        sp.delete('q')
+        return sp
+      },
+      { replace: true },
+    )
+  }, [qParam, setSearchParams])
+
   return (
     <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId} fullBleed>
       {isNaverMapConfigured() ? (
@@ -144,7 +158,13 @@ export default function MapPage() {
           </div>
           {/* 검색바는 시트가 아니라 지도 위 상단 오버레이(spec §5) — peek에서도 도달, ≤3탭 보존. */}
           {coupleActive ? (
-            <MapSearchOverlay coupleId={coupleId} savedKakaoIds={savedKakaoIds} onPick={onPick} snap={snap} />
+            <MapSearchOverlay
+              coupleId={coupleId}
+              savedKakaoIds={savedKakaoIds}
+              onPick={onPick}
+              snap={snap}
+              initialQuery={qParam}
+            />
           ) : null}
           <NaverMap
             places={enriched}
