@@ -1,5 +1,13 @@
-// feature-detect 햅틱. iOS Safari는 navigator.vibrate 미지원 → no-op. 시각 피드백과 항상 병행(ux §1).
+import { isNativePlatform } from './platform'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
+
+// 햅틱 — 네이티브(Capacitor)는 @capacitor/haptics(iOS WKWebView는 navigator.vibrate 미지원이라 필수),
+// 웹은 navigator.vibrate 폴백(미지원 브라우저는 no-op). 시각 피드백과 항상 병행(ux §1).
 export function haptic(pattern: number | number[] = 10): boolean {
+  if (isNativePlatform()) {
+    void Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
+    return true
+  }
   if (typeof navigator === 'undefined') return false
   // NOTE: adapted from plan — the intersection cast `Navigator & { vibrate?: ... }` does not
   // compile against the current lib.dom.d.ts (DOM.Iterable) because intersecting with the

@@ -9,6 +9,12 @@ const config: CapacitorConfig = {
   ios: { contentInset: 'always' },
   // androidScheme=https로 두면 Android WebView origin이 https://localhost — 표준/안전(혼합콘텐츠 회피).
   server: { androidScheme: 'https' },
+  plugins: {
+    // 입력창이 키보드에 가리지 않게 WebView 리사이즈(P-A.5).
+    Keyboard: { resize: 'native' },
+    // 스플래시: 흰 깜빡임 대신 마시멜로 핑크 배경. 셸 마운트 후 initNative가 hide() 호출(launchAutoHide:false).
+    SplashScreen: { launchAutoHide: false, backgroundColor: '#fff1f4', showSpinner: false },
+  },
 }
 
 export default config

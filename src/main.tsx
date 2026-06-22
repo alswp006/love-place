@@ -7,6 +7,7 @@ import { queryClient } from '@/lib/queryClient'
 import { router } from '@/app/router'
 import { registerPwa } from '@/lib/pwa'
 import { initNativeAuthDeepLink } from '@/lib/native/authDeepLink'
+import { initNative } from '@/lib/native/initNative'
 // self-host 웹폰트(OFL) — 본문 Pretendard, 디스플레이 Quicksand(400/500/600만). Cafe24는 tokens.css @font-face.
 import 'pretendard/dist/web/static/pretendard.css'
 import '@fontsource/quicksand/400.css'
@@ -32,3 +33,6 @@ void registerPwa()
 
 // 네이티브 매직링크 딥링크 복귀 처리(웹에선 no-op).
 initNativeAuthDeepLink()
+
+// 네이티브 셸 폴리시(상태바·안드로이드 백·스플래시 숨김 — 웹에선 no-op).
+initNative()
