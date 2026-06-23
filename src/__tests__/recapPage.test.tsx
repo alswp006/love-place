@@ -14,6 +14,10 @@ const recap = vi.hoisted(() => ({
 vi.mock('@/hooks/useCouple', () => ({ useCouple: () => ({ data: { coupleId: 'c1' } }) }))
 vi.mock('@/hooks/useTripRecap', () => ({ useTripRecap: () => recap }))
 vi.mock('@/hooks/usePlaces', () => ({ usePlaces: () => ({ data: [], isLoading: false }) }))
+// 스냅 미적용(측지선 베이스) — 도로 스냅은 별도 훅 테스트로 검증.
+vi.mock('@/hooks/useSnappedPolyline', () => ({
+  useSnappedPolyline: () => ({ polyline: null, roadDistanceKm: null, degraded: false, isLoading: false }),
+}))
 // 지도는 테스트에서 렌더하지 않게(키 미설정) — 스탯/목록은 지도와 별개로 렌더된다.
 vi.mock('@/lib/naver/loadNaverMaps', () => ({ isNaverMapConfigured: () => false }))
 vi.mock('@/lib/haptics', () => ({ haptic: vi.fn() }))

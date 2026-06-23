@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCouple } from '@/hooks/useCouple'
 import { useTripRecap } from '@/hooks/useTripRecap'
+import { useSnappedPolyline } from '@/hooks/useSnappedPolyline'
 import { usePlaces } from '@/hooks/usePlaces'
 import { NaverMap } from '@/components/map/NaverMap'
 import { isNaverMapConfigured } from '@/lib/naver/loadNaverMaps'
@@ -28,7 +29,12 @@ export default function RecapPage() {
     () => (allPlaces ?? []).filter((p) => stopIds.has(p.id)),
     [allPlaces, stopIds],
   )
-  const polyline = useMemo(() => vertices.map((v) => ({ lat: v.lat, lng: v.lng })), [vertices])
+  const geodesic = useMemo(() => vertices.map((v) => ({ lat: v.lat, lng: v.lng })), [vertices])
+  // 프로그레시브: 측지선 즉시 렌더 → 도로 스냅 도착 시 덮어쓰기(미배포/실패면 측지선 유지).
+  const snapped = useSnappedPolyline(coupleId, tripId, vertices)
+  const linePolyline = snapped.polyline ?? geodesic
+  const distKm = snapped.roadDistanceKm ?? stats.distanceKm
+  const distLabel = snapped.roadDistanceKm != null ? '도로' : '장소→장소'
 
   const period =
     trip && trip.start_date && trip.end_date
@@ -81,14 +87,19 @@ export default function RecapPage() {
         <>
           {isNaverMapConfigured() ? (
             <div className={styles.mapWrap}>
-              <NaverMap places={markerPlaces} visitedIds={stopIds} snap="full" polyline={polyline} />
+              <NaverMap
+                places={markerPlaces}
+                visitedIds={stopIds}
+                snap="full"
+                polyline={linePolyline}
+              />
             </div>
           ) : null}
 
           {/* 3-스탯 — 색만 의존 금지(아이콘+텍스트). 거리는 '장소→장소'로 정직 표기(측지선). */}
           <div className={styles.stats} role="group" aria-label="여행 요약">
             <Chip tone="pink">📍 장소 {stats.stopCount}곳</Chip>
-            <Chip tone="neutral">📏 {stats.distanceKm}km(장소→장소)</Chip>
+            <Chip tone="neutral">📏 {distKm}km({distLabel})</Chip>
             <Chip tone="neutral">🗓️ {stats.days}일</Chip>
           </div>
 
