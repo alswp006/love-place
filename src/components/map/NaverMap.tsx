@@ -28,6 +28,7 @@ export function NaverMap({
   snap,
   onSelect,
   onClose,
+  polyline,
 }: {
   places: MarkerPlace[]
   visitedIds?: Set<string>
@@ -36,6 +37,8 @@ export function NaverMap({
   snap: SnapStop
   onSelect?: (id: string) => void
   onClose?: () => void
+  // 리캡 동선(R5) — 정점 순서대로 측지선 폴리라인. 미지정이면 그리지 않음(지도 화면엔 영향 없음).
+  polyline?: { lat: number; lng: number }[]
 }) {
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<naver.maps.Map | null>(null)
@@ -46,6 +49,7 @@ export function NaverMap({
   const mapMoveRef = useRef<naver.maps.MapEventListener[]>([])
   const mapClickRef = useRef<naver.maps.MapEventListener | null>(null)
   const previewMarkerRef = useRef<naver.maps.Marker | null>(null)
+  const polylineRef = useRef<naver.maps.Polyline | null>(null)
   // 내 위치 self-dot + accuracy 원(spec §3.5). userMovedRef: 사용자가 지도를 드래그하면 자동 센터링 중단.
   const selfMarkerRef = useRef<naver.maps.Marker | null>(null)
   const accuracyCircleRef = useRef<naver.maps.Circle | null>(null)
@@ -76,6 +80,27 @@ export function NaverMap({
   // 마커를 재구축할 때 stale 클로저의 선택값을 쓰지 않게(선택 강조가 pan/zoom에서 깜빡 사라짐 방지, R1.6).
   const selectedIdRef = useRef<string | null>(selectedId ?? null)
   selectedIdRef.current = selectedId ?? null
+
+  // 리캡 동선 폴리라인(R5) — 정점 2개 이상이면 측지선으로 잇는다(마시멜로 핑크). 변경/언마운트 시 정리.
+  useEffect(() => {
+    const map = mapRef.current
+    const nv = (typeof window !== 'undefined' && window.naver?.maps && window.naver) || null
+    if (!ready || !map || !nv) return
+    polylineRef.current?.setMap(null)
+    polylineRef.current = null
+    if (!polyline || polyline.length < 2) return
+    polylineRef.current = new nv.maps.Polyline({
+      map,
+      path: polyline.map((p) => new nv.maps.LatLng(p.lat, p.lng)),
+      strokeColor: '#e2638a',
+      strokeWeight: 4,
+      strokeOpacity: 0.9,
+    })
+    return () => {
+      polylineRef.current?.setMap(null)
+      polylineRef.current = null
+    }
+  }, [polyline, ready])
 
   // 지도 초기화(loadKey 재시도 시 재실행). loadNaverMaps()는 promise를 메모이즈하므로
   // 1차 실패가 캐시되면 재시도가 같은 거부 promise를 다시 받는다 → window.naver.maps가

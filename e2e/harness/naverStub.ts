@@ -18,6 +18,12 @@ export const NAVER_STUB_JS = `
   Circle.prototype.setCenter = function () {};
   Circle.prototype.setRadius = function () {};
   Circle.prototype.setOptions = function () {};
+  // Polyline — 리캡 동선(R5). 스텁은 DOM 없이 메서드만(맵 init throw 방지).
+  function Polyline(opts) { this._opts = opts || {}; }
+  Polyline.prototype.setMap = function () {};
+  Polyline.prototype.setPath = function () {};
+  Polyline.prototype.getPath = function () { return (this._opts && this._opts.path) || []; };
+  Polyline.prototype.setOptions = function () {};
   function Marker(opts) {
     this._opts = opts || {};
     this._pos = this._opts.position;
@@ -52,6 +58,6 @@ export const NAVER_STUB_JS = `
   // Position enum — NaverMap이 logoControlOptions/scaleControlOptions에 nv.maps.Position.TOP_LEFT/TOP_RIGHT를
   // 참조하므로 스텁에도 제공해야 map init이 throw하지 않는다(R1.3).
   var Position = { CENTER: 0, TOP_LEFT: 1, TOP_CENTER: 2, TOP_RIGHT: 3, LEFT_CENTER: 4, RIGHT_CENTER: 6, BOTTOM_LEFT: 7, BOTTOM_CENTER: 8, BOTTOM_RIGHT: 9 };
-  window.naver = { maps: { Map: Map, LatLng: LatLng, LatLngBounds: LatLngBounds, Point: Point, Marker: Marker, Circle: Circle, Event: Event, Position: Position } };
+  window.naver = { maps: { Map: Map, LatLng: LatLng, LatLngBounds: LatLngBounds, Point: Point, Marker: Marker, Circle: Circle, Polyline: Polyline, Event: Event, Position: Position } };
 })();
 `
