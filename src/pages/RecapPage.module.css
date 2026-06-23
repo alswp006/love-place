@@ -1,0 +1,107 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.titleBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  color: var(--ink);
+  font-family: var(--font-display);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.period {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+}
+
+.headerSpacer {
+  width: 44px;
+}
+
+.body {
+  padding: var(--sp-4);
+}
+
+/* 지도 — 리캡 동선. 고정 높이 섹션(상세 페이지라 풀블리드 아님). */
+.mapWrap {
+  position: relative;
+  height: 52vh;
+  min-height: 320px;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4) var(--sp-2);
+}
+
+.stops {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--sp-4) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.stop {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+}
+
+.stopNum {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  background: var(--pink-100);
+  color: var(--pink-ink);
+  font-weight: 600;
+  font-size: var(--fs-caption);
+}
+
+.stopBody {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stopName {
+  font-weight: 500;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stopMeta {
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+}

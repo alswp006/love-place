@@ -20,6 +20,8 @@ const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const AuthCallbackPage = lazy(() => import('@/pages/auth/AuthCallbackPage'))
 // 커플 연결(온보딩) — 가드 안, 단 탭바 없는 풀스크린(AppLayout 밖).
 const ConnectPage = lazy(() => import('@/pages/ConnectPage'))
+// 여행 리캡(R5) — 가드+탭바 안의 상세 라우트.
+const RecapPage = lazy(() => import('@/pages/RecapPage'))
 
 function lazyRoute(node: ReactNode) {
   return <Suspense fallback={<RouteFallback />}>{node}</Suspense>
@@ -57,6 +59,12 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           ...tabRoutes,
+          // 여행 리캡 상세(R5) — 추천 탭 '지난 여행'에서 진입(딥링크 가능).
+          {
+            path: 'trips/:tripId/recap',
+            element: lazyRoute(<RecapPage />),
+            errorElement: <RouteError />,
+          },
           // /places는 지도(/)로 통합됨 — 북마크/딥링크 보존용 명시적 리다이렉트.
           { path: 'places', element: <Navigate to="/" replace /> },
           // 미지정(로그인 상태) 경로는 지도(/)로.
