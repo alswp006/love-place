@@ -12,6 +12,7 @@ import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { usePlaces } from '@/hooks/usePlaces'
 import { useVisits } from '@/hooks/useVisits'
+import { useTrips } from '@/hooks/useTrips'
 import { useEventMutations } from '@/hooks/useEventMutations'
 import { regionClusters, RECO_THRESHOLD, type RegionCluster } from '@/lib/recommend/regionClusters'
 import type { CoursePlace, CourseStop } from '@/lib/route/coursePlan'
@@ -35,6 +36,7 @@ export default function RecommendPage() {
   const coupleId = couple?.coupleId ?? null
   const { data: places, isLoading: placesLoading } = usePlaces(coupleId)
   const { data: visits, isLoading: visitsLoading } = useVisits(coupleId)
+  const { data: trips } = useTrips(coupleId)
   const toast = useToast()
   const navigate = useNavigate()
   const { addCourse } = useEventMutations(coupleId, myId, () => {}) // 코스 일괄 추가(멱등)
@@ -147,6 +149,17 @@ export default function RecommendPage() {
                 📷 지난 <strong>{c.regionLabel}</strong> {c.count}곳 다시 보기 ·{' '}
                 <span className={styles.soonBadge}>곧 제공</span>
               </p>
+            ))}
+          </section>
+        ) : null}
+
+        {(trips ?? []).length > 0 ? (
+          <section aria-label="지난 여행">
+            <h2 className={styles.sectionTitle}>지난 여행 리캡</h2>
+            {(trips ?? []).map((t) => (
+              <CtaLink key={t.id} to={`/trips/${t.id}/recap`}>
+                🧭 {t.title} · {t.start_date}~{t.end_date}
+              </CtaLink>
             ))}
           </section>
         ) : null}
