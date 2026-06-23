@@ -19,6 +19,12 @@ function jsonRoute(body: unknown) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
 }
 
+// self-host 웹폰트(Pretendard/Quicksand) 요청 차단 → e2e는 결정론적 폴백 폰트로 렌더한다.
+// (웹폰트 비동기 로딩 타이밍이 스냅샷을 간헐 플래키하게 만들던 것 제거. 앱/프로덕션 폰트는 영향 없음.)
+export async function blockFonts(page: Page): Promise<void> {
+  await page.route(/\.(?:woff2?|ttf|otf)(?:\?.*)?$/i, (route) => route.abort())
+}
+
 export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promise<void> {
   const session = {
     access_token: 'e2e', token_type: 'bearer', expires_in: 3600, expires_at: FAR_FUTURE,
@@ -29,6 +35,7 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
     window.localStorage.setItem(key as string, val as string)
   }, ['sb-e2e-auth-token', JSON.stringify(session)])
 
+  await blockFonts(page)
   await page.route(NAVER_SCRIPT_GLOB, (route) =>
     route.fulfill({ status: 200, contentType: 'application/javascript', body: NAVER_STUB_JS }),
   )

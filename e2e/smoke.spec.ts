@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { blockFonts } from './harness/seed'
 
 // P0b 이후: 탭은 로그인 뒤에 있다. 키 없는 빌드(e2e 환경)에선 비로그인 → /auth(로그인 화면)로 간다.
 // 로그인 후 화면은 인증이 필요해 e2e 스모크에선 다루지 않고, 라우팅/렌더 단위는 vitest가 검증.
@@ -12,6 +13,7 @@ test('보호된 루트(/)는 로그인 화면으로 보낸다', async ({ page })
 })
 
 test('로그인 화면이 모바일 뷰포트에서 렌더된다', async ({ page }) => {
+  await blockFonts(page) // 결정론적 폴백 폰트(스냅샷 플래키 제거)
   await page.goto('/auth')
   await expect(page.getByRole('heading', { name: 'love place' })).toBeVisible()
 
