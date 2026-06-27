@@ -1,0 +1,29 @@
+/* 지도 위 동선 시작/종료 컨트롤 — 상단 오버레이 중앙 정렬 pill. */
+.wrap {
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.wrap > * {
+  pointer-events: auto;
+}
+
+.startBtn {
+  box-shadow: var(--shadow-floating);
+  border-radius: 999px;
+}
+
+.consentLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  border-radius: 999px;
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--shadow-floating);
+}

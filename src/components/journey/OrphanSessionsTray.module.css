@@ -1,0 +1,54 @@
+/* 미연결 동선 트레이 — /us 컨트롤 센터 안. */
+.wrap {
+  margin-top: var(--sp-3);
+  border-top: 1px solid var(--c-border, rgba(0, 0, 0, 0.08));
+  padding-top: var(--sp-3);
+}
+
+.head {
+  margin: 0 0 var(--sp-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.warn {
+  font-weight: 500;
+  color: var(--c-danger, #b8485c);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.meta {
+  font-size: 0.85rem;
+  color: var(--c-text-muted, var(--c-text));
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.select {
+  min-height: 44px;
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border, rgba(0, 0, 0, 0.12));
+  background: var(--c-surface);
+  color: var(--c-text);
+  padding: 0 var(--sp-2);
+}

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { useConsent, LOCATION_POLICY_VERSION } from '@/hooks/useConsent'
 import { ConsentSheet } from './ConsentSheet'
+import { OrphanSessionsTray } from './OrphanSessionsTray'
 import styles from './LocationControlCenter.module.css'
 
 // 위치 컨트롤 센터(/us) — 동의 상태 + 관리 + '즉시 중단'(거절 불가·항상 가능, 위치정보법 제24조2).
@@ -45,6 +46,9 @@ export function LocationControlCenter({ coupleId, userId }: Props) {
         <p className={styles.hint}>
           동의를 철회하면 기록된 동선과 제공 기록이 함께 파기돼요. 동선은 여행 리캡에서 개별 삭제할 수도 있어요.
         </p>
+
+        {/* 미연결 동선(A안) — 여행에 연결하거나 삭제. 14일 후 자동 파기. */}
+        <OrphanSessionsTray coupleId={coupleId} userId={userId} />
       </Card>
 
       <ConsentSheet

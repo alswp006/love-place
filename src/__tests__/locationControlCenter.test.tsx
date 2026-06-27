@@ -16,6 +16,8 @@ vi.mock('@/hooks/useConsent', async (orig) => {
   const real = await orig<typeof import('@/hooks/useConsent')>()
   return { ...real, useConsent: () => c }
 })
+// 미연결 동선 트레이는 별도 테스트(orphanSessionsTray.test) — 여기선 no-op으로 격리.
+vi.mock('@/components/journey/OrphanSessionsTray', () => ({ OrphanSessionsTray: () => null }))
 
 import { LocationControlCenter } from '@/components/journey/LocationControlCenter'
 
