@@ -50,8 +50,10 @@ BEGIN
   IF v_couple IS NULL THEN
     RAISE EXCEPTION 'session not found or not in caller couple';
   END IF;
-  IF v_status <> 'RECORDING' THEN
-    RAISE EXCEPTION 'session not recording (status=%)', v_status;
+  -- 활성 세션(RECORDING/PAUSED)만 점 수용 — 종료 직전 큐 drain이 게이트를 통과하도록(막판 점 유실 방지).
+  -- DONE/DISCARDED(닫힌 세션)는 거부. 조립측은 stop→drain→DONE 순서로 호출.
+  IF v_status NOT IN ('RECORDING', 'PAUSED') THEN
+    RAISE EXCEPTION 'session not active (status=%)', v_status;
   END IF;
   -- 수집·이용 동의 서버 강제(제18조) — 앱단 게이트와 이중화. 철회 즉시 새 점 거부.
   IF NOT public._has_consent(v_owner, 'COLLECT_USE') THEN

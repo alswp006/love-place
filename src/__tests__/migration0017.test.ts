@@ -30,8 +30,8 @@ describe('migration 0017 — 좌표 암호화 RPC + 파기 잡', () => {
     expect(s).toMatch(/SECURITY DEFINER/i)
   })
 
-  it('record_points는 RECORDING 상태가 아니면 거부한다(상태 게이트)', () => {
-    expect(sql()).toMatch(/IF\s+v_status\s*<>\s*'RECORDING'\s+THEN[\s\S]*RAISE EXCEPTION/i)
+  it('record_points는 활성(RECORDING/PAUSED) 세션만 수용, 닫힌 세션 거부(종료 drain 통과용)', () => {
+    expect(sql()).toMatch(/IF\s+v_status\s+NOT IN\s*\(\s*'RECORDING'\s*,\s*'PAUSED'\s*\)\s+THEN[\s\S]*RAISE EXCEPTION/i)
   })
 
   it('_has_consent 헬퍼 + record_points가 COLLECT_USE 동의를 서버에서 강제', () => {
