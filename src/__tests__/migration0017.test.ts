@@ -34,6 +34,16 @@ describe('migration 0017 — 좌표 암호화 RPC + 파기 잡', () => {
     expect(sql()).toMatch(/IF\s+v_status\s+NOT IN\s*\(\s*'RECORDING'\s*,\s*'PAUSED'\s*\)\s+THEN[\s\S]*RAISE EXCEPTION/i)
   })
 
+  it('암호화 함수는 search_path에 extensions 포함(Supabase pgcrypto 스키마) + 키gen은 코어 사용', () => {
+    const s = sql()
+    // pgp_sym_encrypt/decrypt가 extensions 스키마라 search_path에 포함돼야 런타임 해석됨.
+    expect(s).toMatch(/record_points[\s\S]*?SET search_path = public, extensions/i)
+    expect(s).toMatch(/get_session_points[\s\S]*?SET search_path = public, extensions/i)
+    // 키 생성은 pgcrypto gen_random_bytes(스키마 의존) 금지 — 코어 gen_random_uuid 사용.
+    expect(s).not.toMatch(/gen_random_bytes/i)
+    expect(s).toMatch(/vault\.create_secret\([\s\S]*?gen_random_uuid\(\)/i)
+  })
+
   it('_has_consent 헬퍼 + record_points가 COLLECT_USE 동의를 서버에서 강제', () => {
     const s = sql()
     expect(s).toMatch(/CREATE OR REPLACE FUNCTION\s+public\._has_consent\s*\(\s*p_user\s+uuid\s*,\s*p_type\s+text\s*\)/i)

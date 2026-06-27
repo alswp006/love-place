@@ -12,8 +12,11 @@ CREATE EXTENSION IF NOT EXISTS supabase_vault;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM vault.secrets WHERE name = 'loc_point_key') THEN
-    PERFORM vault.create_secret(encode(gen_random_bytes(32), 'hex'), 'loc_point_key',
-            'R6 route_points 좌표 대칭암호 키');
+    -- 키 = 64 hex(256bit). gen_random_uuid()는 코어(pg_catalog)라 스키마 무관 — pgcrypto gen_random_bytes는
+    -- Supabase에서 extensions 스키마라 search_path 의존 → 회피.
+    PERFORM vault.create_secret(
+            replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''),
+            'loc_point_key', 'R6 route_points 좌표 대칭암호 키');
   END IF;
 END $$;
 
@@ -36,7 +39,7 @@ REVOKE ALL ON FUNCTION public._has_consent(uuid, text) FROM public, anon, authen
 -- 1) record_points — 좌표 암호화 insert(멱등) + COLLECT 확인자료 -----------------
 CREATE OR REPLACE FUNCTION public.record_points(p_session uuid, p_points jsonb)
 RETURNS integer
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
 DECLARE
   v_couple uuid; v_owner uuid; v_status text;
   v_key    text := public._loc_key();
@@ -91,7 +94,7 @@ GRANT EXECUTE ON FUNCTION public.record_points(uuid, jsonb) TO authenticated;
 -- 2) get_session_points — 복호 read + PROVIDE 확인자료(상대 열람, 일 1회 디듑) -----
 CREATE OR REPLACE FUNCTION public.get_session_points(p_session uuid)
 RETURNS TABLE(recorded_at timestamptz, lat double precision, lng double precision, accuracy_m real)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
 DECLARE
   v_couple uuid; v_owner uuid;
   v_key    text := public._loc_key();
@@ -139,7 +142,7 @@ GRANT EXECUTE ON FUNCTION public.get_session_points(uuid) TO authenticated;
 --   → 이 함수는 철회 경로(location-purge Edge Function) 전용이므로 세션의 확인자료를 보존기간과
 --     무관하게 전부 파기한다(평시 6개월 보존은 purge_expired_access_log 잡이 담당, 철회는 예외).
 CREATE OR REPLACE FUNCTION public.purge_location_data(p_session uuid)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
 BEGIN
   DELETE FROM public.route_points  WHERE session_id = p_session;   -- CASCADE 대비 명시
   DELETE FROM public.trip_sessions WHERE id = p_session;
@@ -151,7 +154,7 @@ GRANT EXECUTE ON FUNCTION public.purge_location_data(uuid) TO service_role;
 
 -- 4) purge_expired_access_log — 보존기간 만료 자동 파기(미파기 처벌 방지) ----------
 CREATE OR REPLACE FUNCTION public.purge_expired_access_log()
-RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
 DECLARE n integer;
 BEGIN
   DELETE FROM public.location_access_log WHERE retain_until < now();
@@ -165,7 +168,7 @@ GRANT EXECUTE ON FUNCTION public.purge_expired_access_log() TO service_role;
 -- 철회 파기(purge_location_data, 확인자료까지)와 구분: 여기선 수집 '사실'은 audit에 남긴다(제16조2 6개월).
 -- route_points는 trip_sessions ON DELETE CASCADE라 세션 삭제 시 동반 삭제됨.
 CREATE OR REPLACE FUNCTION public.purge_orphan_sessions(p_grace_days int DEFAULT 14)
-RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
 DECLARE n integer;
 BEGIN
   DELETE FROM public.trip_sessions
