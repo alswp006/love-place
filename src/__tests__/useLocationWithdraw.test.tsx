@@ -52,4 +52,17 @@ describe('useLocationWithdraw', () => {
       await expect(result.current.withdraw({ sessionId: 's1' })).rejects.toThrow(/파기/)
     })
   })
+
+  it('하드파기 후 복호 좌표 캐시를 evict한다(잔존 금지)', async () => {
+    h.invoke.mockResolvedValue({ data: { ok: true }, error: null })
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    qc.setQueryData(['recorded-route', 'c1', 's1'], [{ recorded_at: 't', lat: 37.5, lng: 127.0 }])
+    const w = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: qc }, children)
+    const { result } = renderHook(() => useLocationWithdraw('c1'), { wrapper: w })
+    await act(async () => {
+      await result.current.withdraw({ sessionId: 's1' })
+    })
+    expect(qc.getQueryData(['recorded-route', 'c1', 's1'])).toBeUndefined()
+  })
 })

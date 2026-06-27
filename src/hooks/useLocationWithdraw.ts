@@ -17,7 +17,9 @@ export function useLocationWithdraw(coupleId: string | null) {
       if (!data || data.ok !== true) throw new Error('파기 처리에 실패했어요.')
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ['recorded-route', coupleId] })
+      // 하드파기 = 클라 캐시도 evict(복호된 좌표 잔존 금지). invalidate(데이터 유지·재조회)로는 부족.
+      qc.removeQueries({ queryKey: ['recorded-route', coupleId] })
+      qc.removeQueries({ queryKey: ['trip-recorded-session', coupleId] })
       void qc.invalidateQueries({ queryKey: ['trip-session', coupleId] })
     },
   })

@@ -23,6 +23,16 @@ RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
 $$;
 REVOKE ALL ON FUNCTION public._loc_key() FROM public, anon, authenticated;
 
+-- 동의 상태 헬퍼 — 해당 사용자의 consent_type 최신행 granted(없으면 false). 서버단 동의 강제용.
+CREATE OR REPLACE FUNCTION public._has_consent(p_user uuid, p_type text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT COALESCE(
+    (SELECT granted FROM public.consent_log
+     WHERE user_id = p_user AND consent_type = p_type
+     ORDER BY created_at DESC LIMIT 1), false)
+$$;
+REVOKE ALL ON FUNCTION public._has_consent(uuid, text) FROM public, anon, authenticated;
+
 -- 1) record_points — 좌표 암호화 insert(멱등) + COLLECT 확인자료 -----------------
 CREATE OR REPLACE FUNCTION public.record_points(p_session uuid, p_points jsonb)
 RETURNS integer
@@ -42,6 +52,10 @@ BEGIN
   END IF;
   IF v_status <> 'RECORDING' THEN
     RAISE EXCEPTION 'session not recording (status=%)', v_status;
+  END IF;
+  -- 수집·이용 동의 서버 강제(제18조) — 앱단 게이트와 이중화. 철회 즉시 새 점 거부.
+  IF NOT public._has_consent(v_owner, 'COLLECT_USE') THEN
+    RAISE EXCEPTION 'location collection not consented';
   END IF;
 
   INSERT INTO public.route_points
@@ -89,8 +103,13 @@ BEGIN
     RAISE EXCEPTION 'session not found or not in caller couple';
   END IF;
 
-  -- 제3자 제공(제19조): 상대가 내 동선을 열람 → PROVIDE 사실 기록(같은 세션·수신자 1일 1회).
+  -- 제3자 제공(제19조): 상대가 내 동선을 열람하는 경우.
   IF v_owner IS NOT NULL AND v_caller <> v_owner THEN
+    -- ① 제공 동의 서버 강제 — owner가 제3자 제공에 동의하지 않았으면 좌표 반환 거부(UI 토글만 의존 금지).
+    IF NOT public._has_consent(v_owner, 'THIRD_PARTY_PROVIDE_PARTNER') THEN
+      RAISE EXCEPTION 'third-party provision not consented';
+    END IF;
+    -- ② PROVIDE 사실 기록(같은 세션·수신자 1일 1회 디듑).
     INSERT INTO public.location_access_log
       (couple_id, data_subject_id, actor_id, event_type, purpose, recipient_id, session_ref, retain_until, created_by)
     SELECT v_couple, v_owner, v_caller, 'PROVIDE', '상대에게 동선 제공(열람)', v_caller, p_session,
@@ -113,15 +132,17 @@ BEGIN
 END $$;
 GRANT EXECUTE ON FUNCTION public.get_session_points(uuid) TO authenticated;
 
--- 3) purge_location_data — 철회/목적달성 하드 파기(제24조4) -----------------------
+-- 3) purge_location_data — 동의 철회 하드 파기(제24조4) -------------------------------
+-- 위치정보법 제24조4: 동의 철회 시 개인위치정보 + '확인자료'를 함께 파기한다.
+--   → 이 함수는 철회 경로(location-purge Edge Function) 전용이므로 세션의 확인자료를 보존기간과
+--     무관하게 전부 파기한다(평시 6개월 보존은 purge_expired_access_log 잡이 담당, 철회는 예외).
 CREATE OR REPLACE FUNCTION public.purge_location_data(p_session uuid)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   DELETE FROM public.route_points  WHERE session_id = p_session;   -- CASCADE 대비 명시
   DELETE FROM public.trip_sessions WHERE id = p_session;
-  -- 확인자료는 보존의무가 남는 행을 제외하고, 만료된 동반분만 파기.
-  DELETE FROM public.location_access_log
-    WHERE session_ref = p_session AND retain_until < now();
+  -- 철회 동반 파기 — 보존기간 무관하게 해당 세션 확인자료 전부 삭제(제24조4).
+  DELETE FROM public.location_access_log WHERE session_ref = p_session;
 END $$;
 REVOKE ALL ON FUNCTION public.purge_location_data(uuid) FROM public, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.purge_location_data(uuid) TO service_role;
