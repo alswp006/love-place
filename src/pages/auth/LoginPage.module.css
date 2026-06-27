@@ -62,6 +62,35 @@
   cursor: default;
 }
 
+/* Apple 로그인 — Apple HIG 관례(검정 배경·흰 글자). googleBtn 레이아웃 공유. */
+.appleBtn {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: #fff;
+  background: #1a1a1a;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-bottom: var(--sp-2);
+  transition: opacity var(--motion-fast) var(--ease);
+}
+
+.appleBtn:active {
+  opacity: 0.85;
+}
+
+.appleBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .divider {
   width: 100%;
   display: flex;

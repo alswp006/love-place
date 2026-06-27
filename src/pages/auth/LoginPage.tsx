@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/state/auth'
 import { useSignInWithOtp } from '@/hooks/useSignInWithOtp'
 import { useSignInWithGoogle } from '@/hooks/useSignInWithGoogle'
+import { useSignInWithApple } from '@/hooks/useSignInWithApple'
 import { useSignInWithPassword } from '@/hooks/useSignInWithPassword'
 import { useResendCooldown } from '@/hooks/useResendCooldown'
 import { GoogleIcon } from '@/components/auth/GoogleIcon'
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const { initializing, session, configured } = useAuth()
   const { status, error, sendMagicLink, verifyCode, reset } = useSignInWithOtp()
   const google = useSignInWithGoogle()
+  const apple = useSignInWithApple()
   const pw = useSignInWithPassword()
   const cooldown = useResendCooldown()
   const [email, setEmail] = useState('')
@@ -131,6 +133,21 @@ export default function LoginPage() {
           </div>
         ) : (
           <>
+            {/* Apple 로그인(App Store 4.8 — 제3자 소셜 제공 시 동등 옵션). 메일 발송 없이 즉시. */}
+            <button
+              type="button"
+              className={styles.appleBtn}
+              onClick={() => void apple.signIn()}
+              disabled={apple.loading}
+            >
+              <span>{apple.loading ? 'Apple로 이동 중…' : 'Apple로 계속하기'}</span>
+            </button>
+            {apple.error ? (
+              <p className={styles.error} role="alert">
+                {apple.error}
+              </p>
+            ) : null}
+
             {/* 구글 로그인(권장) — 메일 발송 없어 즉시 로그인 */}
             <button
               type="button"
