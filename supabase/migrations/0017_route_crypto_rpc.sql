@@ -160,5 +160,24 @@ END $$;
 REVOKE ALL ON FUNCTION public.purge_expired_access_log() FROM public, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.purge_expired_access_log() TO service_role;
 
--- pg_cron(확인자료 만료 일 1회) — Supabase에서 pg_cron 활성 후 1회 등록:
---   SELECT cron.schedule('purge-loc-access', '0 4 * * *', $$ SELECT public.purge_expired_access_log(); $$);
+-- 5) purge_orphan_sessions — 미연결 세션 목적소멸 파기(좌표만, 확인자료는 6개월 보존 유지) ----
+-- 어느 여행에도 안 붙고(trip_id NULL) 종료된(DONE) 세션이 N일 경과 = '목적 없음' → 좌표 파기.
+-- 철회 파기(purge_location_data, 확인자료까지)와 구분: 여기선 수집 '사실'은 audit에 남긴다(제16조2 6개월).
+-- route_points는 trip_sessions ON DELETE CASCADE라 세션 삭제 시 동반 삭제됨.
+CREATE OR REPLACE FUNCTION public.purge_orphan_sessions(p_grace_days int DEFAULT 14)
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE n integer;
+BEGIN
+  DELETE FROM public.trip_sessions
+  WHERE trip_id IS NULL
+    AND status = 'DONE'
+    AND ended_at IS NOT NULL
+    AND ended_at < now() - (p_grace_days || ' days')::interval;
+  GET DIAGNOSTICS n = ROW_COUNT; RETURN n;
+END $$;
+REVOKE ALL ON FUNCTION public.purge_orphan_sessions(int) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.purge_orphan_sessions(int) TO service_role;
+
+-- pg_cron(일 1회) — Supabase에서 pg_cron 활성 후 1회 등록:
+--   SELECT cron.schedule('purge-loc-access',   '0 4 * * *', $$ SELECT public.purge_expired_access_log(); $$);
+--   SELECT cron.schedule('purge-orphan-sess',  '0 4 * * *', $$ SELECT public.purge_orphan_sessions(14); $$);

@@ -57,13 +57,24 @@ describe('migration 0017 — 좌표 암호화 RPC + 파기 잡', () => {
     expect(s).toMatch(/GRANT EXECUTE ON FUNCTION\s+public\.get_session_points\([^)]*\)\s+TO authenticated/i)
   })
 
-  it('purge 2종은 service_role 전용(authenticated REVOKE)', () => {
+  it('purge 3종은 service_role 전용(authenticated REVOKE)', () => {
     const s = sql()
     expect(s).toMatch(/CREATE OR REPLACE FUNCTION\s+public\.purge_location_data\s*\(\s*p_session\s+uuid\s*\)/i)
     expect(s).toMatch(/CREATE OR REPLACE FUNCTION\s+public\.purge_expired_access_log\s*\(\s*\)/i)
     expect(s).toMatch(/REVOKE ALL ON FUNCTION\s+public\.purge_location_data\([^)]*\)\s+FROM[^;]*authenticated/i)
     expect(s).toMatch(/GRANT EXECUTE ON FUNCTION\s+public\.purge_location_data\([^)]*\)\s+TO service_role/i)
     expect(s).toMatch(/GRANT EXECUTE ON FUNCTION\s+public\.purge_expired_access_log\([^)]*\)\s+TO service_role/i)
+  })
+
+  it('purge_orphan_sessions: 미연결(trip_id NULL)+DONE+N일 경과 세션을 파기(확인자료는 미삭제)', () => {
+    const s = sql()
+    expect(s).toMatch(/CREATE OR REPLACE FUNCTION\s+public\.purge_orphan_sessions\s*\(\s*p_grace_days\s+int\s+DEFAULT\s+14\s*\)/i)
+    expect(s).toMatch(/DELETE FROM public\.trip_sessions[\s\S]*trip_id IS NULL[\s\S]*status\s*=\s*'DONE'[\s\S]*ended_at\s*<\s*now\(\)/i)
+    expect(s).toMatch(/GRANT EXECUTE ON FUNCTION\s+public\.purge_orphan_sessions\([^)]*\)\s+TO service_role/i)
+    // 고아 파기는 확인자료(location_access_log)를 지우지 않는다(철회 파기와 구분) — 이 함수 본문엔 access_log DELETE 없음.
+    const fn = s.slice(s.indexOf('purge_orphan_sessions'))
+    const body = fn.slice(0, fn.indexOf('GRANT EXECUTE ON FUNCTION'))
+    expect(body).not.toMatch(/DELETE FROM public\.location_access_log/i)
   })
 
   it('purge_location_data는 route_points·trip_sessions + 확인자료를 동반 하드 DELETE(제24조4)', () => {
