@@ -1,0 +1,96 @@
+/* 위치 동선 4종 동의 시트 — Dialog(바텀시트) 안. 색+라벨 이중화, 큰 터치 타깃. */
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.title {
+  margin: 0 0 var(--sp-2);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.lede {
+  margin: 0 0 var(--sp-3);
+  font-size: 0.9rem;
+  color: var(--c-text-muted, var(--c-text));
+  line-height: 1.5;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.row {
+  border: 1px solid var(--c-border, rgba(0, 0, 0, 0.08));
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+}
+
+.label {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.label input {
+  margin-top: 0.2rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+}
+
+.labelText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  color: var(--c-text);
+}
+
+.copy {
+  font-size: 0.82rem;
+  color: var(--c-text-muted, var(--c-text));
+  line-height: 1.45;
+}
+
+.optional {
+  font-weight: 500;
+  color: var(--c-text-muted, var(--c-text));
+}
+
+.radios {
+  display: flex;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  font-size: 0.9rem;
+  color: var(--c-text);
+  cursor: pointer;
+}
+
+.reserve {
+  margin: var(--sp-3) 0;
+  font-size: 0.82rem;
+  color: var(--c-text-muted, var(--c-text));
+  line-height: 1.45;
+}
+
+.close {
+  width: 100%;
+}

@@ -1,0 +1,43 @@
+/* 위치 컨트롤 센터(/us) — 동의 상태 + 관리/즉시중단. */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.status {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--c-text);
+  font-size: 0.92rem;
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--c-text-muted, var(--c-text));
+  line-height: 1.45;
+}

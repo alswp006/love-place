@@ -1,0 +1,60 @@
+/* "기록 중" 인디케이터 — 색+점+텍스트 이중화. RECORDING=빨강 펄스, PAUSED=회색 정지. */
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border, rgba(0, 0, 0, 0.08));
+  border-radius: var(--radius);
+}
+
+.dotRecording,
+.dotPaused {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  flex: none;
+}
+
+.dotRecording {
+  background: var(--c-danger, #d6455d);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.dotPaused {
+  background: var(--c-text-muted, #999);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dotRecording {
+    animation: none;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.label {
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  margin-left: auto;
+}
+
+.btn,
+.stop {
+  min-height: 44px;
+}

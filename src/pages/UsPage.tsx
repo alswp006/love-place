@@ -18,6 +18,7 @@ import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { ProfileEditor } from '@/components/profile/ProfileEditor'
 import { DisconnectConfirm } from '@/components/profile/DisconnectConfirm'
+import { LocationControlCenter } from '@/components/journey/LocationControlCenter'
 import { Button } from '@/components/ui/Button'
 import styles from './UsPage.module.css'
 
@@ -226,6 +227,13 @@ export default function UsPage() {
                 {exportError}
               </p>
             ) : null}
+          </section>
+        ) : null}
+
+        {/* 위치 동선 기록(R6) — 동의 관리 + 즉시 중단(위치정보법 제24조2 항상 가능 컨트롤). */}
+        {couple?.coupleId ? (
+          <section className={styles.card} aria-label="위치 동선 컨트롤">
+            <LocationControlCenter coupleId={couple.coupleId} userId={myId} />
           </section>
         ) : null}
 
