@@ -75,14 +75,16 @@ export function createJourneyRecorder(plugin: BgGeoLike | null): JourneyRecorder
   }
 }
 
-// 네이티브에서 transistorsoft 지연 로드. 빌드 시 정적 해석 회피(@vite-ignore + 변수 specifier),
-// 미설치(cap add 전)면 try/catch로 null → no-op recorder. 웹은 항상 null.
+// 네이티브에서만 transistorsoft 지연 로드. literal dynamic import라 Vite가 lazy 청크로 번들 →
+// 런타임(웹뷰)에서 정상 해석. 웹에선 isNativePlatform()=false라 청크가 실행되지 않음(no-op).
 export async function loadBgGeo(): Promise<BgGeoLike | null> {
   if (!isNativePlatform()) return null
   try {
-    const spec = '@transistorsoft/capacitor-background-geolocation'
-    const mod = (await import(/* @vite-ignore */ spec)) as { default?: BgGeoLike } & BgGeoLike
-    return (mod.default ?? mod) as BgGeoLike
+    // 기본 export가 BackgroundGeolocation API 객체. 모듈 네임스페이스와 구조가 달라 unknown 경유 캐스팅.
+    const mod = (await import('@transistorsoft/capacitor-background-geolocation')) as unknown as {
+      default?: BgGeoLike
+    }
+    return mod.default ?? null
   } catch {
     return null
   }
