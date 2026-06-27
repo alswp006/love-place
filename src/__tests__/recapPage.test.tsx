@@ -21,6 +21,14 @@ vi.mock('@/hooks/useSnappedPolyline', () => ({
 // 지도는 테스트에서 렌더하지 않게(키 미설정) — 스탯/목록은 지도와 별개로 렌더된다.
 vi.mock('@/lib/naver/loadNaverMaps', () => ({ isNaverMapConfigured: () => false }))
 vi.mock('@/lib/haptics', () => ({ haptic: vi.fn() }))
+// R6 실측 동선 — 기본 없음(측지선 경로 유지). 일부 테스트에서 폴리라인 주입.
+const recorded = vi.hoisted(() => ({
+  points: [] as unknown[],
+  polyline: [] as { lat: number; lng: number }[],
+  distanceKm: 0,
+  isLoading: false,
+}))
+vi.mock('@/hooks/useTripRecordedRoute', () => ({ useTripRecordedRoute: () => recorded }))
 
 import RecapPage from '@/pages/RecapPage'
 
@@ -56,5 +64,22 @@ describe('RecapPage (여행 리캡)', () => {
     recap.stats = { stopCount: 0, distanceKm: 0, days: 3 }
     renderRecap()
     expect(screen.getByText('이 여행엔 아직 동선이 없어요')).toBeInTheDocument()
+  })
+
+  it('실측 GPS 동선이 있으면 정점이 없어도 표시(거리 "기록" 라벨)', () => {
+    recap.vertices = []
+    recap.stats = { stopCount: 0, distanceKm: 0, days: 3 }
+    recorded.polyline = [
+      { lat: 37.5, lng: 127.0 },
+      { lat: 37.51, lng: 127.0 },
+      { lat: 37.52, lng: 127.01 },
+    ]
+    recorded.distanceKm = 2.5
+    renderRecap()
+    expect(screen.queryByText('이 여행엔 아직 동선이 없어요')).not.toBeInTheDocument()
+    expect(screen.getByText(/2.5km\(기록\)/)).toBeInTheDocument()
+    // 정리(다른 테스트 영향 방지)
+    recorded.polyline = []
+    recorded.distanceKm = 0
   })
 })

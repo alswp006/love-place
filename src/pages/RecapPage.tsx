@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useCouple } from '@/hooks/useCouple'
 import { useTripRecap } from '@/hooks/useTripRecap'
 import { useSnappedPolyline } from '@/hooks/useSnappedPolyline'
+import { useTripRecordedRoute } from '@/hooks/useTripRecordedRoute'
 import { usePlaces } from '@/hooks/usePlaces'
 import { NaverMap } from '@/components/map/NaverMap'
 import { isNaverMapConfigured } from '@/lib/naver/loadNaverMaps'
@@ -32,9 +33,14 @@ export default function RecapPage() {
   const geodesic = useMemo(() => vertices.map((v) => ({ lat: v.lat, lng: v.lng })), [vertices])
   // 프로그레시브: 측지선 즉시 렌더 → 도로 스냅 도착 시 덮어쓰기(미배포/실패면 측지선 유지).
   const snapped = useSnappedPolyline(coupleId, tripId, vertices)
-  const linePolyline = snapped.polyline ?? geodesic
-  const distKm = snapped.roadDistanceKm ?? stats.distanceKm
-  const distLabel = snapped.roadDistanceKm != null ? '도로' : '장소→장소'
+  // R6: 실측 GPS 동선이 있으면 최우선(실제 이동 경로). 없으면 도로 스냅, 그것도 없으면 측지선.
+  const recorded = useTripRecordedRoute(coupleId, tripId)
+  const hasRecorded = recorded.polyline.length >= 2
+  const linePolyline = hasRecorded ? recorded.polyline : (snapped.polyline ?? geodesic)
+  const distKm = hasRecorded
+    ? recorded.distanceKm
+    : (snapped.roadDistanceKm ?? stats.distanceKm)
+  const distLabel = hasRecorded ? '기록' : snapped.roadDistanceKm != null ? '도로' : '장소→장소'
 
   const period =
     trip && trip.start_date && trip.end_date
@@ -75,12 +81,12 @@ export default function RecapPage() {
             }
           />
         </div>
-      ) : vertices.length === 0 ? (
+      ) : vertices.length === 0 && !hasRecorded ? (
         <div className={styles.body}>
           <EmptyState
             emoji="🗺️"
             title="이 여행엔 아직 동선이 없어요"
-            hint="가본 장소를 이 여행에 연결하면 동선이 그려져요."
+            hint="여행 중 '여행 시작'으로 동선을 기록하거나, 가본 장소를 이 여행에 연결하면 동선이 그려져요."
           />
         </div>
       ) : (
