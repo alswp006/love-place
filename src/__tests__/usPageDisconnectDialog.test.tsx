@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
+import { ToastProvider } from '@/components/common/ToastProvider'
 
 vi.mock('@/state/auth', () => ({
   useAuth: () => ({ user: { id: 'u1' }, session: { user: { id: 'u1' } }, configured: true, initializing: false }),
@@ -30,9 +31,9 @@ function renderUs() {
   return render(
     <QueryClientProvider client={qc}>
       <OfflineQueueProvider>
-        <MemoryRouter>
+        <ToastProvider><MemoryRouter>
           <UsPage />
-        </MemoryRouter>
+        </MemoryRouter></ToastProvider>
       </OfflineQueueProvider>
     </QueryClientProvider>,
   )

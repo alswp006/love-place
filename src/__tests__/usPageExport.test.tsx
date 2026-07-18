@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
+import { ToastProvider } from '@/components/common/ToastProvider'
 
 // 내보내기 헬퍼(T10/T11) 모킹 — UsPage가 JSON·ZIP 경로를 올바로 엮는지(계약)만 검증.
 const { fetchCoupleExport, fetchPhotoBlobs, downloadJson, downloadBlob, buildExportZip } = vi.hoisted(() => ({
@@ -45,9 +46,9 @@ function renderUs() {
   return render(
     <QueryClientProvider client={qc}>
       <OfflineQueueProvider>
-        <MemoryRouter>
+        <ToastProvider><MemoryRouter>
           <UsPage />
-        </MemoryRouter>
+        </MemoryRouter></ToastProvider>
       </OfflineQueueProvider>
     </QueryClientProvider>,
   )

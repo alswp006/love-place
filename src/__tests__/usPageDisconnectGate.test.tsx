@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
+import { ToastProvider } from '@/components/common/ToastProvider'
 
 // 내보내기 헬퍼 모킹 — 게이트 흐름(내보냄 전 해제 불가)만 검증.
 const { fetchCoupleExport, fetchPhotoBlobs, downloadJson, downloadBlob, buildExportZip, disconnectMutate } =
@@ -49,9 +50,9 @@ function renderUs() {
   return render(
     <QueryClientProvider client={qc}>
       <OfflineQueueProvider>
-        <MemoryRouter>
+        <ToastProvider><MemoryRouter>
           <UsPage />
-        </MemoryRouter>
+        </MemoryRouter></ToastProvider>
       </OfflineQueueProvider>
     </QueryClientProvider>,
   )

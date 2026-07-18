@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 
 // OrphanSessionsTray — 미연결 동선 목록·연결·삭제, 14일 자동삭제 경고.
 const state = vi.hoisted(() => ({
+  createTrip: vi.fn(),
   orphans: [] as Array<{ id: string; version: number; status: string; trip_id: null; ended_at: string | null; started_at: string; point_count: number }>,
   trips: [{ id: 't9', title: '속초 여행' }] as Array<{ id: string; title: string }>,
   link: vi.fn(async () => {}),
@@ -12,7 +13,11 @@ vi.mock('@/hooks/useOrphanSessions', () => ({
   useOrphanSessions: () => ({ data: state.orphans }),
   useLinkSessionToTrip: () => ({ link: state.link, isPending: false }),
 }))
-vi.mock('@/hooks/useTrips', () => ({ useTrips: () => ({ data: state.trips }) }))
+vi.mock('@/hooks/useTrips', () => ({
+  useTrips: () => ({ data: state.trips }),
+  // '동선으로 여행 만들기' 원탭 — 생성 mutate mock(onSuccess에 trip id 전달)
+  useCreateTrip: () => ({ mutate: state.createTrip, isPending: false }),
+}))
 vi.mock('@/hooks/useLocationWithdraw', () => ({ useLocationWithdraw: () => ({ withdraw: state.withdraw, isPending: false }) }))
 
 import { OrphanSessionsTray } from '@/components/journey/OrphanSessionsTray'

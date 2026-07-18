@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
+import { ToastProvider } from '@/components/common/ToastProvider'
 
 // UsPage 로딩 스켈레톤 분기 검증(Task 9): useCouple isLoading:true면 페이지 스켈레톤(role=status, label),
 // isLoading:false면 기존 프로필/연결 블록 렌더(회귀). 모듈 레벨 가변 상태로 isLoading을 바꾼다.
@@ -38,9 +39,9 @@ function renderUs() {
   return render(
     <QueryClientProvider client={qc}>
       <OfflineQueueProvider>
-        <MemoryRouter>
+        <ToastProvider><MemoryRouter>
           <UsPage />
-        </MemoryRouter>
+        </MemoryRouter></ToastProvider>
       </OfflineQueueProvider>
     </QueryClientProvider>,
   )

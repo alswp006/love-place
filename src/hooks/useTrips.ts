@@ -13,6 +13,8 @@ export type TripRow = {
   version: number
 }
 
+let tripsChannelSeq = 0 // 채널 토픽 유일화 카운터(위 주석 참조)
+
 export function useTrips(coupleId: string | null) {
   const queryClient = useQueryClient()
   const query = useQuery<TripRow[]>({
@@ -33,8 +35,10 @@ export function useTrips(coupleId: string | null) {
 
   useEffect(() => {
     if (!coupleId || !isSupabaseConfigured) return
+    // 토픽은 훅 인스턴스별로 유일하게 — supabase.channel()은 같은 토픽이면 기존 인스턴스를 돌려주므로,
+    // 이미 subscribe()된 채널에 .on()을 또 붙이다 throw한다(한 화면에 useTrips 구독자 2개면 크래시).
     const channel = supabase
-      .channel(`trips:${coupleId}`)
+      .channel(`trips:${coupleId}:${++tripsChannelSeq}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'trips', filter: `couple_id=eq.${coupleId}` },
@@ -53,19 +57,25 @@ export type NewTrip = { title: string; startDate: string; endDate: string; regio
 
 export function useCreateTrip(coupleId: string | null, myId: string | null) {
   const queryClient = useQueryClient()
-  return useMutation<void, Error, NewTrip>({
+  // 생성된 trip id 반환 — '동선으로 여행 만들기'(생성→즉시 연결 원탭)가 이어서 쓴다.
+  return useMutation<string, Error, NewTrip>({
     mutationFn: async (t) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
-      const { error } = await supabase.from('trips').insert({
-        couple_id: coupleId,
-        title: t.title,
-        start_date: t.startDate,
-        end_date: t.endDate,
-        region_code: t.regionCode ?? null,
-        created_by: myId,
-        updated_by: myId,
-      })
+      const { data, error } = await supabase
+        .from('trips')
+        .insert({
+          couple_id: coupleId,
+          title: t.title,
+          start_date: t.startDate,
+          end_date: t.endDate,
+          region_code: t.regionCode ?? null,
+          created_by: myId,
+          updated_by: myId,
+        })
+        .select('id')
+        .single()
       if (error) throw new Error(error.message)
+      return (data as { id: string }).id
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['trips', coupleId] }),
   })

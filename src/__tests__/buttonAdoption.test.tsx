@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
+import { ToastProvider } from '@/components/common/ToastProvider'
 import btn from '@/components/ui/Button.module.css'
 
 // 마시멜로 R2 1차 채택 — LoginPage/UsPage의 주요·보조 버튼이 공용 Button 프리미티브로
@@ -76,9 +77,9 @@ beforeEach(() => {
 
 function renderLogin() {
   return render(
-    <MemoryRouter>
+    <ToastProvider><MemoryRouter>
       <LoginPage />
-    </MemoryRouter>,
+    </MemoryRouter></ToastProvider>,
   )
 }
 
@@ -87,9 +88,9 @@ function renderUs() {
   return render(
     <QueryClientProvider client={qc}>
       <OfflineQueueProvider>
-        <MemoryRouter>
+        <ToastProvider><MemoryRouter>
           <UsPage />
-        </MemoryRouter>
+        </MemoryRouter></ToastProvider>
       </OfflineQueueProvider>
     </QueryClientProvider>,
   )

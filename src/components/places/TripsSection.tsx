@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useTrips, useCreateTrip, useDeleteTrip } from '@/hooks/useTrips'
 import type { VisitRow } from '@/hooks/useVisits'
 import { visitCountByTrip, groupTripsByRegion } from '@/lib/places/tripGroups'
@@ -38,13 +39,15 @@ export function TripsSection({
 
   const renderTrip = (t: (typeof list)[number]) => (
     <li key={t.id} className={styles.trip}>
-      <div className={styles.tripMain}>
+      {/* 항목 본문 = 리캡 딥링크(§T13 결선) — 동선/방문 요약을 보는 유일한 진입점. */}
+      <Link className={styles.tripMain} to={`/trips/${t.id}/recap`} aria-label={`${t.title} 리캡 보기`}>
         <span className={styles.tripTitle}>{t.title}</span>
         <span className={styles.tripMeta}>
           {t.start_date}~{t.end_date}
           {counts[t.id] ? ` · ${counts[t.id]}곳 방문` : ''}
+          {' · 리캡 →'}
         </span>
-      </div>
+      </Link>
       <button
         type="button"
         className={styles.del}

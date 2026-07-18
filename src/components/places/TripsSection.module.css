@@ -137,6 +137,12 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  /* Link로 전환(리캡 진입) — 텍스트 링크 장식 없이 행 전체가 터치 타깃 */
+  flex: 1;
+  text-decoration: none;
+  color: inherit;
+  min-height: 44px;
+  justify-content: center;
 }
 
 .tripTitle {
