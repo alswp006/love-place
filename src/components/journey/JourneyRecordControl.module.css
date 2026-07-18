@@ -19,6 +19,8 @@
   align-items: center;
   min-height: 44px;
   padding: 0 var(--sp-3);
+  border: none; /* Link → button 전환(그 자리에서 ConsentSheet) — 시각은 동일하게 */
+  cursor: pointer;
   border-radius: 999px;
   background: var(--c-surface);
   color: var(--c-text);

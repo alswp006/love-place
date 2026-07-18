@@ -47,11 +47,12 @@ describe('JourneyRecordControl', () => {
     expect(rec.start).toHaveBeenCalledOnce()
   })
 
-  it('동의 없으면 /us 유도 링크(시작 버튼 없음)', () => {
+  it('동의 없으면 그 자리에서 ConsentSheet를 연다(탭 이동 강제 없음, 시작 버튼 없음)', () => {
     consent.canRecord = false
     renderControl()
-    expect(screen.getByRole('link', { name: /위치 동의/ })).toHaveAttribute('href', '/us')
     expect(screen.queryByRole('button', { name: /여행 동선 시작/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /위치 동의/ }))
+    expect(screen.getByRole('dialog', { name: '위치 동선 동의 관리' })).toBeInTheDocument()
   })
 
   it('기록 중: RecordingBadge + 종료 시 end 호출', () => {

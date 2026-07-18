@@ -61,11 +61,26 @@ export function useJourneyRecording(
   }
 
   const start = useCallback(async () => {
-    const id = await session.start() // RECORDING 세션 생성(동의 게이트). 실패 시 throw → 상태 그대로 idle.
+    // 1) 위치 서비스/권한 선체크를 '세션 생성 전에' — 꺼져 있으면 여기서 throw(한국어).
+    //    DB 세션을 만들기 전이라 고아 RECORDING 세션이 남지 않고 상태도 idle 유지.
+    const rec = recorderRef.current ?? (recorderRef.current = await getJourneyRecorder())
+    await rec.ensureReady()
+    // 2) 동의 게이트 통과 시 RECORDING 세션 생성.
+    const id = await session.start()
     sessionIdRef.current = id
     versionRef.current = 1
-    const rec = recorderRef.current ?? (recorderRef.current = await getJourneyRecorder())
-    await rec.start(onPointFor(id))
+    // 3) 수집 시작. 실패하면 방금 만든 세션을 롤백(고아 세션 방지) 후 rethrow.
+    try {
+      await rec.start(onPointFor(id))
+    } catch (e) {
+      try {
+        await session.end({ id, version: versionRef.current })
+      } catch {
+        /* 롤백 실패는 삼킴 — 고아 세션 정리 잡(purge_orphan_sessions)이 후속 처리 */
+      }
+      sessionIdRef.current = null
+      throw e
+    }
     startTimer()
     setStatus('recording')
   }, [session, startTimer])
