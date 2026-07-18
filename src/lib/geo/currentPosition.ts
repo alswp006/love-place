@@ -24,10 +24,43 @@ function reasonForCode(code: number): 'denied' | 'unavailable' | 'timeout' {
   return 'unavailable'
 }
 
-export function getCurrentPosition(opts: Options = {}): Promise<GeoResult> {
-  const geo = resolveGeo(opts.geo)
-  if (!geo) return Promise.resolve({ ok: false, reason: 'unsupported' })
+// 네이티브(Capacitor): WebView navigator.geolocation은 origin 프롬프트/차단이 얽혀 신뢰 불가 →
+// 이미 설치된 bg-geo 플러그인의 원샷 getCurrentPosition을 쓴다(앱 권한 프롬프트와 자연 연동).
+// 실패/미지원이면 null을 돌려 웹 경로로 폴백.
+async function nativeCurrentPosition(timeoutMs: number): Promise<GeoResult | null> {
+  const { isNativePlatform } = await import('@/lib/platform')
+  if (!isNativePlatform()) return null
+  const { loadBgGeo } = await import('@/lib/journey/recorder')
+  const plugin = await loadBgGeo()
+  if (!plugin?.getCurrentPosition) return null
+  try {
+    const loc = await plugin.getCurrentPosition({
+      timeout: Math.max(1, Math.ceil(timeoutMs / 1000)), // bg-geo는 초 단위
+      maximumAge: 60_000,
+      desiredAccuracy: 40,
+      samples: 1,
+    })
+    return {
+      ok: true,
+      lat: loc.coords.latitude,
+      lng: loc.coords.longitude,
+      accuracy: loc.coords.accuracy ?? 50,
+    }
+  } catch (code) {
+    // bg-geo LocationError: 1=TIMEOUT, 그 외(0 UNKNOWN/2 NETWORK/499 CANCELLED)는 unavailable로 정규화.
+    return { ok: false, reason: code === 1 ? 'timeout' : 'unavailable' }
+  }
+}
+
+export async function getCurrentPosition(opts: Options = {}): Promise<GeoResult> {
   const timeout = opts.timeoutMs ?? 8000
+  // 테스트/호출측이 geo를 주입하면 그대로 웹 경로(순수성 유지). 미주입 시에만 네이티브 우선.
+  if (opts.geo === undefined) {
+    const native = await nativeCurrentPosition(timeout)
+    if (native) return native
+  }
+  const geo = resolveGeo(opts.geo)
+  if (!geo) return { ok: false, reason: 'unsupported' }
   return new Promise<GeoResult>((resolve) => {
     geo.getCurrentPosition(
       (pos) =>
@@ -62,7 +95,9 @@ export async function getPermissionState(
   }
 }
 
-/** 로드 시 자동 locate 여부 — granted일 때만(추가 프롬프트 회피, spec §3.5). 순수. */
+/** 로드 시 자동 locate 여부 — denied만 제외. 앱 시작 기본 화면 = 내 위치(요구사항).
+ * prompt 상태도 시도한다 — 지도 첫 화면은 위치 프롬프트가 맥락에 맞는 지점이고(§8 맥락 요청),
+ * 네이티브 앱은 동선 기록 흐름에서 이미 위치 권한 맥락을 가진다. 순수. */
 export function shouldAutoLocate(state: PermissionState): boolean {
-  return state === 'granted'
+  return state !== 'denied'
 }

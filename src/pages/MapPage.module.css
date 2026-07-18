@@ -7,7 +7,9 @@
   flex: 1;
   display: flex;
   min-height: 0;
-  padding-bottom: calc(var(--sheet-peek-h) + var(--tabbar-h) + var(--safe-bottom));
+  /* 하단 예약은 PlaceSheet가 실측 발행한 --map-bottom-reserve가 정본(지도 하단 = 시트 peek 상단).
+     mapWrap은 이미 탭바 위에서 끝나므로 탭바/safe를 더하면 이중계산 → 공백. 폴백은 최초 페인트용. */
+  padding-bottom: var(--map-bottom-reserve, calc(var(--sheet-peek-h) + var(--tabbar-h)));
 }
 
 /* 지도 위 충돌 배너 — 검색 오버레이와 같은 z 레이어(시트 45 < 오버레이 50). */
@@ -25,7 +27,8 @@
    스스로 숨어 빈 div만 남으므로 레이아웃을 침범하지 않는다(pointer-events는 카드에만). */
 .feedOverlay {
   position: absolute;
-  top: calc(var(--safe-top) + var(--sp-2) + 48px);
+  /* 검색 오버레이(입력 44px + 패딩 2×sp-2) 아래로 — 48px 가정이 작아 CTA가 검색바를 뚫었다. */
+  top: calc(var(--safe-top) + var(--sp-2) + 60px + var(--sp-2));
   left: var(--sp-3);
   right: var(--sp-3);
   max-width: 480px;

@@ -5,6 +5,9 @@
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--c-surface-2);
+  /* SDK 내부 컨트롤(로고/축척)의 z-index를 지도 안에 가둔다 — 없으면 루트 스태킹에서
+     시트(z:45)를 뚫고 로고가 리스트 카드 위에 떠 보인다. */
+  isolation: isolate;
 }
 
 /* ≥44px 투명 터치 타깃(HIG, ux §1). 시각 tip은 글리프 하단이 anchor(12,24)에 닿도록
@@ -129,12 +132,15 @@
   min-height: 0;
 }
 
-/* '내 위치' 플로팅 버튼 — 우하단, peek 시트 위(spec §3.5). 터치 타깃 ≥44px.
-   시트가 탭바 위에 앵커되므로 peek 밴드 + 탭바 높이만큼 띄워 peek에서 시트/탭바에 가리지 않게 한다. */
+/* '내 위치' 플로팅 버튼 — 지도 우하단 고정. mapHost 하단이 곧 시트 peek 상단이므로
+   sp-3만 띄우면 항상 지도 오른쪽 아래 모서리에 붙는다(토큰 재계산 금지 — 이중계산 이력). */
 .myLocBtn {
   position: absolute;
   right: var(--sp-3);
-  bottom: calc(var(--sheet-peek-h) + var(--tabbar-h) + var(--sp-3));
+  bottom: var(--sp-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -192,7 +198,7 @@
 .locToast {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--sheet-peek-h) + var(--tabbar-h) + var(--sp-6));
+  bottom: var(--sp-6);
   transform: translateX(-50%);
   max-width: 90%;
   background: var(--c-text);

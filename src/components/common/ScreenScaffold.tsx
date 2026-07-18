@@ -15,7 +15,7 @@ type Props = {
 export function ScreenScaffold({ title, subtitle, children, testId, fullBleed = false }: Props) {
   if (fullBleed) {
     return (
-      <section className={styles.fullBleed} data-testid={testId} aria-label={title}>
+      <section className={styles.fullBleed} data-fullbleed data-testid={testId} aria-label={title}>
         {children}
       </section>
     )

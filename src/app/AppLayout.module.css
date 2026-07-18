@@ -22,6 +22,12 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* 풀블리드(지도) 라우트는 safe-top 패딩 제거 — 지도가 상태바 밑까지 깔리고,
+   지도 위 오버레이(검색바 등)가 자체적으로 safe-top을 오프셋한다. 아니면 상단에 빈 띠가 생긴다. */
+.content:has([data-fullbleed]) {
+  padding-top: 0;
+}
+
 /* 라우트 전환 크로스페이드 래퍼(R4) — .content의 flex 자식으로 동작해야 풀블리드(지도) 자식이
    flex:1로 높이를 얻는다(absolute-stack 금지). key=pathname 리마운트 시 페이드 인.
    reduce-motion은 tokens.css 전역 캡(animation-duration 0.001ms)으로 무력화 — JS 게이트 불필요. */

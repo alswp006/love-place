@@ -71,14 +71,14 @@ describe('NaverMap 컨트롤 배치(spec R1.3)', () => {
     delete window.naver
   })
 
-  it('로고는 TOP_LEFT, 축척은 TOP_RIGHT로 두고 데이터 컨트롤은 끈다', async () => {
+  it('로고는 BOTTOM_LEFT, 축척은 BOTTOM_RIGHT(풀블리드 후 상단은 Dynamic Island·검색 오버레이에 가림) + 데이터 컨트롤 끔', async () => {
     render(<NaverMap places={[]} snap="peek" />)
     await waitFor(() => expect(mapSpy).toHaveBeenCalled())
     const options = mapSpy.mock.calls[0]![1] as Record<string, unknown>
     expect(options.logoControl).toBe(true)
-    expect(options.logoControlOptions).toEqual({ position: 1 })
+    expect(options.logoControlOptions).toEqual({ position: 10 })
     expect(options.scaleControl).toBe(true)
-    expect(options.scaleControlOptions).toEqual({ position: 3 })
+    expect(options.scaleControlOptions).toEqual({ position: 12 })
     expect(options.mapDataControl).toBe(false)
   })
 })

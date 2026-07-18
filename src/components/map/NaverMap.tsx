@@ -17,6 +17,8 @@ import styles from './NaverMap.module.css'
 // 마커는 색만이 아니라 모양/라벨로도 구분(§8 접근성): 둘 다 찜=♥(퍼플), 그 외=★(브랜드).
 // 가본 곳(채운 별+체크) 구분은 P3.
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 } // 서울 시청(빈 상태 기본 중심)
+// 내 위치 이동 시 줌 — 동네 수준(15). fitBounds(내위치+저장장소)는 도(道) 단위로 벌어져 금지.
+const LOCATE_ZOOM = 15
 
 type MarkerPlace = PlaceRow & { wish?: WishStatus }
 
@@ -112,11 +114,12 @@ export function NaverMap({
       mapRef.current = new nv.maps.Map(elRef.current, {
         center: new nv.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
         zoom: 11,
-        // 로고는 ToS상 유지(필수). 컨트롤을 상단으로 옮겨 하단 시트와 안 겹치게(spec R1.3).
+        // 로고는 ToS상 유지(필수). 지도가 상태바 밑까지 풀블리드가 되면서 상단은 Dynamic Island·
+        // 검색 오버레이에 가리므로 하단으로 — mapWrap의 peek 인셋 덕에 peek 시트 바로 위에 보인다(research 01 §10).
         logoControl: true,
-        logoControlOptions: { position: nv.maps.Position.TOP_LEFT },
+        logoControlOptions: { position: nv.maps.Position.BOTTOM_LEFT },
         scaleControl: true,
-        scaleControlOptions: { position: nv.maps.Position.TOP_RIGHT },
+        scaleControlOptions: { position: nv.maps.Position.BOTTOM_RIGHT },
         mapDataControl: false,
       })
       setReady(true)
@@ -299,8 +302,9 @@ export function NaverMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places, ready])
 
-  // 내 위치 self-dot(파란 점) + accuracy 원을 그리고 self+places로 fitBounds(spec §3.5).
-  // 마커/원은 1개만 — 위치/반경만 갱신(재생성 금지). places의 좌표 유효 핀까지 bounds에 포함.
+  // 내 위치 self-dot + accuracy 원을 그리고 '내 위치를 중심으로 가깝게'(LOCATE_ZOOM) 잡는다.
+  // ★ self+places fitBounds 금지 — 저장장소가 멀면(서울~강릉) 도 단위로 벌어져 내 위치가 안 보인다.
+  // 마커/원은 1개만 — 위치/반경만 갱신(재생성 금지).
   const showSelf = (lat: number, lng: number, accuracy: number) => {
     const nv = window.naver
     const map = mapRef.current
@@ -333,10 +337,8 @@ export function NaverMap({
         clickable: false,
         zIndex: 0,
       })
-    const pts = places.filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number')
-    const b = new nv.maps.LatLngBounds(pos, pos)
-    for (const p of pts) b.extend(new nv.maps.LatLng(p.lat!, p.lng!))
-    map.fitBounds(b)
+    map.setCenter(pos)
+    map.setZoom(LOCATE_ZOOM)
   }
 
   // 초기 센터링 1/2 — granted일 때만 자동 locate(추가 프롬프트 금지, spec §3.5 / dossier 02 §4.6).
@@ -535,7 +537,14 @@ export function NaverMap({
         data-hidden={floatingHidden ? 'true' : undefined}
         tabIndex={floatingHidden ? -1 : 0}
       >
-        {isLocating ? <span className={styles.spinner} aria-hidden="true" /> : '📍'}
+        {isLocating ? (
+          <span className={styles.spinner} aria-hidden="true" />
+        ) : (
+          /* 범용 '내 위치' 크로스헤어 아이콘(지도앱 관례) — 이모지 핀(📍)은 장소 마커와 혼동 */
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+            <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3A8.99 8.99 0 0 0 13 3.06V1h-2v2.06A8.99 8.99 0 0 0 3.06 11H1v2h2.06A8.99 8.99 0 0 0 11 20.94V23h2v-2.06A8.99 8.99 0 0 0 20.94 13H23v-2h-2.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z" />
+          </svg>
+        )}
       </button>
       {locToast ? (
         <div
