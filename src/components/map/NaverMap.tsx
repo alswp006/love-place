@@ -95,8 +95,11 @@ export function NaverMap({
       map,
       path: polyline.map((p) => new nv.maps.LatLng(p.lat, p.lng)),
       strokeColor: '#e2638a',
-      strokeWeight: 4,
-      strokeOpacity: 0.9,
+      strokeWeight: 5,
+      strokeOpacity: 0.85,
+      // 모서리/끝을 둥글게 — 각진 GPS 꺾임을 부드럽게(폴리시).
+      strokeLineCap: 'round',
+      strokeLineJoin: 'round',
     })
     return () => {
       polylineRef.current?.setMap(null)

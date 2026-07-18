@@ -36,3 +36,17 @@ export function recordedDistanceKm(points: { lat: number; lng: number }[]): numb
   }
   return Math.round(km * 10) / 10
 }
+
+/** 첫~마지막 점 사이 경과 분(리캡 ⏱️ 스탯). 정렬 전제 없음(내부 min/max). 0~1점이면 0. */
+export function recordedDurationMin(points: { recorded_at: string }[]): number {
+  if (points.length < 2) return 0
+  let min = Infinity
+  let max = -Infinity
+  for (const p of points) {
+    const t = Date.parse(p.recorded_at)
+    if (!Number.isFinite(t)) continue
+    if (t < min) min = t
+    if (t > max) max = t
+  }
+  return min < max ? Math.round((max - min) / 60_000) : 0
+}

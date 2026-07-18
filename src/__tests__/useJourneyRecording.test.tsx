@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   end: vi.fn(),
   recEnsureReady: vi.fn(),
   recStart: vi.fn(),
+  onPoint: null as ((p: { client_point_id: string; recorded_at: string; lat: number; lng: number; accuracy_m: number | null; speed_mps: number | null }) => void) | null,
   recStop: vi.fn(),
   enqueue: vi.fn(),
   flush: vi.fn(),
@@ -51,7 +52,11 @@ beforeEach(() => {
   h.resume.mockReset().mockImplementation(async () => void order.push('session.resume'))
   h.end.mockReset().mockImplementation(async () => void order.push('session.end'))
   h.recEnsureReady.mockReset().mockImplementation(async () => void order.push('rec.ensureReady'))
-  h.recStart.mockReset().mockImplementation(async () => void order.push('rec.start'))
+  h.onPoint = null
+  h.recStart.mockReset().mockImplementation(async (cb) => {
+    order.push('rec.start')
+    h.onPoint = cb as typeof h.onPoint
+  })
   h.recStop.mockReset().mockImplementation(async () => void order.push('rec.stop'))
   h.enqueue.mockReset().mockResolvedValue(true)
   h.flush.mockReset().mockImplementation(async () => {
@@ -131,6 +136,28 @@ describe('useJourneyRecording — 녹화 오케스트레이션', () => {
     })
     expect(order).toEqual([])
     expect(h.end).not.toHaveBeenCalled()
+  })
+
+  it('점 수집 거리를 종료 시 recorded_distance_m로 전달(+end는 {id,version} 반환)', async () => {
+    const { result } = renderHook(() => useJourneyRecording('c1', 'u1', 't1', { canRecord: true }))
+    await act(async () => {
+      await result.current.start()
+    })
+    // 위도 0.01도 ≈ 1.11km 이동한 두 점 수집
+    const pt = (lat: number, i: number) => ({
+      client_point_id: `p${i}`, recorded_at: `2026-07-18T10:0${i}:00Z`,
+      lat, lng: 127, accuracy_m: 5, speed_mps: null,
+    })
+    h.onPoint?.(pt(37.5, 1))
+    h.onPoint?.(pt(37.51, 2))
+    let ended: { id: string; version: number } | null = null
+    await act(async () => {
+      ended = await result.current.end()
+    })
+    expect(ended).toEqual({ id: 's1', version: 2 })
+    const arg = h.end.mock.calls[0]![0] as { recordedDistanceM: number }
+    expect(arg.recordedDistanceM).toBeGreaterThan(1000)
+    expect(arg.recordedDistanceM).toBeLessThan(1250)
   })
 
   it('동의 없으면 start가 throw(세션 미생성)되고 상태 idle 유지', async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { orderedRoute, recordedDistanceKm, type RoutePointLike } from '@/lib/recap/routeStats'
+import { orderedRoute, recordedDistanceKm, recordedDurationMin, type RoutePointLike } from '@/lib/recap/routeStats'
 
 describe('routeStats', () => {
   it('recordedDistanceKm: 0~1점은 0, 연속 점은 haversine 누적', () => {
@@ -39,5 +39,27 @@ describe('routeStats', () => {
       { recorded_at: '2026-06-01T10:00:00Z', lat: 37.5, lng: 127 },
     ]
     expect(orderedRoute(pts)).toHaveLength(1)
+  })
+})
+
+
+describe('recordedDurationMin — 첫~마지막 점 경과 분(리캡 ⏱️)', () => {
+  const at = (iso: string) => ({ recorded_at: iso })
+
+  it('0~1점이면 0', () => {
+    expect(recordedDurationMin([])).toBe(0)
+    expect(recordedDurationMin([at('2026-07-18T10:00:00Z')])).toBe(0)
+  })
+
+  it('첫~마지막 경과 분(반올림)', () => {
+    expect(
+      recordedDurationMin([at('2026-07-18T10:00:00Z'), at('2026-07-18T11:23:30Z')]),
+    ).toBe(84)
+  })
+
+  it('입력 순서와 무관(내부 min/max)', () => {
+    expect(
+      recordedDurationMin([at('2026-07-18T10:30:00Z'), at('2026-07-18T10:00:00Z')]),
+    ).toBe(30)
   })
 })

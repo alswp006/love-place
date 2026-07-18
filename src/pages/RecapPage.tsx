@@ -4,6 +4,7 @@ import { useCouple } from '@/hooks/useCouple'
 import { useTripRecap } from '@/hooks/useTripRecap'
 import { useSnappedPolyline } from '@/hooks/useSnappedPolyline'
 import { useTripRecordedRoute } from '@/hooks/useTripRecordedRoute'
+import { recordedDurationMin } from '@/lib/recap/routeStats'
 import { usePlaces } from '@/hooks/usePlaces'
 import { NaverMap } from '@/components/map/NaverMap'
 import { isNaverMapConfigured } from '@/lib/naver/loadNaverMaps'
@@ -41,6 +42,10 @@ export default function RecapPage() {
     ? recorded.distanceKm
     : (snapped.roadDistanceKm ?? stats.distanceKm)
   const distLabel = hasRecorded ? '기록' : snapped.roadDistanceKm != null ? '도로' : '장소→장소'
+  // 실측 소요시간(⏱️) — 점 타임스탬프에서 도출(세션 조회 불필요). "1시간 23분"/"45분" 표기.
+  const durationMin = hasRecorded ? recordedDurationMin(recorded.points) : 0
+  const durationLabel =
+    durationMin >= 60 ? `${Math.floor(durationMin / 60)}시간 ${durationMin % 60}분` : `${durationMin}분`
 
   const period =
     trip && trip.start_date && trip.end_date
@@ -102,11 +107,12 @@ export default function RecapPage() {
             </div>
           ) : null}
 
-          {/* 3-스탯 — 색만 의존 금지(아이콘+텍스트). 거리는 '장소→장소'로 정직 표기(측지선). */}
+          {/* 스탯 — 색만 의존 금지(아이콘+텍스트). 값 없는 스탯(장소 0곳 등)은 숨겨 빈 인상 회피. */}
           <div className={styles.stats} role="group" aria-label="여행 요약">
-            <Chip tone="pink">📍 장소 {stats.stopCount}곳</Chip>
+            {stats.stopCount > 0 ? <Chip tone="pink">📍 장소 {stats.stopCount}곳</Chip> : null}
             <Chip tone="neutral">📏 {distKm}km({distLabel})</Chip>
-            <Chip tone="neutral">🗓️ {stats.days}일</Chip>
+            {hasRecorded && durationMin > 0 ? <Chip tone="neutral">⏱️ {durationLabel}</Chip> : null}
+            {stats.days > 0 ? <Chip tone="neutral">🗓️ {stats.days}일</Chip> : null}
           </div>
 
           {/* 순서 정거장 목록 — 번호+이름+날짜+지역 */}

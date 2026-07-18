@@ -8,6 +8,7 @@ import {
   flush,
   type PointSender,
 } from '@/lib/journey/pointQueue'
+import { haversineKm } from '@/lib/recap/recapStats'
 
 // R6 녹화 오케스트레이터 — 세션 + recorder + 오프라인 큐를 잇는 write-side 컨트롤러.
 // ★ 종료/일시중지 순서 불변식: recorder.stop → 큐 drain(아직 활성 상태라 record_points 게이트 통과) → 상태 변경.
@@ -28,6 +29,9 @@ export function useJourneyRecording(
   const recorderRef = useRef<JourneyRecorder | null>(null)
   const sessionIdRef = useRef<string | null>(null)
   const versionRef = useRef(1)
+  // 실측 이동거리 누적(km) — 종료 시 recorded_distance_m로 저장(설계 T8: end가 거리 세팅).
+  const distanceKmRef = useRef(0)
+  const lastPointRef = useRef<{ lat: number; lng: number } | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // 큐 → record_points 전송자(서버가 client_point_id 멱등 처리 → 중복 0).
@@ -58,6 +62,9 @@ export function useJourneyRecording(
 
   const onPointFor = (id: string) => (p: Parameters<typeof enqueuePoint>[2]) => {
     void enqueuePoint(storeRef.current, id, p)
+    const cur = { lat: p.lat, lng: p.lng }
+    if (lastPointRef.current) distanceKmRef.current += haversineKm(lastPointRef.current, cur)
+    lastPointRef.current = cur
   }
 
   const start = useCallback(async () => {
@@ -69,6 +76,8 @@ export function useJourneyRecording(
     const id = await session.start()
     sessionIdRef.current = id
     versionRef.current = 1
+    distanceKmRef.current = 0
+    lastPointRef.current = null
     // 3) 수집 시작. 실패하면 방금 만든 세션을 롤백(고아 세션 방지) 후 rethrow.
     try {
       await rec.start(onPointFor(id))
@@ -106,16 +115,22 @@ export function useJourneyRecording(
     setStatus('recording')
   }, [session, startTimer])
 
-  const end = useCallback(async () => {
+  // 종료 — 성공 시 {id, version(종료 후)}을 반환해 호출측이 이어서 여행 자동 연결에 쓴다.
+  const end = useCallback(async (): Promise<{ id: string; version: number } | null> => {
     const id = sessionIdRef.current
-    if (!id) return
+    if (!id) return null
     clearTimer()
     await recorderRef.current?.stop() // 1) 수집 중단(새 점 차단)
     await drain() // 2) 큐 비우기 — 세션이 아직 활성(RECORDING/PAUSED)이라 게이트 통과 ★
-    await session.end({ id, version: versionRef.current }) // 3) 그 다음 DONE
+    await session.end({
+      id,
+      version: versionRef.current,
+      recordedDistanceM: Math.round(distanceKmRef.current * 1000),
+    }) // 3) 그 다음 DONE
     versionRef.current += 1
     sessionIdRef.current = null
     setStatus('idle')
+    return { id, version: versionRef.current }
   }, [session, drain, clearTimer])
 
   useEffect(() => () => clearTimer(), [clearTimer])

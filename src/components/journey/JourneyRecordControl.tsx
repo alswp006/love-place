@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useConsent } from '@/hooks/useConsent'
 import { useJourneyRecording } from '@/hooks/useJourneyRecording'
+import { useLinkSessionToTrip } from '@/hooks/useOrphanSessions'
+import { soleTripCovering, localDayKey, findTripsCoveringDay } from '@/lib/journey/autoLink'
 import { useToast } from '@/components/common/ToastProvider'
 import { Button } from '@/components/ui/Button'
 import { RecordingBadge } from './RecordingBadge'
@@ -17,6 +19,7 @@ export function JourneyRecordControl({ coupleId, userId }: Props) {
   // A안: trip_id=null로 시작(고아 세션). 종료 후 '우리' 탭에서 여행에 연결.
   const rec = useJourneyRecording(coupleId, userId, null, { canRecord: consent.canRecord })
   const toast = useToast()
+  const linker = useLinkSessionToTrip(coupleId, userId)
   const [consentOpen, setConsentOpen] = useState(false)
 
   if (!coupleId) return null
@@ -30,7 +33,22 @@ export function JourneyRecordControl({ coupleId, userId }: Props) {
   }
   const onEnd = async () => {
     try {
-      await rec.end()
+      const ended = await rec.end()
+      // 자동 연결(마찰 최소): 오늘이 기간에 드는 여행이 '딱 하나'면 그 여행으로.
+      // 없거나 둘 이상(모호)·연결 실패면 수동 폴백(미연결 트레이 안내).
+      if (ended && coupleId) {
+        const day = localDayKey()
+        const sole = soleTripCovering(await findTripsCoveringDay(coupleId, day), day)
+        if (sole) {
+          try {
+            await linker.link({ id: ended.id, version: ended.version, tripId: sole.id })
+            toast.show(`동선이 ‘${sole.title}’ 여행에 연결됐어요.`)
+            return
+          } catch {
+            /* 링크 충돌/실패 → 아래 수동 폴백 안내 */
+          }
+        }
+      }
       toast.show('동선이 저장됐어요. ‘우리’ 탭에서 여행에 연결하세요.')
     } catch (e) {
       toast.show(e instanceof Error ? e.message : '동선 저장에 실패했어요.')
