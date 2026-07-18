@@ -39,6 +39,7 @@ describe('useSignInWithApple — App Store 4.8 대응', () => {
       await result.current.signIn()
     })
     expect(signInWithOAuth.mock.calls[0]![0].options.skipBrowserRedirect).toBe(true)
+    expect(signInWithOAuth.mock.calls[0]![0].options.redirectTo).toBe('app.loveplace://auth/callback')
     expect(browserOpen).toHaveBeenCalledWith({ url: 'https://appleid.apple.com/auth?x=1' })
   })
 

@@ -6,7 +6,7 @@ import { Browser } from '@capacitor/browser'
 // Apple 로그인 — App Store 4.8 대응(제3자 소셜 로그인 제공 시 'Apple로 로그인' 동등 옵션 요구).
 // 콜백은 /auth/callback. Supabase Auth의 apple provider 설정(Service ID·키) 필요(서버 구성).
 // 네이티브(Capacitor): 임베디드 WebView OAuth 제약 회피 위해 skipBrowserRedirect로 URL만 받아 시스템 브라우저로.
-//   복귀는 appUrlOpen → exchangeCodeForSession(authDeepLink, P-A). redirect base는 배포 사이트 URL 우선.
+//   복귀는 커스텀 스킴 app.loveplace://auth/callback → appUrlOpen → exchangeCodeForSession(authDeepLink).
 export function useSignInWithApple() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +19,7 @@ export function useSignInWithApple() {
     }
     setLoading(true)
     const base = import.meta.env.VITE_PUBLIC_SITE_URL?.trim() || window.location.origin
-    const redirectTo = `${base}/auth/callback`
+    const redirectTo = isNativePlatform() ? 'app.loveplace://auth/callback' : `${base}/auth/callback`
 
     if (isNativePlatform()) {
       const { data, error: err } = await supabase.auth.signInWithOAuth({

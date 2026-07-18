@@ -8,7 +8,8 @@ import { Browser } from '@capacitor/browser'
 // 가입 시 handle_new_user 트리거가 profiles를 자동 생성하므로 매직링크와 동일하게 동작.
 // 네이티브(Capacitor): Google은 임베디드 WebView OAuth를 차단(disallowed_useragent)하므로,
 //   skipBrowserRedirect로 인증 URL만 받아 @capacitor/browser(시스템 브라우저/ASWebAuthenticationSession)로 연다.
-//   복귀는 appUrlOpen → exchangeCodeForSession(authDeepLink, P-A). redirect base는 배포 사이트 URL 우선.
+//   복귀는 커스텀 스킴 app.loveplace://auth/callback → appUrlOpen → exchangeCodeForSession(authDeepLink).
+//   (웹 콜백으로 보내면 시스템 브라우저 안에 웹앱이 열린 채 남는다. 스킴은 Info.plist + Supabase allowlist 등록.)
 export function useSignInWithGoogle() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -21,7 +22,7 @@ export function useSignInWithGoogle() {
     }
     setLoading(true)
     const base = import.meta.env.VITE_PUBLIC_SITE_URL?.trim() || window.location.origin
-    const redirectTo = `${base}/auth/callback`
+    const redirectTo = isNativePlatform() ? 'app.loveplace://auth/callback' : `${base}/auth/callback`
 
     if (isNativePlatform()) {
       const { data, error: err } = await supabase.auth.signInWithOAuth({

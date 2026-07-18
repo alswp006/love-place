@@ -28,6 +28,8 @@ describe('useSignInWithGoogle — 네이티브/웹 분기', () => {
     })
     const opts = signInWithOAuth.mock.calls[0]![0].options
     expect(opts.skipBrowserRedirect).toBeUndefined()
+    expect(opts.redirectTo).toMatch(/\/auth\/callback$/)
+    expect(opts.redirectTo).not.toMatch(/^app\.loveplace:/)
     expect(browserOpen).not.toHaveBeenCalled()
   })
 
@@ -39,6 +41,8 @@ describe('useSignInWithGoogle — 네이티브/웹 분기', () => {
       await result.current.signIn()
     })
     expect(signInWithOAuth.mock.calls[0]![0].options.skipBrowserRedirect).toBe(true)
+    // 복귀는 커스텀 스킴 딥링크 — 웹 콜백으로 보내면 시스템 브라우저에 웹앱이 열린 채 남는다.
+    expect(signInWithOAuth.mock.calls[0]![0].options.redirectTo).toBe('app.loveplace://auth/callback')
     expect(browserOpen).toHaveBeenCalledWith({ url: 'https://accounts.google.com/o/oauth2/auth?x=1' })
   })
 
