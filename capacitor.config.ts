@@ -6,9 +6,14 @@ const config: CapacitorConfig = {
   appId: 'app.loveplace',
   appName: 'love place',
   webDir: 'dist',
-  ios: { contentInset: 'always' },
-  // androidScheme=https로 두면 Android WebView origin이 https://localhost — 표준/안전(혼합콘텐츠 회피).
-  server: { androidScheme: 'https' },
+  // contentInset은 never — 인셋은 CSS env(safe-area-inset-*)가 단일 소스다(viewport-fit=cover).
+  // 'always'는 UIKit 스크롤뷰 인셋이 하단 safe-area를 한 번 더 먹어 탭바 아래 빈 띠를 만든다.
+  ios: { contentInset: 'never' },
+  // hostname을 배포 도메인으로: 네이버 지도 인증(/v3/auth)이 페이지 URL의 "호스트"만 검사하므로
+  // 기본값(capacitor://localhost)이면 401로 지도가 죽는다. 등록 도메인과 호스트를 맞춰 인증 통과.
+  // 이 origin은 Edge Function ALLOWED_ORIGINS에도 등록돼 있어야 한다(capacitor://<hostname>).
+  // androidScheme=https라 Android origin은 https://<hostname>(웹 배포와 동일)이 된다.
+  server: { androidScheme: 'https', hostname: 'love-place-production.up.railway.app' },
   plugins: {
     // 입력창이 키보드에 가리지 않게 WebView 리사이즈(P-A.5).
     Keyboard: { resize: 'native' },
