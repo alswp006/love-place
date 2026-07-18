@@ -6,9 +6,7 @@
   align-items: flex-end;
   justify-content: center;
   z-index: 60;
-  padding-bottom: var(--safe-bottom);
-  /* 모달 뒤 배경 스크롤 차단. */
-  touch-action: none;
+  /* 뒤 배경 스크롤 차단은 useScrollLock(JS) 담당(백드롭 touch-action:none 금지). */
   overscroll-behavior: none;
 }
 .sheet {
@@ -22,7 +20,8 @@
   -webkit-overflow-scrolling: touch;
   background: var(--c-surface);
   border-radius: 16px 16px 0 0;
-  padding: 20px;
+  /* 시트는 화면 바닥까지 — 하단 여백은 시트 안쪽 패딩으로(safe-area). */
+  padding: 20px 20px calc(20px + var(--safe-bottom));
   animation: rise var(--motion-base) var(--ease);
 }
 @keyframes rise {

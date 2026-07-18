@@ -6,9 +6,7 @@
   align-items: flex-end;
   justify-content: center;
   z-index: 50;
-  padding-bottom: var(--safe-bottom);
-  /* 모달 열렸을 때 뒤 배경 스크롤 차단 — 백드롭 위 터치가 페이지를 스크롤하지 않게(탭 닫기는 click이라 유지). */
-  touch-action: none;
+  /* 뒤 배경 스크롤 차단은 useScrollLock(JS) 담당 — 백드롭 touch-action:none은 자식 시트의 pan-y까지 무력화하므로 금지. */
   overscroll-behavior: none;
 }
 
@@ -24,7 +22,8 @@
   flex-direction: column;
   background: var(--c-surface);
   border-radius: var(--radius) var(--radius) 0 0;
-  padding: var(--sp-4);
+  /* 시트는 화면 바닥까지 — 하단 여백은 시트 안쪽 패딩으로(safe-area). 백드롭 패딩이면 밑에 배경 띠가 보인다. */
+  padding: var(--sp-4) var(--sp-4) calc(var(--sp-4) + var(--safe-bottom));
   box-shadow: var(--shadow-floating);
   animation: rise var(--motion-base) var(--ease);
 }

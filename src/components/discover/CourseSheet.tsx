@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { buildCoursePlan, type CoursePlace, type CourseStop } from '@/lib/route/coursePlan'
 import { formatTime } from '@/lib/calendar/eventDays'
 import { Button } from '@/components/ui/Button'
+import { useScrollLock } from '@/hooks/useScrollLock'
 import styles from './CourseSheet.module.css'
 
 type Props = {
@@ -22,6 +24,7 @@ function parseTimeToMin(hhmm: string): number {
 }
 
 export function CourseSheet({ regionLabel, places, defaultDate, busy, onCancel, onConfirm }: Props) {
+  useScrollLock(true) // 열림=마운트. 뒤 배경 스크롤 차단
   const [date, setDate] = useState(defaultDate)
   const [startTime, setStartTime] = useState('10:00')
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -57,11 +60,12 @@ export function CourseSheet({ regionLabel, places, defaultDate, busy, onCancel, 
 
   const handleConfirm = () => onConfirm({ stops, dayKeyStr: date, startMin })
 
-  return (
+  return createPortal(
     <div className={styles.backdrop} onClick={onCancel}>
       <div
         ref={sheetRef}
         className={styles.sheet}
+        data-sheet-scroll
         role="dialog"
         aria-modal="true"
         aria-label={`${regionLabel} 코스 미리보기`}
@@ -107,6 +111,7 @@ export function CourseSheet({ regionLabel, places, defaultDate, busy, onCancel, 
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

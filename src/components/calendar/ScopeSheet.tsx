@@ -1,5 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/Button'
+import { useScrollLock } from '@/hooks/useScrollLock'
 import styles from './ScopeSheet.module.css'
 
 // 반복 일정 범위 선택 시트(R2.3) — occurrence를 편집/삭제할 때 적용 범위를 묻는다.
@@ -14,6 +16,7 @@ type Props = {
 }
 
 export function ScopeSheet({ mode, onPick, onCancel }: Props) {
+  useScrollLock(true) // 열림=마운트. 뒤 배경 스크롤 차단
   const sheetRef = useRef<HTMLDivElement>(null)
   const verb = mode === 'delete' ? '삭제' : '수정'
 
@@ -49,11 +52,12 @@ export function ScopeSheet({ mode, onPick, onCancel }: Props) {
     }
   }
 
-  return (
+  return createPortal(
     <div className={styles.backdrop} onClick={onCancel}>
       <div
         ref={sheetRef}
         className={styles.sheet}
+        data-sheet-scroll
         role="dialog"
         aria-modal="true"
         aria-label={`반복 일정 ${verb} 범위`}
@@ -76,6 +80,7 @@ export function ScopeSheet({ mode, onPick, onCancel }: Props) {
           취소
         </Button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

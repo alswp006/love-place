@@ -1,5 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
+import { useScrollLock } from '@/hooks/useScrollLock'
 import styles from './Dialog.module.css'
 
 type DialogProps = {
@@ -15,6 +16,7 @@ const FOCUSABLE = 'button, input, textarea, select, [href], [tabindex]:not([tabi
 
 // 공용 모달 프리미티브 — 포털 + 백드롭 + 포커스 트랩 + ESC + 복귀 포커스(EventSheet 패턴 일원화, §8 a11y).
 export function Dialog({ open, onClose, ariaLabel, initialFocusRef, className, children }: DialogProps) {
+  useScrollLock(open) // 열린 동안 뒤 배경 스크롤 차단
   const sheetRef = useRef<HTMLDivElement>(null)
   const prevFocusRef = useRef<HTMLElement | null>(null)
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type TouchEvent as ReactTouchEvent } from 'react'
+import { createPortal } from 'react-dom'
 import type { EventRow } from '@/hooks/useEvents'
 import type { ProfileMap } from '@/hooks/useProfiles'
 import type { NewEvent, EventPatch } from '@/hooks/useEventMutations'
@@ -7,6 +8,7 @@ import { tzNote } from '@/lib/calendar/tzLabel'
 import { parseRule, buildRule, type Freq } from '@/lib/calendar/rrule'
 import { buildEventTimes } from '@/lib/calendar/eventTimes'
 import { Button } from '@/components/ui/Button'
+import { useScrollLock } from '@/hooks/useScrollLock'
 import styles from './EventSheet.module.css'
 
 type Props = {
@@ -24,6 +26,7 @@ type Props = {
 }
 
 export function EventSheet({ initial, defaultDate, myId, busy, profiles, conflictRefresh, onClose, onCreate, onUpdate, onDelete }: Props) {
+  useScrollLock(true) // 열림=마운트. 뒤 캘린더 스크롤 차단(iOS 체이닝)
   const editing = initial != null
   // 상대 PERSONAL 일정은 읽기 전용(canEdit 가드, 조사03 §4 — RLS USING 미러).
   // canEdit = visibility==='SHARED' || owner_id===myId. 상대 PERSONAL이면 입력·저장·삭제 차단.
@@ -176,7 +179,9 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, conflic
     }
   }
 
-  return (
+  // body로 포탈 — 페이지 트리 안에 렌더하면 조상 스태킹 컨텍스트에 갇혀 탭바(z:46)가
+  // 시트 하단 버튼을 가린다(Dialog와 동일 패턴).
+  return createPortal(
     <div className={styles.backdrop} onClick={onClose}>
       <div
         ref={sheetRef}
@@ -197,7 +202,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, conflic
         >
           <span className={styles.grip} />
         </div>
-        <form onSubmit={onSubmit} className={styles.form}>
+        <form onSubmit={onSubmit} className={styles.form} data-sheet-scroll>
           {isPartnerPersonal ? (
             <p className={styles.readonlyLabel}>상대 일정 · {ownerName}</p>
           ) : null}
@@ -351,6 +356,7 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, conflic
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
