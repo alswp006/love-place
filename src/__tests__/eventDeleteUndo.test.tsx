@@ -83,8 +83,11 @@ function renderCalendar() {
 }
 
 // 아젠다의 이벤트를 눌러 EventSheet 수정 모드를 연다.
+// (행 옆에 '… 휴지통으로 보내기' 퀵삭제 버튼이 생겨 /데이트/만으로는 모호 — 항목 버튼만 매칭.)
 function openEditSheet() {
-  fireEvent.click(screen.getByRole('button', { name: /데이트/ }))
+  fireEvent.click(
+    screen.getByRole('button', { name: (n) => n.includes('데이트') && !n.includes('휴지통') }),
+  )
 }
 
 beforeEach(() => {
@@ -123,5 +126,23 @@ describe('일정 삭제 인라인 확인 + 되돌리기 Undo(R1.5 Task 15 / Task
     const undo = await screen.findByRole('button', { name: '되돌리기' })
     fireEvent.click(undo)
     await waitFor(() => expect(h.restore).toHaveBeenCalledWith('events', 'e1', 4, 'u1'))
+  })
+})
+
+describe('목록 바로 삭제 — 상세 진입 없이 아젠다 행에서(동일 인라인 확인 계약)', () => {
+  it('🗑 1탭은 삭제하지 않고 인라인 확인으로 바뀐다', () => {
+    renderCalendar()
+    fireEvent.click(screen.getByRole('button', { name: '데이트 휴지통으로 보내기' }))
+    expect(h.softDelete).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: '정말 삭제할까요?' })).toBeInTheDocument()
+  })
+
+  it('확인 탭이 softDelete(expectedVersion) 호출 + Undo 토스트(시트 안 거침)', async () => {
+    renderCalendar()
+    fireEvent.click(screen.getByRole('button', { name: '데이트 휴지통으로 보내기' }))
+    fireEvent.click(screen.getByRole('button', { name: '정말 삭제할까요?' }))
+    await waitFor(() => expect(h.softDelete).toHaveBeenCalledWith('events', 'e1', 3, 'u1'))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('일정을 삭제했어요'))
+    expect(screen.getByRole('button', { name: '되돌리기' })).toBeInTheDocument()
   })
 })

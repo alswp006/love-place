@@ -186,11 +186,19 @@
   gap: var(--sp-2);
 }
 
+/* 항목 행 = 본문 버튼 + 삭제 버튼(중첩 인터랙티브 회피 위해 형제로). */
+.eventRow {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-2);
+}
+
 .eventItem {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   text-align: left;
   border: 1px solid var(--c-border);
   background: var(--c-surface);
@@ -198,6 +206,28 @@
   padding: var(--sp-2) var(--sp-3);
   cursor: pointer;
   min-height: 48px;
+}
+
+/* 목록에서 바로 휴지통 — 터치 타깃 ≥44px(HIG), 아이콘+aria-label(색 외 구분 §8). */
+.eventDeleteBtn {
+  flex-shrink: 0;
+  min-width: 44px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--c-text-weak);
+  font-size: var(--fs-body);
+}
+
+/* 인라인 확인 상태 — 색+텍스트 이중화(§8). 두 번째 탭이 실제 삭제. */
+.eventDeleteConfirm {
+  color: #fff;
+  background: var(--c-danger, #c0392b);
+  border-color: var(--c-danger, #c0392b);
+  font-size: var(--fs-caption);
+  padding: 0 var(--sp-2);
+  white-space: nowrap;
 }
 
 .eventBar {

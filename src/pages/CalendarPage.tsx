@@ -205,6 +205,21 @@ export default function CalendarPage() {
     void deleteWithUndo({ id, expectedVersion: v })
   }
 
+  // 목록에서 바로 삭제(상세 진입 불필요) — 비반복은 Undo 토스트 소프트삭제, 반복은 범위 시트로 분기.
+  const quickDelete = (ev: Occurrence<EventRow>) => {
+    if (ev.recurrence_rule) {
+      setScope({
+        mode: 'delete',
+        series: { ...ev, start: ev._seriesStart, end: ev._seriesEnd },
+        occStartIso: ev.start,
+        occDayKey: dayKey(ev.start),
+        patch: null,
+      })
+      return
+    }
+    void deleteWithUndo({ id: ev.id, expectedVersion: ev.version })
+  }
+
   // 반복 occurrence 편집/삭제는 범위 시트로 분기(조사 01 §1/§6). 비반복은 곧장 plain 적용.
   const onUpdate = (id: string, v: number, patch: EventPatch) => {
     const series = sheet.editing
@@ -394,6 +409,7 @@ export default function CalendarPage() {
               placeById={placeById}
               onEdit={openEdit}
               onAdd={openCreate}
+              onDelete={quickDelete}
             />
           </>
         )}
@@ -558,6 +574,7 @@ function DayAgenda({
   placeById,
   onEdit,
   onAdd,
+  onDelete,
 }: {
   dateKey: string
   events: Occurrence<EventRow>[]
@@ -566,7 +583,10 @@ function DayAgenda({
   placeById: Record<string, PlaceRow>
   onEdit: (ev: Occurrence<EventRow>) => void
   onAdd: () => void
+  onDelete: (ev: Occurrence<EventRow>) => void
 }) {
+  // 목록 바로 삭제도 EventSheet와 같은 계약: 1탭은 지우지 않고 인라인 확인 먼저(실수 삭제 방지).
+  const [confirmId, setConfirmId] = useState<string | null>(null)
   return (
     <section className={styles.agenda} aria-label={`${dateKey} 일정`}>
       <h2 className={styles.agendaTitle}>{dateKey}</h2>
@@ -591,19 +611,43 @@ function DayAgenda({
             const place = ev.place_id ? placeById[ev.place_id] : undefined
             return (
               <li key={ev.id}>
-                <button type="button" className={styles.eventItem} onClick={() => onEdit(ev)}>
-                  <span className={styles.eventBar} style={{ background: meta.cssVar }} aria-hidden />
-                  <span className={styles.eventTime}>{ev.is_all_day ? '종일' : formatTime(ev.start)}</span>
-                  <span className={styles.eventTitle}>{ev.title}</span>
-                  {ev.recurrence_rule ? <span aria-label="반복 일정">🔁</span> : null}
-                  {myId && ev.reminders?.some((r) => r.userId === myId) ? (
-                    <span aria-label="리마인더 설정됨">🔔</span>
-                  ) : null}
-                  <SourceAvatar userId={ev.owner_id} profiles={profiles} myId={myId} context=" 일정" />
-                  <span className={styles.eventTrack} style={{ color: meta.cssVar }}>
-                    {meta.symbol} {meta.label}
-                  </span>
-                </button>
+                <div className={styles.eventRow}>
+                  <button type="button" className={styles.eventItem} onClick={() => onEdit(ev)}>
+                    <span className={styles.eventBar} style={{ background: meta.cssVar }} aria-hidden />
+                    <span className={styles.eventTime}>{ev.is_all_day ? '종일' : formatTime(ev.start)}</span>
+                    <span className={styles.eventTitle}>{ev.title}</span>
+                    {ev.recurrence_rule ? <span aria-label="반복 일정">🔁</span> : null}
+                    {myId && ev.reminders?.some((r) => r.userId === myId) ? (
+                      <span aria-label="리마인더 설정됨">🔔</span>
+                    ) : null}
+                    <SourceAvatar userId={ev.owner_id} profiles={profiles} myId={myId} context=" 일정" />
+                    <span className={styles.eventTrack} style={{ color: meta.cssVar }}>
+                      {meta.symbol} {meta.label}
+                    </span>
+                  </button>
+                  {/* 상세 진입 없이 바로 삭제 — 1탭=인라인 확인, 2탭=삭제(비반복: Undo 토스트 / 반복: 범위 시트). */}
+                  {confirmId === ev.id ? (
+                    <button
+                      type="button"
+                      className={`${styles.eventDeleteBtn} ${styles.eventDeleteConfirm}`}
+                      onClick={() => {
+                        setConfirmId(null)
+                        onDelete(ev)
+                      }}
+                    >
+                      정말 삭제할까요?
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.eventDeleteBtn}
+                      onClick={() => setConfirmId(ev.id)}
+                      aria-label={`${ev.title} 휴지통으로 보내기`}
+                    >
+                      <span aria-hidden="true">🗑</span>
+                    </button>
+                  )}
+                </div>
                 {place ? (
                   // 칩은 항목 버튼 밖(중첩 인터랙티브 회피) — 지도로 가는 별도 링크.
                   <a className={styles.placeChip} href={`/?place=${ev.place_id}`} aria-label={`지도에서 ${place.name} 보기`}>

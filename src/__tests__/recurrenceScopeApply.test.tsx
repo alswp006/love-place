@@ -88,14 +88,18 @@ function renderCalendar() {
 
 // 아젠다의 occurrence를 눌러 EventSheet 수정 모드를 연다(기본=선택일 2026-06-20 = 시리즈 첫 회차).
 function openEditSheet() {
-  fireEvent.click(screen.getByRole('button', { name: /주말 데이트/ }))
+  fireEvent.click(
+    screen.getByRole('button', { name: (n) => n.includes('주말 데이트') && !n.includes('휴지통') }),
+  )
 }
 
 // 시리즈 앵커가 아닌 회차를 편집하려면 월 셀로 그 날을 먼저 선택한 뒤 아젠다의 occurrence를 연다.
 // (셀 버튼 aria-label은 'YYYY-MM-DD …'로 시작 — MonthGrid.)
 function selectDayAndEdit(occDay: string) {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${occDay}`) }))
-  fireEvent.click(screen.getByRole('button', { name: /주말 데이트/ }))
+  fireEvent.click(
+    screen.getByRole('button', { name: (n) => n.includes('주말 데이트') && !n.includes('휴지통') }),
+  )
 }
 
 beforeEach(() => {
