@@ -24,8 +24,7 @@ npx supabase --help    # 동작 확인
 
 ```bash
 npx supabase login        # 브라우저로 Personal Access Token 발급
-npx supabase link --project-ref <PROJECT_REF> -p '<DB_PASSWORD>'
-```
+npx supabase link --project-ref uddytwakwryqqbfjhebd
 
 > 확인: 이게 보이면 OK — `npx supabase migration list` 가 에러 없이 Local/Remote 표를 출력한다(링크 성공).
 
