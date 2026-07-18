@@ -16,6 +16,12 @@ import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WithWish } from '@/lib/places/wishStatus'
 import { nextSnap, prevSnap, snapForFlick, translateYFor, dimProgress, type SnapStop } from '@/lib/places/sheetSnap'
+
+// full 미만에서 body는 스크롤러가 아니라 시트 드래그 표면 — 리스트 스크롤은 full에서만.
+// (half에서 리스트가 스크롤되면 시트가 translateY만큼 내려가 있어 하단이 화면 밖 + 위로 끌어도 시트가 안 펼쳐진다.)
+function bodyStyleFor(snap: SnapStop): { overflowY?: 'hidden'; touchAction?: 'none' } {
+  return snap === 'full' ? {} : { overflowY: 'hidden', touchAction: 'none' }
+}
 import { sheetTravelHeight, setAppVh } from '@/lib/layout/appViewport'
 import { readPxVar } from '@/lib/layout/cssOffsets'
 import { haptic } from '@/lib/haptics'
@@ -144,10 +150,22 @@ export function PlaceSheet({
     const measure = () => {
       setVh(window.innerHeight)
       setAppVh(window.innerHeight) // CSS(.sheet height/bottom)와 JS(translate)가 같은 vh를 읽게.
-      if (peekRef.current) setPeekPx(peekRef.current.getBoundingClientRect().height)
       const sb = getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')
       const px = parseFloat(sb) || 0
       setSafeBottom(px)
+      if (peekRef.current) {
+        const h = peekRef.current.getBoundingClientRect().height
+        setPeekPx(h)
+        // 지도가 예약할 하단 인셋을 '실측'으로 발행 — 지도 하단이 시트 peek 상단에 정확히 닿게.
+        // peek 상단(viewport Y) = travel - peekPx. 지도영역 하단 = 실제 탭바 top.
+        // 예약 = 탭바top - peek상단. (토큰 --tabbar-h/--safe로 계산하면 실제 탭바 높이와 어긋나
+        // 지도-시트 사이에 배경 공백이 생긴다 — 탭바 이중계산 버그.)
+        const peekTopY = Math.max(0, window.innerHeight - tabbarH - px - h)
+        const tabbar = document.querySelector('[class*="tabbar"]') as HTMLElement | null
+        const tabbarTop = tabbar?.getBoundingClientRect().top ?? window.innerHeight - tabbarH - px
+        const reserve = Math.max(h, tabbarTop - peekTopY)
+        document.documentElement.style.setProperty('--map-bottom-reserve', `${reserve}px`)
+      }
     }
     measure()
     window.addEventListener('resize', measure)
@@ -171,11 +189,13 @@ export function PlaceSheet({
     if (selectedId && snap === 'peek') setSnap('half')
   }, [selectedId, snap])
 
-  // 빈/미연결/로딩이면 첫 화면이 죽지 않게 half로 자동 오픈(spec §3.3). peek에서만(사용자 펼침 존중).
+  // 빈/미연결이면 첫 화면이 죽지 않게 half로 자동 오픈(spec §3.3). peek에서만(사용자 펼침 존중).
+  // ★ 로딩 '중'에는 판단 보류 — 로딩 순간을 빈 상태로 오판해 장소가 있어도 매번 half로 열리면
+  //   시작 화면(내 위치 지도)을 가리고 내 위치 버튼(peek 전용)도 숨긴다.
   const autoHalfRef = useRef(false)
   useEffect(() => {
-    if (autoHalfRef.current) return
-    const nothingToShow = !coupleActive || placesLoading || places.length === 0
+    if (autoHalfRef.current || placesLoading) return
+    const nothingToShow = !coupleActive || places.length === 0
     if (nothingToShow && snap === 'peek') {
       autoHalfRef.current = true
       setSnap('half')
@@ -249,15 +269,20 @@ export function PlaceSheet({
     dragInfo.current = null
   }
 
-  // body 당겨 접기 — scrollTop===0에서 아래로 끌면 한 단계 접는다(네이티브 시트 제스처 근사).
+  // body 제스처(네이티브 시트 근사) — full 미만: 리스트 스크롤 대신 위로 끌면 펼치고 아래로 끌면 접는다
+  // (iOS 지도앱 패턴). full: 리스트가 스크롤하고, scrollTop===0에서 아래로 끌면 한 단계 접기.
   const onBodyPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if ((bodyRef.current?.scrollTop ?? 0) <= 0) bodyDrag.current = { y: e.clientY }
+    if (snap !== 'full' || (bodyRef.current?.scrollTop ?? 0) <= 0) bodyDrag.current = { y: e.clientY }
   }
   const onBodyPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const b = bodyDrag.current
     if (!b) return
-    if (e.clientY - b.y > DRAG_THRESHOLD && (bodyRef.current?.scrollTop ?? 0) <= 0) {
-      setSnap(prevSnap(snap)) // scrollTop===0에서 아래로 끌면 한 단계 접기
+    const dy = e.clientY - b.y
+    if (dy > DRAG_THRESHOLD && (bodyRef.current?.scrollTop ?? 0) <= 0) {
+      setSnap(prevSnap(snap)) // 아래로 끌면 한 단계 접기
+      bodyDrag.current = null
+    } else if (-dy > DRAG_THRESHOLD && snap !== 'full') {
+      setSnap(nextSnap(snap)) // full 미만에서 위로 끌면 한 단계 펼치기
       bodyDrag.current = null
     }
   }
@@ -373,6 +398,7 @@ export function PlaceSheet({
           ref={bodyRef}
           className={styles.body}
           data-sheet-body
+          style={bodyStyleFor(snap)}
           onPointerDown={onBodyPointerDown}
           onPointerMove={onBodyPointerMove}
           onPointerUp={onBodyPointerUp}
@@ -393,6 +419,7 @@ export function PlaceSheet({
           ref={bodyRef}
           className={`${styles.body} ${detailMode ? styles.bodyDetail : ''}`}
           data-sheet-body
+          style={bodyStyleFor(snap)}
           onPointerDown={onBodyPointerDown}
           onPointerMove={onBodyPointerMove}
           onPointerUp={onBodyPointerUp}
