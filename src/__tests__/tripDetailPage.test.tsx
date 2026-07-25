@@ -16,8 +16,11 @@ const state = vi.hoisted(() => ({
   events: [] as unknown[],
   places: [] as unknown[],
   wishes: { byPlace: {} as Record<string, unknown>, mine: {} },
+  // directions 프록시 결과 — undefined = 미배포/실패(칩 없음이 기본 경로).
+  legResults: undefined as { distanceMeters: number | null; polyline: null; degraded: boolean }[] | undefined,
   create: vi.fn(),
   remove: vi.fn(),
+  openDirections: vi.fn(),
 }))
 
 vi.mock('@/state/auth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }))
@@ -32,6 +35,13 @@ vi.mock('@/hooks/useEventMutations', () => ({
     remove: { mutate: state.remove, isPending: false },
   }),
 }))
+
+vi.mock('@/hooks/useDirectionLegs', () => ({
+  useDirectionLegs: () => ({ data: state.legResults }),
+}))
+// 지도는 키 미설정이면 렌더하지 않는다 — 칩/목록은 지도와 무관하게 검증된다.
+vi.mock('@/lib/naver/loadNaverMaps', () => ({ isNaverMapConfigured: () => false }))
+vi.mock('@/lib/places/directionsUrl', () => ({ openDirections: state.openDirections }))
 
 import TripDetailPage from '@/pages/TripDetailPage'
 
@@ -59,9 +69,23 @@ beforeEach(() => {
   state.events = []
   state.places = []
   state.wishes = { byPlace: {}, mine: {} }
+  state.legResults = undefined
   state.create.mockReset()
   state.remove.mockReset()
+  state.openDirections.mockReset()
 })
+
+// 좌표를 가진 두 스톱이 붙어 있는 Day 1 시나리오(거리 칩 검증용 공통 세팅).
+function seedTwoStops() {
+  state.places = [
+    { id: 'p1', name: '칠성조선소', lat: 38.2, lng: 128.59 },
+    { id: 'p2', name: '영금정', lat: 38.21, lng: 128.6 },
+  ]
+  state.events = [
+    { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
+    { id: 'e2', title: '영금정', start: kst('2026-07-25', '14:00'), end: kst('2026-07-25', '15:00'), place_id: 'p2', memo: null, version: 1 },
+  ]
+}
 
 describe('TripDetailPage — 여행 Day 계획', () => {
   it('여행 기간에서 Day 슬롯을 도출한다(1박2일 → Day 1·2)', () => {
@@ -146,6 +170,58 @@ describe('TripDetailPage — 여행 Day 계획', () => {
     renderDetail()
     fireEvent.click(screen.getByLabelText('칠성조선소 빼기'))
     expect(state.remove).toHaveBeenCalledWith({ id: 'e1', expectedVersion: 7 })
+  })
+
+  it('거리 칩 — 스톱 사이에 거리 + 길찾기를 텍스트로 보여준다', () => {
+    seedTwoStops()
+    state.legResults = [{ distanceMeters: 1240, polyline: null, degraded: false }]
+    renderDetail()
+    expect(screen.getByRole('button', { name: /칠성조선소에서 영금정까지 1.2km/ })).toBeInTheDocument()
+    expect(screen.getByText(/1.2km · 길찾기/)).toBeInTheDocument()
+  })
+
+  it('거리 칩 — 1km 미만은 m 단위로', () => {
+    seedTwoStops()
+    state.legResults = [{ distanceMeters: 352, polyline: null, degraded: false }]
+    renderDetail()
+    expect(screen.getByText(/350m · 길찾기/)).toBeInTheDocument()
+  })
+
+  it('거리 칩 탭 → 다음 스톱으로 길찾기 딥링크', () => {
+    seedTwoStops()
+    state.legResults = [{ distanceMeters: 1240, polyline: null, degraded: false }]
+    renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /칠성조선소에서 영금정까지/ }))
+    expect(state.openDirections).toHaveBeenCalledWith({ lat: 38.21, lng: 128.6, name: '영금정' })
+  })
+
+  it('프록시 미배포/실패면 칩을 숨긴다 — 목록은 그대로 뜬다', () => {
+    seedTwoStops()
+    state.legResults = undefined
+    renderDetail()
+    expect(screen.queryByText(/길찾기/)).not.toBeInTheDocument()
+    expect(screen.getByText('칠성조선소')).toBeInTheDocument()
+  })
+
+  it('거리 미상(null)이면 0km 같은 거짓말 대신 칩을 숨긴다', () => {
+    seedTwoStops()
+    state.legResults = [{ distanceMeters: null, polyline: null, degraded: true }]
+    renderDetail()
+    expect(screen.queryByText(/길찾기/)).not.toBeInTheDocument()
+  })
+
+  it('좌표 없는 스톱이 끼면 그 구간엔 칩을 만들지 않는다(거짓 거리 방지)', () => {
+    state.places = [
+      { id: 'p1', name: '칠성조선소', lat: 38.2, lng: 128.59 },
+      { id: 'p2', name: '이름만 있는 곳', lat: null, lng: null },
+    ]
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
+      { id: 'e2', title: '이름만 있는 곳', start: kst('2026-07-25', '14:00'), end: kst('2026-07-25', '15:00'), place_id: 'p2', memo: null, version: 1 },
+    ]
+    state.legResults = [{ distanceMeters: 1240, polyline: null, degraded: false }]
+    renderDetail()
+    expect(screen.queryByText(/길찾기/)).not.toBeInTheDocument()
   })
 
   it('없는 여행이면 친근한 빈 상태로 — 흰 화면 금지', () => {

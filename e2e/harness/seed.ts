@@ -13,6 +13,8 @@ export type SeedTables = {
   profiles?: unknown[]
   events?: unknown[]
   trips?: unknown[]
+  /** directions 프록시 leg 결과. 미시드면 프록시를 실패시켜 '미배포' 폴백 경로를 재현한다. */
+  directionLegs?: { polyline: { lat: number; lng: number }[] | null; distanceMeters: number | null; degraded: boolean }[]
 }
 
 function jsonRoute(body: unknown) {
@@ -83,5 +85,11 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
   await page.route('**/e2e.supabase.co/rest/v1/events**', jsonRoute(tables.events ?? []))
   // 여행(§5.3) — trips REST. 여행 탭 목록/상세가 읽는다. 미시드 시 빈 배열(빈 상태 경로).
   await page.route('**/e2e.supabase.co/rest/v1/trips**', jsonRoute(tables.trips ?? []))
+  // 길찾기 프록시(P4c) — 시드하면 거리 칩·도로 폴리라인이 뜨고, 미시드면 500으로 '미배포' 폴백을 재현한다.
+  await page.route('**/e2e.supabase.co/functions/v1/directions', (route) =>
+    tables.directionLegs
+      ? jsonRoute({ ok: true, legs: tables.directionLegs })(route)
+      : route.fulfill({ status: 500, contentType: 'application/json', body: '{"ok":false}' }),
+  )
   await page.route('**/realtime/v1/websocket**', (route) => route.abort())
 }

@@ -1,13 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import type { RecapVertex } from '@/lib/recap/recapStats'
+import { useDirectionLegs } from '@/hooks/useDirectionLegs'
 import {
   toLegs,
   verticesKey,
   mergeLegPolylines,
   roadDistanceKm,
   type LatLng,
-  type LegResult,
 } from '@/lib/recap/legs'
 
 export type Snapped = {
@@ -25,21 +23,8 @@ export function useSnappedPolyline(
   vertices: RecapVertex[],
 ): Snapped {
   const legs = toLegs(vertices)
-  const key = verticesKey(vertices)
-  const q = useQuery<LegResult[]>({
-    queryKey: ['trip-directions', coupleId, tripId, key],
-    enabled: Boolean(coupleId && tripId && isSupabaseConfigured && legs.length >= 1),
-    staleTime: 1000 * 60 * 60, // 동선은 visit 변경 전 불변(verticesKey가 바뀌면 새 쿼리)
-    retry: false,
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke<{ ok: boolean; legs: LegResult[] }>(
-        'directions',
-        { body: { legs } },
-      )
-      if (error || !data || data.ok === false) throw new Error('directions unavailable')
-      return data.legs
-    },
-  })
+  // 동선은 visit 변경 전 불변(verticesKey가 바뀌면 새 쿼리).
+  const q = useDirectionLegs(coupleId, tripId, legs, verticesKey(vertices))
 
   if (!q.data) {
     return { polyline: null, roadDistanceKm: null, degraded: false, isLoading: q.isLoading }

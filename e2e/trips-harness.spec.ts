@@ -113,6 +113,46 @@ test('상세 — 담기 패널은 이미 담긴 곳을 후보에서 뺀다', asy
   await expect(page.getByText(/담을 수 있는 가고싶은 곳이 없어요/)).toBeVisible()
 })
 
+test('상세 — 거리 칩 + 그날 동선 미니 지도', async ({ page }) => {
+  await seedAuthedMap(page, {
+    trips: TRIPS,
+    events: EVENTS,
+    places: PLACES,
+    // 스톱 2곳 → 구간 1개. 도로 거리 1.24km.
+    directionLegs: [
+      {
+        polyline: [
+          { lat: 38.2, lng: 128.59 },
+          { lat: 38.205, lng: 128.595 },
+          { lat: 38.21, lng: 128.6 },
+        ],
+        distanceMeters: 1240,
+        degraded: false,
+      },
+    ],
+  })
+  await page.goto('/trips/t1')
+  // 거리 + 길찾기를 텍스트로(색만 의존 금지 §8). 탭 타깃은 44px 이상.
+  const chip = page.getByRole('button', { name: /칠성조선소에서 영금정까지 1\.2km/ })
+  await expect(chip).toBeVisible()
+  expect((await chip.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  // 미니 지도(네이버 스텁)가 그려진다.
+  await expect(page.getByLabel('장소 지도')).toBeVisible()
+
+  const s = shot('trip-detail-legs')
+  test.skip(s.skip, `베이스라인 없음(${process.platform})`)
+  await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
+})
+
+test('상세 — 길찾기 프록시가 죽어도 목록은 그대로(칩만 사라짐)', async ({ page }) => {
+  // directionLegs 미시드 → 프록시 500. 칩은 없지만 스톱·Day는 정상 렌더돼야 한다.
+  await seedAuthedMap(page, { trips: TRIPS, events: EVENTS, places: PLACES })
+  await page.goto('/trips/t1')
+  await expect(page.getByText('칠성조선소')).toBeVisible()
+  await expect(page.getByText('영금정')).toBeVisible()
+  await expect(page.getByText(/길찾기/)).toHaveCount(0)
+})
+
 test('상세 — 다크 모드', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await seedAuthedMap(page, { trips: TRIPS, events: EVENTS, places: PLACES })

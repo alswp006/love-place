@@ -4,7 +4,7 @@ import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useTrips } from '@/hooks/useTrips'
 import { useEvents } from '@/hooks/useEvents'
-import { usePlaces } from '@/hooks/usePlaces'
+import { usePlaces, type PlaceRow } from '@/hooks/usePlaces'
 import { useWishes } from '@/hooks/useWishes'
 import { useEventMutations } from '@/hooks/useEventMutations'
 import { useConflict } from '@/lib/sync/useConflict'
@@ -13,6 +13,12 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { Skeleton } from '@/components/common/Skeleton'
 import { Button } from '@/components/ui/Button'
 import { Chip } from '@/components/ui/Chip'
+import { NaverMap } from '@/components/map/NaverMap'
+import { isNaverMapConfigured } from '@/lib/naver/loadNaverMaps'
+import { useDirectionLegs } from '@/hooks/useDirectionLegs'
+import { mergeLegPolylines } from '@/lib/recap/legs'
+import { dayLegs, legIndexByFromId, legsKey, formatDistance } from '@/lib/trips/dayLegs'
+import { openDirections } from '@/lib/places/directionsUrl'
 import { formatTime, DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import { localDayKey } from '@/lib/journey/autoLink'
 import {
@@ -56,14 +62,48 @@ export default function TripDetailPage() {
   const [adding, setAdding] = useState(false)
 
   const placeById = useMemo(() => {
-    const m = new Map<string, string>()
-    for (const p of places ?? []) m.set(p.id, p.name)
+    const m = new Map<string, PlaceRow>()
+    for (const p of places ?? []) m.set(p.id, p)
     return m
   }, [places])
 
   const stops = useMemo(
     () => (activeDay ? stopsOfDay(events ?? [], activeDay) : []),
     [events, activeDay],
+  )
+
+  // 스톱 사이 구간 — 좌표가 양쪽 다 있는 인접 쌍만(좌표 미상이면 칩을 만들지 않는다).
+  const legs = useMemo(
+    () =>
+      dayLegs(stops, (s) => {
+        const p = s.place_id ? placeById.get(s.place_id) : undefined
+        return p && typeof p.lat === 'number' && typeof p.lng === 'number'
+          ? { lat: p.lat, lng: p.lng }
+          : null
+      }),
+    [stops, placeById],
+  )
+  // 도로 스냅 — 프록시 미배포/실패면 조용히 없는 것으로(칩 숨김, 지도는 직선 폴백).
+  const dir = useDirectionLegs(
+    coupleId,
+    activeDay ? `${tripId}:${activeDay}` : null,
+    legs.map((l) => ({ from: l.from, to: l.to })),
+    legsKey(legs),
+  )
+  const legIndex = useMemo(() => legIndexByFromId(legs), [legs])
+  // 지도 선: 도로 경로가 오면 그것, 아니면 스톱을 직선으로 이은 베이스라인(2곳 이상일 때만).
+  const polyline = useMemo(() => {
+    const plain = legs.map((l) => ({ from: l.from, to: l.to }))
+    if (plain.length === 0) return []
+    return dir.data ? mergeLegPolylines(plain, dir.data) : mergeLegPolylines(plain, [])
+  }, [legs, dir.data])
+  // 미니 지도 마커 = 그날 스톱의 장소들(순서대로).
+  const dayPlaces = useMemo(
+    () =>
+      stops
+        .map((s) => (s.place_id ? placeById.get(s.place_id) : undefined))
+        .filter((p): p is NonNullable<typeof p> => Boolean(p && p.lat != null && p.lng != null)),
+    [stops, placeById],
   )
 
   // 담을 후보 = 위시(가고싶음)로 찜한 장소 중 이 Day에 아직 없는 것.
@@ -152,6 +192,14 @@ export default function TripDetailPage() {
         ))}
       </div>
 
+      {/* 그날 동선 미니 지도 — 스톱이 2곳 이상일 때만(1곳짜리 선은 의미 없음).
+          도로 경로가 오기 전엔 직선 베이스라인으로 즉시 그린다(프로그레시브). */}
+      {dayPlaces.length >= 2 && isNaverMapConfigured() ? (
+        <div className={styles.mapWrap}>
+          <NaverMap places={dayPlaces} snap="full" polyline={polyline} />
+        </div>
+      ) : null}
+
       {/* 그 날의 스톱 — 시간순. 담긴 곳이 없으면 죽은 화면 대신 담기 유도(§7). */}
       {stops.length === 0 ? (
         <EmptyState
@@ -161,26 +209,57 @@ export default function TripDetailPage() {
         />
       ) : (
         <ol className={styles.stops}>
-          {stops.map((s) => (
-            <li key={s.id} className={styles.stop}>
-              <span className={styles.time}>{formatTime(s.start)}</span>
-              <span className={styles.stopBody}>
-                <span className={styles.stopName}>
-                  {s.place_id ? (placeById.get(s.place_id) ?? s.title) : s.title}
-                </span>
-                {s.memo ? <span className={styles.stopMemo}>{s.memo}</span> : null}
-              </span>
-              <button
-                type="button"
-                className={styles.stopDel}
-                onClick={() => remove.mutate({ id: s.id, expectedVersion: s.version })}
-                disabled={remove.isPending}
-                aria-label={`${s.title} 빼기`}
-              >
-                ✕
-              </button>
-            </li>
-          ))}
+          {stops.map((s) => {
+            const place = s.place_id ? placeById.get(s.place_id) : undefined
+            const name = place?.name ?? s.title
+            const li = legIndex[s.id]
+            const leg = li === undefined ? undefined : legs[li]
+            const dist = li === undefined ? null : formatDistance(dir.data?.[li]?.distanceMeters)
+            // 다음 스톱(길찾기 목적지) — 구간이 있을 때만 존재.
+            const nextPlace = leg?.toId
+              ? placeById.get(stops.find((x) => x.id === leg.toId)?.place_id ?? '')
+              : undefined
+            return (
+              <li key={s.id}>
+                <div className={styles.stop}>
+                  <span className={styles.time}>{formatTime(s.start)}</span>
+                  <span className={styles.stopBody}>
+                    <span className={styles.stopName}>{name}</span>
+                    {s.memo ? <span className={styles.stopMemo}>{s.memo}</span> : null}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.stopDel}
+                    onClick={() => remove.mutate({ id: s.id, expectedVersion: s.version })}
+                    disabled={remove.isPending}
+                    aria-label={`${name} 빼기`}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* 구간 칩 — 이미 보여줘야 하는 정보(거리)에 길찾기 탭 타깃을 얹는다(화면을 안 늘림).
+                    거리 미상이면 칩 자체를 숨긴다(0km 같은 거짓말 금지). */}
+                {leg && dist && nextPlace ? (
+                  <button
+                    type="button"
+                    className={styles.legChip}
+                    onClick={() =>
+                      openDirections({
+                        lat: leg.to.lat,
+                        lng: leg.to.lng,
+                        name: nextPlace.name,
+                      })
+                    }
+                    aria-label={`${name}에서 ${nextPlace.name}까지 ${dist} — 길찾기 열기`}
+                  >
+                    <span className={styles.legLine} aria-hidden />
+                    <span className={styles.legText}>↳ {dist} · 길찾기</span>
+                  </button>
+                ) : null}
+              </li>
+            )
+          })}
         </ol>
       )}
 

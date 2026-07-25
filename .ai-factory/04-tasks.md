@@ -184,8 +184,18 @@ public/      (PWA manifest·아이콘·service worker)
 - **산출:** `src/lib/trips/tripDays.ts`, `src/pages/{TripsPage,TripDetailPage}.tsx`, `src/app/tabs.ts`·`router.tsx`·`nav/icons.tsx`(Suitcase). `components/places/TripsSection.tsx` 제거(페이지로 흡수).
 - **의존성:** P3b, P2b(events place_id), P1b(wishes).
 - **DoD:** 5탭 렌더·딥링크(`/trips/:tripId`) / Day 슬롯이 기간에서 도출 / 담기→그날 이벤트(기본 10:00, 이후 마지막 스톱에 이어붙임) / 이미 담긴 곳은 후보에서 제외 / 빼기는 `version` 조건부 / 빈 상태·로딩 스켈레톤 / 상태 칩은 색+텍스트.
-- **테스트:** `tripDays.test.ts`(19: Day 도출·정렬·국면 라벨·슬롯 시각·KST 자정 경계), `tripDetailPage.test.tsx`(10: Day 전환·중복 방지·낙관적 락·없는 여행), `e2e/trips-harness.spec.ts`(6: 탭 진입·빈 상태·목록 칩·Day 슬롯·담기 후보·다크).
-- **후속(미착수):** 스톱 사이 **거리/이동시간 칩**(`directions` Edge Function이 leg별 `distanceMeters` 반환 — 배포만 하면 붙음) + 그날 동선 **미니 지도**(`useSnappedPolyline` 재사용). 트리플식 그래픽의 나머지 절반.
+- **테스트:** `tripDays.test.ts`(19: Day 도출·정렬·국면 라벨·슬롯 시각·KST 자정 경계), `tripDetailPage.test.tsx`(16: Day 전환·중복 방지·낙관적 락·없는 여행·거리 칩), `e2e/trips-harness.spec.ts`(8).
+
+## P3b-3 — 스톱 사이 거리 칩 + 그날 동선 미니 지도 ✅
+
+- **범위:** 여행 상세의 인접 스톱 사이에 **거리 + 길찾기 칩**(탭 → 네이버 길찾기 딥링크, 앱 미설치 시 웹 폴백), 그날 동선 **미니 지도**(도로 스냅 폴리라인, 오기 전엔 직선 베이스라인 — 프로그레시브).
+- **재사용:** `directions` Edge Function(P4c)이 이미 leg별 `{polyline, distanceMeters, degraded}`를 반환한다. 새 프록시·마이그레이션 없음. **needs-deploy: `supabase functions deploy directions`** — 미배포여도 칩만 안 뜨고 나머지는 정상(폴백 검증 포함).
+- **정리:** `useDirectionLegs`(원시 leg 반환)를 단일 호출 경로로 두고 `useSnappedPolyline`(리캡)이 그 위에 서게 리팩터 — 프록시 호출이 한 곳(중복 제거, 캐시 정책 일원화).
+- **[비협상] 거짓 거리 금지:** 좌표가 없는 스톱이 끼면 그 스톱이 걸린 **두 구간 모두** 만들지 않는다(건너뛰어 이으면 실제와 다른 두 장소 사이 거리를 말하게 됨). `distanceMeters=null`이면 `0km` 대신 칩을 **숨긴다**.
+- **산출:** `src/lib/trips/dayLegs.ts`, `src/hooks/useDirectionLegs.ts`, `TripDetailPage` 칩·지도.
+- **의존성:** P3b-2, P4c(directions 프록시).
+- **DoD:** 거리 표기(1km 미만 m / 이상 km) / 칩 탭 → 다음 스톱 딥링크 / 프록시 실패·미배포 시 칩만 사라지고 목록·지도 정상 / 칩 터치 타깃 ≥44px / 좌표 미상 구간엔 칩 없음.
+- **테스트:** `dayLegs.test.ts`(10: 구간 도출·좌표 결손·거리 포맷·캐시 키), `tripDetailPage.test.tsx` 거리 칩 6건, `e2e` 거리 칩·미니 지도·프록시 다운 폴백.
 
 ## P3c — 공유 사진 앨범 (EXIF 제안 + 수동 확정 + 미분류 트레이)
 

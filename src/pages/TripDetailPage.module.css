@@ -78,6 +78,15 @@
   color: var(--c-brand);
 }
 
+/* 그날 동선 미니 지도 — 고정 높이로 리스트를 밀어내지 않게. */
+.mapWrap {
+  position: relative;
+  height: 200px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+}
+
 .stops {
   list-style: none;
   margin: 0;
@@ -85,6 +94,35 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
+}
+
+/* 구간 칩 — 스톱 사이. 색이 아니라 텍스트(거리 + '길찾기')로 뜻을 말한다(§8). */
+.legChip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--c-text-weak);
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  padding: 0 var(--sp-3);
+  /* 터치 타깃 ≥44px(HIG) */
+  min-height: 44px;
+  text-align: left;
+}
+
+.legLine {
+  width: 2px;
+  align-self: stretch;
+  margin: 4px 0 4px 18px;
+  background: var(--c-border);
+  flex-shrink: 0;
+}
+
+.legText {
+  min-width: 0;
 }
 
 .stop {
