@@ -49,6 +49,8 @@ function makeNaverStub() {
     maps: {
       Map: class {
         constructor(el: HTMLElement) {
+          // 테스트 스텁: 생성된 맵 인스턴스를 밖에서 잡아두려는 의도적 alias.
+          // eslint-disable-next-line @typescript-eslint/no-this-alias
           mapObj = this
           mapEl = el
         }

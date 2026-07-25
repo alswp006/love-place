@@ -22,7 +22,11 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       // 외부 응답은 경계에서 검증 후 신뢰(web-stack.md §1). any 금지.
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      // `_` 접두 = 의도적으로 안 쓰는 값(구조분해로 prop 걷어내기 등). 인자·변수 양쪽에 적용.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   },
   // 테스트 파일에 vitest 전역 허용

@@ -12,7 +12,8 @@ const rec = vi.hoisted(() => ({
   start: vi.fn(async () => {}),
   pause: vi.fn(async () => {}),
   resume: vi.fn(async () => {}),
-  end: vi.fn(async () => {}),
+  // end는 실제 훅과 동일하게 {id, version(종료 후)} 또는 null을 반환한다.
+  end: vi.fn(async (): Promise<{ id: string; version: number } | null> => null),
 }))
 vi.mock('@/hooks/useConsent', async (orig) => {
   const real = await orig<typeof import('@/hooks/useConsent')>()
