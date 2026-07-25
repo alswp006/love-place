@@ -11,6 +11,7 @@ import { TABS } from '@/app/tabs'
 const PAGES: Record<string, React.LazyExoticComponent<() => React.JSX.Element>> = {
   '/': lazy(() => import('@/pages/MapPage')),
   '/calendar': lazy(() => import('@/pages/CalendarPage')),
+  '/trips': lazy(() => import('@/pages/TripsPage')),
   '/discover': lazy(() => import('@/pages/RecommendPage')),
   '/us': lazy(() => import('@/pages/UsPage')),
 }
@@ -22,6 +23,8 @@ const AuthCallbackPage = lazy(() => import('@/pages/auth/AuthCallbackPage'))
 const ConnectPage = lazy(() => import('@/pages/ConnectPage'))
 // 여행 리캡(R5) — 가드+탭바 안의 상세 라우트.
 const RecapPage = lazy(() => import('@/pages/RecapPage'))
+// 여행 상세(Day 계획) — 여행 탭에서 진입. 리캡(/recap)보다 덜 구체적이라 라우트 랭킹상 충돌 없음.
+const TripDetailPage = lazy(() => import('@/pages/TripDetailPage'))
 
 function lazyRoute(node: ReactNode) {
   return <Suspense fallback={<RouteFallback />}>{node}</Suspense>
@@ -59,10 +62,16 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           ...tabRoutes,
-          // 여행 리캡 상세(R5) — 추천 탭 '지난 여행'에서 진입(딥링크 가능).
+          // 여행 리캡 상세(R5) — 추천 탭 '지난 여행'·여행 상세에서 진입(딥링크 가능).
           {
             path: 'trips/:tripId/recap',
             element: lazyRoute(<RecapPage />),
+            errorElement: <RouteError />,
+          },
+          // 여행 상세(Day 계획) — 여행 목록에서 진입(딥링크 가능).
+          {
+            path: 'trips/:tripId',
+            element: lazyRoute(<TripDetailPage />),
             errorElement: <RouteError />,
           },
           // /places는 지도(/)로 통합됨 — 북마크/딥링크 보존용 명시적 리다이렉트.

@@ -176,6 +176,17 @@ public/      (PWA manifest·아이콘·service worker)
 - **DoD:** 여행별·지역별 보기 정확 / 커버사진 폴백 / region 그룹 안정.
 - **테스트:** 그룹핑 로직, 커버 폴백, 빈 상태.
 
+## P3b-2 — 여행 탭 승격 + Day 계획 (계획 면 신설) ✅
+
+- **왜:** P3b까지의 `trips`는 **회고 전용**이었다(visits 묶기·리캡·동선 자동 연결 — 전부 사후). 가기 **전에** 여행에 장소를 담는 경로가 없었고, 목록마저 `/us`(설정) 탭의 접힌 섹션에 묻혀 있었다.
+- **범위:** ① 하단 탭 4→5(`/trips` 신설, `src/app/tabs.ts` 단일 출처) ② 목록 페이지로 승격(진행중→예정→지난 정렬, 여행별/지역별 보기 유지) ③ 상세 `/trips/:tripId` — 기간에서 도출한 Day 슬롯 + 그날 스톱(시간순) + 스톱 빼기(낙관적 락) ④ 가고싶은 곳에서 담기 → 그날 이벤트 생성 ⑤ 지난 여행 → 리캡 링크.
+- **[비협상] 계획을 따로 저장하지 않는다:** Day N 스톱 = 그 날짜에 든 `events` 중 `place_id`가 있는 것. `events.trip_id`·조인 테이블 **금지**(캘린더와 이중 관리 = §4.2 "상태는 도출" 위반). 결과적으로 **마이그레이션 0**.
+- **산출:** `src/lib/trips/tripDays.ts`, `src/pages/{TripsPage,TripDetailPage}.tsx`, `src/app/tabs.ts`·`router.tsx`·`nav/icons.tsx`(Suitcase). `components/places/TripsSection.tsx` 제거(페이지로 흡수).
+- **의존성:** P3b, P2b(events place_id), P1b(wishes).
+- **DoD:** 5탭 렌더·딥링크(`/trips/:tripId`) / Day 슬롯이 기간에서 도출 / 담기→그날 이벤트(기본 10:00, 이후 마지막 스톱에 이어붙임) / 이미 담긴 곳은 후보에서 제외 / 빼기는 `version` 조건부 / 빈 상태·로딩 스켈레톤 / 상태 칩은 색+텍스트.
+- **테스트:** `tripDays.test.ts`(19: Day 도출·정렬·국면 라벨·슬롯 시각·KST 자정 경계), `tripDetailPage.test.tsx`(10: Day 전환·중복 방지·낙관적 락·없는 여행), `e2e/trips-harness.spec.ts`(6: 탭 진입·빈 상태·목록 칩·Day 슬롯·담기 후보·다크).
+- **후속(미착수):** 스톱 사이 **거리/이동시간 칩**(`directions` Edge Function이 leg별 `distanceMeters` 반환 — 배포만 하면 붙음) + 그날 동선 **미니 지도**(`useSnappedPolyline` 재사용). 트리플식 그래픽의 나머지 절반.
+
 ## P3c — 공유 사진 앨범 (EXIF 제안 + 수동 확정 + 미분류 트레이)
 
 - **범위:** Supabase Storage 원본+썸네일 업로드, `photos`(storage_url·thumbnail_url·place_id?·trip_id?·taken_at·exif_lat?·exif_lng?·classified_by·uploaded_by·caption). EXIF로 trip/place **추정 제안**(자동 확정 금지, '자동' 배지), 1탭 수락/변경. GPS 없음→시각으로 trip만, 둘 다 못맞춤→**미분류(UNCLASSIFIED) 트레이**(정식 상태). 필터 칩(여행/지역/날짜/태그). **썸네일 지연 로딩**, 원본은 탭 시.

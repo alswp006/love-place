@@ -1,0 +1,165 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, within } from '@testing-library/react'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
+
+// 여행 상세(Day 계획) — Day 슬롯은 기간에서 도출, 스톱은 events에서 도출(별도 저장소 없음).
+// 오늘을 2026-07-25로 고정해야 '오늘 Day 자동 선택'이 결정적으로 검증된다.
+vi.mock('@/lib/journey/autoLink', async (orig) => {
+  const real = await orig<typeof import('@/lib/journey/autoLink')>()
+  return { ...real, localDayKey: () => '2026-07-25' }
+})
+
+const kst = (day: string, hhmm: string) => new Date(`${day}T${hhmm}:00+09:00`).toISOString()
+
+const state = vi.hoisted(() => ({
+  trips: [] as unknown[],
+  events: [] as unknown[],
+  places: [] as unknown[],
+  wishes: { byPlace: {} as Record<string, unknown>, mine: {} },
+  create: vi.fn(),
+  remove: vi.fn(),
+}))
+
+vi.mock('@/state/auth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }))
+vi.mock('@/hooks/useCouple', () => ({ useCouple: () => ({ data: { coupleId: 'c1' } }) }))
+vi.mock('@/hooks/useTrips', () => ({ useTrips: () => ({ data: state.trips, isLoading: false }) }))
+vi.mock('@/hooks/useEvents', () => ({ useEvents: () => ({ data: state.events }) }))
+vi.mock('@/hooks/usePlaces', () => ({ usePlaces: () => ({ data: state.places }) }))
+vi.mock('@/hooks/useWishes', () => ({ useWishes: () => ({ data: state.wishes }) }))
+vi.mock('@/hooks/useEventMutations', () => ({
+  useEventMutations: () => ({
+    create: { mutate: state.create, isPending: false },
+    remove: { mutate: state.remove, isPending: false },
+  }),
+}))
+
+import TripDetailPage from '@/pages/TripDetailPage'
+
+function renderDetail() {
+  return render(
+    <MemoryRouter initialEntries={['/trips/t1']}>
+      <Routes>
+        <Route path="/trips/:tripId" element={<TripDetailPage />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+
+const TRIP = {
+  id: 't1',
+  title: '속초 1박2일',
+  start_date: '2026-07-25',
+  end_date: '2026-07-26',
+  region_code: null,
+  version: 1,
+}
+
+beforeEach(() => {
+  state.trips = [TRIP]
+  state.events = []
+  state.places = []
+  state.wishes = { byPlace: {}, mine: {} }
+  state.create.mockReset()
+  state.remove.mockReset()
+})
+
+describe('TripDetailPage — 여행 Day 계획', () => {
+  it('여행 기간에서 Day 슬롯을 도출한다(1박2일 → Day 1·2)', () => {
+    renderDetail()
+    const bar = screen.getByRole('group', { name: '여행 날짜 선택' })
+    expect(within(bar).getByText('Day 1')).toBeInTheDocument()
+    expect(within(bar).getByText('Day 2')).toBeInTheDocument()
+    expect(within(bar).queryByText('Day 3')).not.toBeInTheDocument()
+  })
+
+  it('오늘이 기간에 들면 오늘 Day가 선택된 채로 열린다', () => {
+    renderDetail()
+    const day1 = screen.getByRole('button', { pressed: true })
+    expect(within(day1).getByText('Day 1')).toBeInTheDocument()
+  })
+
+  it('그 날의 스톱을 시간순으로 보여준다 — 장소 없는 일정은 빼고', () => {
+    state.places = [{ id: 'p1', name: '칠성조선소' }, { id: 'p2', name: '영금정' }]
+    state.events = [
+      { id: 'e2', title: '영금정', start: kst('2026-07-25', '14:00'), end: kst('2026-07-25', '15:00'), place_id: 'p2', memo: null, version: 1 },
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
+      { id: 'e0', title: '휴가 신청', start: kst('2026-07-25', '08:00'), end: kst('2026-07-25', '08:30'), place_id: null, memo: null, version: 1 },
+    ]
+    renderDetail()
+    const items = screen.getAllByRole('listitem')
+    expect(items.map((li) => li.textContent)).toEqual([
+      expect.stringContaining('칠성조선소'),
+      expect.stringContaining('영금정'),
+    ])
+    expect(screen.queryByText('휴가 신청')).not.toBeInTheDocument()
+  })
+
+  it('Day를 바꾸면 그 날 스톱만 보인다', () => {
+    state.places = [{ id: 'p1', name: '칠성조선소' }, { id: 'p3', name: '속초해변' }]
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
+      { id: 'e3', title: '속초해변', start: kst('2026-07-26', '09:00'), end: kst('2026-07-26', '10:00'), place_id: 'p3', memo: null, version: 1 },
+    ]
+    renderDetail()
+    expect(screen.getByText('칠성조선소')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Day 2'))
+    expect(screen.getByText('속초해변')).toBeInTheDocument()
+    expect(screen.queryByText('칠성조선소')).not.toBeInTheDocument()
+  })
+
+  it('빈 날은 죽은 화면 대신 담기 유도를 보여준다', () => {
+    renderDetail()
+    expect(screen.getByText('이 날은 아직 비어 있어요')).toBeInTheDocument()
+  })
+
+  it('위시에서 담으면 그 Day·그 장소로 이벤트를 만든다', () => {
+    state.places = [{ id: 'p1', name: '칠성조선소', region_label: '속초' }]
+    state.wishes = { byPlace: { p1: { userIds: ['u1'], totalPriority: 3, maxPriority: 3 } }, mine: {} }
+    renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /가고싶은 곳에서 담기/ }))
+    fireEvent.click(screen.getByRole('button', { name: /칠성조선소/ }))
+
+    expect(state.create).toHaveBeenCalledOnce()
+    const arg = state.create.mock.calls[0]![0] as { placeId: string; start: string; visibility: string }
+    expect(arg.placeId).toBe('p1')
+    expect(arg.visibility).toBe('SHARED')
+    // 빈 날의 첫 스톱은 기본 10:00(KST) — 01:00Z.
+    expect(arg.start).toBe(kst('2026-07-25', '10:00'))
+  })
+
+  it('이미 그 Day에 담긴 장소는 후보에서 빠진다(중복 담기 방지)', () => {
+    state.places = [{ id: 'p1', name: '칠성조선소' }]
+    state.wishes = { byPlace: { p1: { userIds: ['u1'], totalPriority: 3, maxPriority: 3 } }, mine: {} }
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
+    ]
+    renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /가고싶은 곳에서 담기/ }))
+    expect(screen.getByText(/담을 수 있는 가고싶은 곳이 없어요/)).toBeInTheDocument()
+  })
+
+  it('스톱 빼기는 낙관적 락(version)으로 보낸다 — LWW 금지(§4.3)', () => {
+    state.places = [{ id: 'p1', name: '칠성조선소' }]
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 7 },
+    ]
+    renderDetail()
+    fireEvent.click(screen.getByLabelText('칠성조선소 빼기'))
+    expect(state.remove).toHaveBeenCalledWith({ id: 'e1', expectedVersion: 7 })
+  })
+
+  it('없는 여행이면 친근한 빈 상태로 — 흰 화면 금지', () => {
+    state.trips = []
+    renderDetail()
+    expect(screen.getByText('여행을 찾을 수 없어요')).toBeInTheDocument()
+  })
+
+  it('지난 여행에는 리캡 링크가 붙는다(계획 → 기록 연결)', () => {
+    state.trips = [{ ...TRIP, start_date: '2026-05-01', end_date: '2026-05-02' }]
+    renderDetail()
+    expect(screen.getByRole('link', { name: /리캡 보기/ })).toHaveAttribute(
+      'href',
+      '/trips/t1/recap',
+    )
+  })
+})

@@ -7,8 +7,6 @@ import { Dialog } from '@/components/common/Dialog'
 import { useAuth } from '@/state/auth'
 import { useSignOut } from '@/hooks/useSignOut'
 import { useCouple } from '@/hooks/useCouple'
-import { useVisits } from '@/hooks/useVisits'
-import { TripsSection } from '@/components/places/TripsSection'
 import { useDisconnectCouple } from '@/hooks/useCoupleInvite'
 import { fetchCoupleExport, fetchPhotoBlobs, downloadJson, downloadBlob } from '@/lib/export/dumpSchema'
 import { buildExportZip } from '@/lib/export/buildZip'
@@ -40,7 +38,6 @@ export default function UsPage() {
   const [zipExported, setZipExported] = useState(false)
   const cancelRef = useRef<HTMLButtonElement>(null)
   const myId = user?.id ?? null
-  const { data: visits } = useVisits(couple?.coupleId ?? null) // 여행 섹션 방문수 표시용
   const conflict = useConflict()
   const [trashOpen, setTrashOpen] = useState(false)
   const coupleId = couple?.coupleId ?? null
@@ -230,13 +227,6 @@ export default function UsPage() {
                 {exportError}
               </p>
             ) : null}
-          </section>
-        ) : null}
-
-        {/* ✈️ 여행 — 생성/목록/리캡 진입. (장소 탭이 지도로 통합되며 마운트가 누락됐던 것 복구.) */}
-        {couple?.coupleId ? (
-          <section className={styles.card} aria-label="여행 관리">
-            <TripsSection coupleId={couple.coupleId} myId={myId} visits={visits ?? []} />
           </section>
         ) : null}
 

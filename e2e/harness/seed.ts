@@ -12,6 +12,7 @@ export type SeedTables = {
   reactions?: unknown[]
   profiles?: unknown[]
   events?: unknown[]
+  trips?: unknown[]
 }
 
 function jsonRoute(body: unknown) {
@@ -80,5 +81,7 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
   await page.route('**/e2e.supabase.co/rest/v1/reactions**', jsonRoute(tables.reactions ?? []))
   // 캘린더(§5.1) — events REST. 미시드 시 빈 배열(연결됨-빈 CTA 경로). Realtime은 abort로 폴백.
   await page.route('**/e2e.supabase.co/rest/v1/events**', jsonRoute(tables.events ?? []))
+  // 여행(§5.3) — trips REST. 여행 탭 목록/상세가 읽는다. 미시드 시 빈 배열(빈 상태 경로).
+  await page.route('**/e2e.supabase.co/rest/v1/trips**', jsonRoute(tables.trips ?? []))
   await page.route('**/realtime/v1/websocket**', (route) => route.abort())
 }

@@ -1,0 +1,198 @@
+import { useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { ScreenScaffold } from '@/components/common/ScreenScaffold'
+import { EmptyState } from '@/components/common/EmptyState'
+import { Skeleton } from '@/components/common/Skeleton'
+import { CtaLink } from '@/components/common/CtaLink'
+import { Button } from '@/components/ui/Button'
+import { Chip } from '@/components/ui/Chip'
+import { useAuth } from '@/state/auth'
+import { useCouple } from '@/hooks/useCouple'
+import { useTrips, useCreateTrip, useDeleteTrip } from '@/hooks/useTrips'
+import { useEvents } from '@/hooks/useEvents'
+import { useVisits } from '@/hooks/useVisits'
+import { visitCountByTrip, groupTripsByRegion } from '@/lib/places/tripGroups'
+import { sortTripsForList, tripPhase, tripPhaseLabel, stopCountInTrip } from '@/lib/trips/tripDays'
+import { localDayKey } from '@/lib/journey/autoLink'
+import { tabByPath } from '@/app/tabs'
+import styles from './TripsPage.module.css'
+
+// 🧳 여행 — 여행 목록(§5.3). '우리'(설정) 탭에 접혀 있던 섹션을 탭으로 승격.
+// 정렬은 진행중 → 예정 → 지난(tripDays.sortTripsForList) — 지금 무슨 일이 벌어지는지가 맨 위.
+// 계획(담긴 곳) 수는 events에서 도출한다 — 여행에 계획을 따로 저장하지 않는다(CLAUDE.md §7).
+export default function TripsPage() {
+  const tab = tabByPath('/trips')
+  const { user } = useAuth()
+  const { data: couple } = useCouple()
+  const coupleId = couple?.coupleId ?? null
+  const myId = user?.id ?? null
+
+  const { data: trips, isLoading } = useTrips(coupleId)
+  const { data: events } = useEvents(coupleId)
+  const { data: visits } = useVisits(coupleId)
+  const create = useCreateTrip(coupleId, myId)
+  const del = useDeleteTrip(coupleId, myId)
+
+  const [formOpen, setFormOpen] = useState(false)
+  const [view, setView] = useState<'trip' | 'region'>('trip') // 이관 전 TripsSection의 보기 전환 유지
+  const [form, setForm] = useState({ title: '', start: '', end: '' })
+
+  const today = localDayKey()
+  const list = useMemo(() => sortTripsForList(trips ?? [], today), [trips, today])
+  const visitCounts = useMemo(() => visitCountByTrip(visits ?? []), [visits])
+
+  const canSubmit =
+    Boolean(form.title.trim()) && Boolean(form.start) && Boolean(form.end) && form.end >= form.start
+
+  // 여행별/지역별 두 보기가 같은 카드를 쓴다(중복 렌더 로직 방지).
+  const renderTrip = (t: (typeof list)[number]) => {
+    const phase = tripPhase(t, today)
+    const planned = stopCountInTrip(events ?? [], t)
+    const visited = visitCounts[t.id] ?? 0
+    return (
+      <li key={t.id} className={styles.item}>
+        <Link className={styles.card} to={`/trips/${t.id}`} aria-label={`${t.title} 여행 상세 열기`}>
+          <div className={styles.cardHead}>
+            <span className={styles.title}>{t.title}</span>
+            {/* 상태는 색이 아니라 텍스트로 말한다(§8 색만 의존 금지). */}
+            <Chip tone={phase === 'ONGOING' ? 'ok' : phase === 'UPCOMING' ? 'pink' : 'neutral'}>
+              {tripPhaseLabel(t, today)}
+            </Chip>
+          </div>
+          <span className={styles.meta}>
+            {t.start_date} ~ {t.end_date}
+          </span>
+          <span className={styles.counts}>
+            {planned > 0 ? `담은 곳 ${planned}` : '담은 곳 없음'}
+            {visited > 0 ? ` · 다녀온 곳 ${visited}` : ''}
+          </span>
+        </Link>
+        <button
+          type="button"
+          className={styles.del}
+          onClick={() => del.mutate({ id: t.id, expectedVersion: t.version })}
+          disabled={del.isPending}
+          aria-label={`${t.title} 삭제`}
+        >
+          🗑
+        </button>
+      </li>
+    )
+  }
+
+  const onCreate = (e: FormEvent) => {
+    e.preventDefault()
+    if (!canSubmit) return
+    create.mutate(
+      { title: form.title.trim(), startDate: form.start, endDate: form.end },
+      {
+        onSuccess: () => {
+          setForm({ title: '', start: '', end: '' })
+          setFormOpen(false)
+        },
+      },
+    )
+  }
+
+  return (
+    <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+      <div className={styles.actions}>
+        <Button
+          variant={formOpen ? 'ghost' : 'primary'}
+          onClick={() => setFormOpen((v) => !v)}
+          aria-expanded={formOpen}
+          aria-controls="trip-create-form"
+        >
+          {formOpen ? '취소' : '+ 새 여행'}
+        </Button>
+      </div>
+
+      {formOpen ? (
+        <form id="trip-create-form" className={styles.form} onSubmit={onCreate} aria-label="여행 만들기">
+          <input
+            className={styles.input}
+            placeholder="여행 이름 (예: 속초 1박2일)"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            aria-label="여행 이름"
+          />
+          <div className={styles.dates}>
+            <input
+              type="date"
+              className={styles.date}
+              value={form.start}
+              onChange={(e) => setForm({ ...form, start: e.target.value })}
+              aria-label="시작일"
+            />
+            <span aria-hidden>~</span>
+            <input
+              type="date"
+              className={styles.date}
+              value={form.end}
+              min={form.start || undefined}
+              onChange={(e) => setForm({ ...form, end: e.target.value })}
+              aria-label="종료일"
+            />
+          </div>
+          {form.start && form.end && form.end < form.start ? (
+            <p className={styles.formError} role="alert">
+              종료일이 시작일보다 빠를 수 없어요.
+            </p>
+          ) : null}
+          <Button type="submit" variant="primary" disabled={create.isPending || !canSubmit}>
+            {create.isPending ? '만드는 중…' : '여행 만들기'}
+          </Button>
+        </form>
+      ) : null}
+
+      {isLoading ? (
+        <Skeleton count={3} label="여행 불러오는 중" />
+      ) : list.length === 0 ? (
+        <EmptyState
+          emoji={tab.empty.emoji}
+          title={tab.empty.title}
+          hint={tab.empty.hint}
+          action={
+            tab.empty.action ? (
+              <CtaLink to={tab.empty.action.to}>{tab.empty.action.label}</CtaLink>
+            ) : undefined
+          }
+        />
+      ) : (
+        <>
+          <div className={styles.viewToggle} role="group" aria-label="보기 전환">
+            <button
+              type="button"
+              className={view === 'trip' ? styles.viewOn : styles.viewBtn}
+              aria-pressed={view === 'trip'}
+              onClick={() => setView('trip')}
+            >
+              여행별
+            </button>
+            <button
+              type="button"
+              className={view === 'region' ? styles.viewOn : styles.viewBtn}
+              aria-pressed={view === 'region'}
+              onClick={() => setView('region')}
+            >
+              지역별
+            </button>
+          </div>
+
+          {view === 'trip' ? (
+            <ul className={styles.list}>{list.map(renderTrip)}</ul>
+          ) : (
+            groupTripsByRegion(list).map((g) => (
+              <div key={g.regionKey} className={styles.regionGroup}>
+                <h2 className={styles.regionTitle}>
+                  {g.regionKey === '미지정' ? '지역 미지정' : g.regionKey}
+                </h2>
+                <ul className={styles.list}>{g.trips.map(renderTrip)}</ul>
+              </div>
+            ))
+          )}
+        </>
+      )}
+    </ScreenScaffold>
+  )
+}

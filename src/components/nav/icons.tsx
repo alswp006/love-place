@@ -61,6 +61,17 @@ export function Sparkles({ filled, className, decorative = true }: IconProps) {
   )
 }
 
+// 여행 탭 — 가방(여정 묶음). MapPin(지도)·CalendarDays(일정)와 실루엣이 겹치지 않게 사각 손잡이 형태로.
+export function Suitcase({ filled, className, decorative = true }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden={decorative} fill={filled ? 'currentColor' : 'none'}>
+      <rect x="3" y="7.5" width="18" height="12.5" rx="2.2" />
+      <path d="M9 7.5V5.2a1.2 1.2 0 0 1 1.2-1.2h3.6A1.2 1.2 0 0 1 15 5.2v2.3" />
+      <path d="M3 12.5h18" stroke={filled ? 'var(--c-surface)' : 'currentColor'} />
+    </svg>
+  )
+}
+
 export function Users({ filled, className, decorative = true }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden={decorative} fill={filled ? 'currentColor' : 'none'}>

@@ -1,7 +1,7 @@
-import { MapPin, CalendarDays, Sparkles, Users, type IconComponent } from '@/components/nav/icons'
+import { MapPin, CalendarDays, Suitcase, Sparkles, Users, type IconComponent } from '@/components/nav/icons'
 
-// 4탭 IA의 단일 출처(설계서 §3 — 장소 탭은 지도에 통합). TabBar·router·페이지 셸·테스트가 모두 여기서 도출 —
-// 한 곳만 고치면 라우팅·네비·테스트가 동기화된다(메타 중복으로 인한 무성 회귀 방지).
+// 5탭 IA의 단일 출처(설계서 §3 — 장소 탭은 지도에 통합, 여행 탭은 '우리'에서 승격). TabBar·router·페이지 셸·테스트가
+// 모두 여기서 도출 — 한 곳만 고치면 라우팅·네비·테스트가 동기화된다(메타 중복으로 인한 무성 회귀 방지).
 export type TabDef = {
   /** 라우트 경로(절대) */
   path: string
@@ -46,6 +46,20 @@ export const TABS: TabDef[] = [
       title: '첫 일정을 만들어볼까요?',
       hint: '나·상대·함께 세 가지 색으로 일정을 겹쳐 봐요.',
       action: { label: '장소부터 모아보기', to: '/' },
+    },
+  },
+  {
+    path: '/trips',
+    label: '여행',
+    testId: 'page-trips',
+    title: '여행',
+    subtitle: '함께 다녀올 곳 · 다녀온 곳',
+    Icon: Suitcase,
+    empty: {
+      emoji: '🧳',
+      title: '아직 만든 여행이 없어요',
+      hint: '날짜를 정하면 그날그날 어디를 갈지 담아둘 수 있어요.',
+      action: { label: '가고싶은 곳 먼저 모으기', to: '/' },
     },
   },
   {

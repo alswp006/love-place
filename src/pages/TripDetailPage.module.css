@@ -1,0 +1,205 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  padding-bottom: calc(var(--sp-3) + var(--safe-bottom));
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.titleBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-title, 1.25rem);
+  /* 긴 여행 이름도 줄바꿈 허용(고정 높이 금지 — Dynamic Type, §4) */
+  overflow-wrap: anywhere;
+}
+
+.period {
+  margin: 2px 0 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+/* Day 전환 — 가로 스크롤(긴 여행). 스크롤은 이 컨테이너 안에서만. */
+.dayBar {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.dayBtn,
+.dayOn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-weak);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  /* 터치 타깃 ≥44px(HIG) */
+  min-height: 44px;
+  min-width: 64px;
+}
+
+.dayOn {
+  color: var(--c-brand);
+  border-color: var(--c-brand);
+  font-weight: 600;
+}
+
+.dayNum {
+  font-size: var(--fs-caption);
+}
+
+.dayDate {
+  font-size: var(--fs-caption);
+  opacity: 0.8;
+}
+
+.todayDot {
+  font-size: 0.7rem;
+  color: var(--c-brand);
+}
+
+.stops {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.stop {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+}
+
+.time {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.stopBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.stopName {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.stopMemo {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.stopDel {
+  border: none;
+  background: transparent;
+  color: var(--c-text-weak);
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+
+.stopDel:disabled {
+  opacity: 0.4;
+}
+
+.addBar {
+  display: flex;
+}
+
+.picker {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2);
+}
+
+.pickerEmpty {
+  margin: 0;
+  padding: var(--sp-2);
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  text-align: center;
+}
+
+.pickerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  /* 후보가 많아도 화면을 다 먹지 않게 — 목록 안에서 스크롤 */
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.pick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--c-text);
+  text-align: left;
+  padding: var(--sp-2);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.pick:disabled {
+  opacity: 0.5;
+}
+
+.pickName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pickRegion {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  flex-shrink: 0;
+}
+
+.recapLink {
+  color: var(--c-brand);
+  text-decoration: none;
+  font-size: var(--fs-caption);
+  padding: var(--sp-2);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}

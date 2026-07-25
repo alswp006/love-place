@@ -1,43 +1,29 @@
-.section {
-  margin-top: var(--sp-2);
-  border-top: 1px solid var(--c-border);
-  padding-top: var(--sp-2);
-}
-
-.toggle {
+.actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--c-text-weak);
-  cursor: pointer;
-  padding: var(--sp-2);
-  font-size: var(--fs-caption);
-  min-height: 44px;
+  justify-content: flex-end;
+  margin-bottom: var(--sp-3);
 }
 
-.body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  padding-top: var(--sp-2);
-}
-
-.createForm {
+.form {
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md, var(--radius-sm));
+  margin-bottom: var(--sp-3);
 }
 
-.input {
+.input,
+.date {
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
   padding: var(--sp-2);
+  /* rem 기반 — 사용자 글자 크기 설정 존중(Dynamic Type, §4) */
   font-size: var(--fs-body);
   background: var(--c-surface);
   color: var(--c-text);
+  min-height: 44px;
 }
 
 .dates {
@@ -46,41 +32,21 @@
   gap: var(--sp-2);
 }
 
-.dates input {
+.date {
   flex: 1;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  padding: var(--sp-2);
-  background: var(--c-surface);
-  color: var(--c-text);
+  min-width: 0;
 }
 
-.add {
-  border: none;
-  background: var(--c-brand);
-  color: #fff;
-  border-radius: var(--radius-sm);
-  padding: var(--sp-2);
-  font-weight: 600;
-  cursor: pointer;
-  min-height: 44px;
-}
-
-.add:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.empty {
+.formError {
+  margin: 0;
   font-size: var(--fs-caption);
-  color: var(--c-text-weak);
-  text-align: center;
-  padding: var(--sp-2);
+  color: var(--c-danger, #d33);
 }
 
 .viewToggle {
   display: flex;
   gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
 }
 
 .viewBtn,
@@ -89,7 +55,7 @@
   background: var(--c-surface);
   color: var(--c-text-weak);
   border-radius: 999px;
-  padding: 4px 12px;
+  padding: 4px 14px;
   font-size: var(--fs-caption);
   cursor: pointer;
   min-height: 44px;
@@ -110,7 +76,7 @@
 .regionTitle {
   font-size: var(--fs-caption);
   color: var(--c-text-weak);
-  margin: var(--sp-2) 0 0;
+  margin: var(--sp-3) 0 0;
 }
 
 .list {
@@ -122,34 +88,42 @@
   gap: var(--sp-2);
 }
 
-.trip {
+.item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: stretch;
   gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
 }
 
-.tripMain {
+.card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  /* Link로 전환(리캡 진입) — 텍스트 링크 장식 없이 행 전체가 터치 타깃 */
+  gap: 4px;
   flex: 1;
+  min-width: 0;
+  padding: var(--sp-3);
   text-decoration: none;
   color: inherit;
+  /* 터치 타깃 ≥44px(HIG) */
   min-height: 44px;
-  justify-content: center;
 }
 
-.tripTitle {
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  /* 글자가 커져도 깨지지 않게 줄바꿈 허용(고정 높이 금지, §4) */
+  flex-wrap: wrap;
+}
+
+.title {
   font-weight: 600;
+  min-width: 0;
 }
 
-.tripMeta {
+.meta,
+.counts {
   font-size: var(--fs-caption);
   color: var(--c-text-weak);
 }
