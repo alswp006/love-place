@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import type { EventRow } from '@/hooks/useEvents'
 
 // UpcomingFeed 카드(Task 15): TodayCard 승격 — buildUpcomingFeed(now 틱) 결과를 인앱 피드 카드로.
@@ -8,6 +9,15 @@ import type { EventRow } from '@/hooks/useEvents'
 
 let eventsState: { data: EventRow[] } = { data: [] }
 vi.mock('@/hooks/useEvents', () => ({ useEvents: () => eventsState }))
+// 출처 아바타용 프로필 — 상대 개인 일정이 출처 없이 뜨던 것을 막으면서 붙었다.
+vi.mock('@/hooks/useProfiles', () => ({
+  useProfiles: () => ({
+    data: {
+      me: { id: 'me', displayName: '나', color: '#3b6db5', avatarUrl: null },
+      you: { id: 'you', displayName: '지민', color: '#e58', avatarUrl: null },
+    },
+  }),
+}))
 
 // prefers-reduced-motion 기본은 false(미디어쿼리 미일치). 케이스에서 덮어쓴다.
 let reduceMotion = false
@@ -59,14 +69,22 @@ describe('UpcomingFeed 카드(Task 15)', () => {
 
   it('항목 0이면 카드 미렌더(self-hide, 죽은 카드 금지)', () => {
     eventsState = { data: [] }
-    const { container } = render(<UpcomingFeed coupleId="c1" myId="u1" />)
+    const { container } = render(
+      <MemoryRouter>
+        <UpcomingFeed coupleId="c1" myId="u1" />
+      </MemoryRouter>,
+    )
     expect(container.firstChild).toBeNull()
   })
 
   it('imminent(곧 시작) 항목: N분 뒤 라벨 + 🔔 아이콘 + aria-live="polite"', () => {
     // 리마인더 점화 imminent(soft 아님) → 🔔. (리마인더 없는 60분 이내는 soft → ⏱ 별도 케이스)
     eventsState = { data: [makeEvent({ id: 'soon', title: '곧 만나요', start: '2026-06-20T12:10:00+09:00', end: '2026-06-20T13:10:00+09:00', reminders: [{ userId: 'u1', offsetMinutes: 10 }] })] }
-    render(<UpcomingFeed coupleId="c1" myId="u1" />)
+    render(
+      <MemoryRouter>
+        <UpcomingFeed coupleId="c1" myId="u1" />
+      </MemoryRouter>,
+    )
     expect(screen.getByText('곧 만나요')).toBeInTheDocument()
     expect(screen.getByText('10분 뒤')).toBeInTheDocument()
     // 색 단독 금지 — 아이콘+텍스트 동반(🔔).
@@ -80,7 +98,11 @@ describe('UpcomingFeed 카드(Task 15)', () => {
   it('soft imminent(리마인더 없음, 60분 이내): "곧 시작" 텍스트 + ⏱ 아이콘(색 단독 금지)', () => {
     // 리마인더 없음 → soft 점화(60분 이내). 30분 뒤.
     eventsState = { data: [makeEvent({ id: 'soft', title: '카페 데이트', start: '2026-06-20T12:30:00+09:00', end: '2026-06-20T13:30:00+09:00', reminders: [] })] }
-    render(<UpcomingFeed coupleId="c1" myId="u1" />)
+    render(
+      <MemoryRouter>
+        <UpcomingFeed coupleId="c1" myId="u1" />
+      </MemoryRouter>,
+    )
     expect(screen.getByText('카페 데이트')).toBeInTheDocument()
     // soft는 ⏱ 글리프(리마인더 점화 🔔와 구분).
     expect(screen.getByText('⏱')).toBeInTheDocument()
@@ -92,7 +114,11 @@ describe('UpcomingFeed 카드(Task 15)', () => {
 
   it('비-soft imminent(내 리마인더 점화): 🔔 아이콘(⏱ 아님)', () => {
     eventsState = { data: [makeEvent({ id: 'fired', title: '리마인더 점화', start: '2026-06-20T12:10:00+09:00', end: '2026-06-20T13:10:00+09:00', reminders: [{ userId: 'u1', offsetMinutes: 10 }] })] }
-    render(<UpcomingFeed coupleId="c1" myId="u1" />)
+    render(
+      <MemoryRouter>
+        <UpcomingFeed coupleId="c1" myId="u1" />
+      </MemoryRouter>,
+    )
     expect(screen.getByText('🔔')).toBeInTheDocument()
     expect(screen.queryByText('⏱')).toBeNull()
   })
@@ -101,7 +127,11 @@ describe('UpcomingFeed 카드(Task 15)', () => {
     eventsState = {
       data: [makeEvent({ id: 'far', title: '제주 여행', start: '2026-06-23T10:00:00+09:00', end: '2026-06-23T11:00:00+09:00' })],
     }
-    render(<UpcomingFeed coupleId="c1" myId="u1" />)
+    render(
+      <MemoryRouter>
+        <UpcomingFeed coupleId="c1" myId="u1" />
+      </MemoryRouter>,
+    )
     expect(screen.getByText('제주 여행')).toBeInTheDocument()
     expect(screen.getByText('D-3')).toBeInTheDocument()
     expect(screen.getByText('📅')).toBeInTheDocument()
@@ -114,16 +144,52 @@ describe('UpcomingFeed 카드(Task 15)', () => {
     reduceMotion = true
     // 리마인더 점화 imminent(soft 아님) → 라벨 그대로 'N분 뒤'(soft 접두 없음).
     eventsState = { data: [makeEvent({ id: 'soon', title: '곧 만나요', start: '2026-06-20T12:10:00+09:00', end: '2026-06-20T13:10:00+09:00', reminders: [{ userId: 'u1', offsetMinutes: 10 }] })] }
-    render(<UpcomingFeed coupleId="c1" myId="u1" />)
+    render(
+      <MemoryRouter>
+        <UpcomingFeed coupleId="c1" myId="u1" />
+      </MemoryRouter>,
+    )
     // 즉시 최종 라벨(애니메이션 중간 상태 없이).
     expect(screen.getByText('10분 뒤')).toBeInTheDocument()
+  })
+
+  it('누구 일정인지 색이 아니라 심볼+라벨로 말한다 — 상대 PERSONAL이 출처 없이 섞이던 것 차단(§8)', () => {
+    eventsState = {
+      data: [
+        makeEvent({ id: 'mine', title: '내 일정', visibility: 'PERSONAL', owner_id: 'me', start: '2026-06-23T10:00:00+09:00', end: '2026-06-23T11:00:00+09:00' }),
+        makeEvent({ id: 'theirs', title: '상대 일정', visibility: 'PERSONAL', owner_id: 'you', start: '2026-06-24T10:00:00+09:00', end: '2026-06-24T11:00:00+09:00' }),
+      ],
+    }
+    render(
+      <MemoryRouter>
+        <UpcomingFeed coupleId="c1" myId="me" />
+      </MemoryRouter>,
+    )
+    expect(screen.getByText('▲ 나')).toBeInTheDocument()
+    expect(screen.getByText('■ 상대')).toBeInTheDocument()
+  })
+
+  it('항목을 탭하면 그 날짜 캘린더로 간다(신호를 봤으면 갈 수 있어야)', () => {
+    eventsState = {
+      data: [makeEvent({ id: 'far', title: '제주 여행', start: '2026-06-23T10:00:00+09:00', end: '2026-06-23T11:00:00+09:00' })],
+    }
+    render(
+      <MemoryRouter>
+        <UpcomingFeed coupleId="c1" myId="u1" />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/calendar?date=2026-06-23')
   })
 
   it('카드 컨테이너는 접근성 라벨(aria-label="다가오는 일정")을 가진다', () => {
     eventsState = {
       data: [makeEvent({ id: 'far', title: '제주 여행', start: '2026-06-23T10:00:00+09:00', end: '2026-06-23T11:00:00+09:00' })],
     }
-    render(<UpcomingFeed coupleId="c1" myId="u1" />)
+    render(
+      <MemoryRouter>
+        <UpcomingFeed coupleId="c1" myId="u1" />
+      </MemoryRouter>,
+    )
     expect(screen.getByLabelText('다가오는 일정')).toBeInTheDocument()
   })
 })

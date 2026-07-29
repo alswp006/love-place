@@ -1,0 +1,46 @@
+.wrap {
+  margin-top: var(--sp-3);
+  border-top: 1px solid var(--c-border);
+  padding-top: var(--sp-3);
+}
+
+.title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  /* 30일치가 쌓여도 카드를 밀어내지 않게 */
+  max-height: 32vh;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.label {
+  font-size: var(--fs-body);
+  /* 글자 확대에도 깨지지 않게(고정 높이 없음) */
+  overflow-wrap: anywhere;
+}
+
+.detail {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}

@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useEvents } from '@/hooks/useEvents'
+import { useProfiles } from '@/hooks/useProfiles'
 import { buildUpcomingFeed } from '@/lib/calendar/upcomingFeed'
+import { TRACK_META } from '@/lib/calendar/track'
+import { SourceAvatar } from '@/components/common/SourceAvatar'
 import styles from './UpcomingFeed.module.css'
 
 // 다가오는 일정 인앱 피드 카드(Task 15) — TodayCard 승격. 첫 화면(지도) 상단의 경량 활동 신호.
@@ -8,6 +12,7 @@ import styles from './UpcomingFeed.module.css'
 // now 틱(1분)으로 '곧 시작' 카운트다운 갱신, 항목 0이면 self-hide(죽은 카드 금지).
 export function UpcomingFeed({ coupleId, myId }: { coupleId: string | null; myId: string | null }) {
   const { data: events } = useEvents(coupleId)
+  const { data: profiles } = useProfiles(coupleId)
   const [now, setNow] = useState(() => new Date().toISOString())
   useEffect(() => {
     const t = setInterval(() => setNow(new Date().toISOString()), 60000) // 1분 틱(곧 시작 카운트다운)
@@ -21,13 +26,22 @@ export function UpcomingFeed({ coupleId, myId }: { coupleId: string | null; myId
       <ul className={styles.list}>
         {items.map((i) => (
           <li key={i.id} className={styles.item} {...(i.kind === 'imminent' ? { 'aria-live': 'polite' } : {})}>
-            <span className={styles.badge} aria-hidden>
-              {i.kind === 'imminent' ? (i.soft ? '⏱' : '🔔') : '📅'}
-            </span>
-            <span className={styles.label}>
-              {i.kind === 'imminent' && i.soft ? `곧 시작 · ${i.label}` : i.label}
-            </span>
-            <span className={styles.title}>{i.title}</span>
+            {/* 신호를 봤으면 갈 수 있어야 한다 — 그 날짜 아젠다로. */}
+            <Link className={styles.row} to={`/calendar?date=${i.dayKey}`}>
+              <span className={styles.badge} aria-hidden>
+                {i.kind === 'imminent' ? (i.soft ? '⏱' : '🔔') : '📅'}
+              </span>
+              <span className={styles.label}>
+                {i.kind === 'imminent' && i.soft ? `곧 시작 · ${i.label}` : i.label}
+              </span>
+              <span className={styles.title}>{i.title}</span>
+              {/* 누구 일정인지 — 색만 쓰지 않고 아바타 + 심볼(●▲■)+라벨로 이중화(§8).
+                  상대의 PERSONAL 일정이 출처 없이 섞여 뜨던 것을 막는다. */}
+              <SourceAvatar userId={i.ownerId} profiles={profiles ?? {}} myId={myId} context=" 일정" />
+              <span className={styles.track} style={{ color: TRACK_META[i.track].cssVar }}>
+                {TRACK_META[i.track].symbol} {TRACK_META[i.track].label}
+              </span>
+            </Link>
           </li>
         ))}
       </ul>

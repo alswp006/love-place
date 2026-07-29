@@ -147,3 +147,9 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* 하트 상태 문장 — 숫자 대신 "누가 눌렀나"를 텍스트로(ux §2). 색에 의존하지 않는다. */
+.reactState {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}

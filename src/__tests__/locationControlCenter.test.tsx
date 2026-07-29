@@ -18,6 +18,8 @@ vi.mock('@/hooks/useConsent', async (orig) => {
 })
 // 미연결 동선 트레이는 별도 테스트(orphanSessionsTray.test) — 여기선 no-op으로 격리.
 vi.mock('@/components/journey/OrphanSessionsTray', () => ({ OrphanSessionsTray: () => null }))
+// 열람 내역 피드는 별도 테스트에서 검증 — 여기선 동의 상태·중단 버튼만 본다.
+vi.mock('@/components/journey/ProvideFeed', () => ({ ProvideFeed: () => null }))
 
 import { LocationControlCenter } from '@/components/journey/LocationControlCenter'
 

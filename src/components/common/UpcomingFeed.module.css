@@ -56,3 +56,22 @@
     animation: none;
   }
 }
+
+/* 항목 전체가 딥링크(그 날짜 아젠다로). 링크 장식 없이 행 전체가 터치 타깃. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+  /* 터치 타깃 ≥44px(HIG) */
+  min-height: 44px;
+  /* 글자 확대 시 줄바꿈 허용(고정 높이 금지) */
+  flex-wrap: wrap;
+}
+
+.track {
+  font-size: var(--fs-caption);
+  flex-shrink: 0;
+}

@@ -13,7 +13,7 @@ import styles from './PlaceDetail.module.css'
 // 카테고리/지역 + 액션(가봤어요 토글 · ❤️ 리액션 · 닫기). 길찾기 없음(#5). 포커스 이동 + aria-live.
 // 컬렉션(저장 목록) props는 선택 — 주어지면 "목록" 섹션으로 이 장소의 목록 소속을 토글한다(가산 기능).
 export function PlaceDetail({
-  place, visited, didIReact, reactionCount, busy,
+  place, visited, didIReact, reactionCount, reactionState, busy,
   onVisit, onUnvisit, onReact, onClose,
   collections, memberCollIds, onToggleCollection, onManageCollections,
 }: {
@@ -21,6 +21,8 @@ export function PlaceDetail({
   visited: boolean
   didIReact: boolean
   reactionCount: number
+  /** "상대가 하트를 눌렀어요" 같은 상태 문장(aggregateReactions.reactionLabel). 숫자만으론 누가 눌렀는지 못 읽는다. */
+  reactionState?: string
   busy: boolean
   onVisit: () => void
   onUnvisit: () => void
@@ -86,8 +88,12 @@ export function PlaceDetail({
           count={reactionCount}
           onToggle={onReact}
           disabled={busy}
-          label={`${place.name} 하트 리액션 (총 ${reactionCount}개)`}
+          label={`${place.name} — ${reactionState ?? `하트 리액션 (총 ${reactionCount}개)`}`}
         />
+        {/* 숫자만 조용히 +1 되는 대신, 누가 눌렀는지 텍스트로 말한다(ux §2 "함께 하는 신호"). */}
+        {reactionState && reactionCount > 0 ? (
+          <span className={styles.reactState}>{reactionState}</span>
+        ) : null}
       </div>
 
       {onToggleCollection ? (

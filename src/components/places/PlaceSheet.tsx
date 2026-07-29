@@ -7,6 +7,7 @@ import { PlaceList } from '@/components/places/PlaceList'
 import { PlaceDetail } from '@/components/places/PlaceDetail'
 import { PlacePreviewDetail } from '@/components/places/PlacePreviewDetail'
 import { useToggleReaction, type ReactionMap } from '@/hooks/useReactions'
+import { reactionLabel } from '@/lib/places/aggregateReactions'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import { useMarkVisited, useUnmarkVisited } from '@/hooks/useVisits'
 import { useSetWishPriority } from '@/hooks/useSetWishPriority'
@@ -441,6 +442,7 @@ export function PlaceSheet({
                   visited={visitedIds.has(selectedPlace.id)}
                   didIReact={reactions?.[selectedPlace.id]?.didIReact ?? false}
                   reactionCount={reactions?.[selectedPlace.id]?.count ?? 0}
+                  reactionState={reactionLabel(reactions?.[selectedPlace.id], myId)}
                   busy={markVisited.isPending || unmarkVisited.isPending}
                   onVisit={() => {
                     if (!visitedIds.has(selectedPlace.id))

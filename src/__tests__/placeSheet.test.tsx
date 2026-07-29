@@ -603,8 +603,10 @@ describe('PlaceSheet — 저장·방문 토글 햅틱 배선(R4.1: 성공/제거
   it('❤️ 리액션 토글(onReact) 탭 시 mutate와 같은 시점에 haptic이 호출된다(낙관적, 시각 칩 병행)', () => {
     renderSheet({ places: [aPlace], selectedId: 'p1' })
     const detail = screen.getByLabelText('장소 상세')
-    // 리액션 버튼 aria-label: `{name} 하트 리액션 (총 N개)` — 탭 시점(낙관적)에 haptic 발화.
-    fireEvent.click(within(detail).getByRole('button', { name: /하트 리액션/ }))
+    // 리액션 버튼 aria-label: `{name} — {상태 문장}`(예: "… — 상대가 하트를 눌렀어요").
+    // 예전엔 "하트 리액션 (총 N개)"였는데 숫자만으론 누가 눌렀는지 못 읽어 상태 문장으로 바꿨다.
+    // 탭 시점(낙관적)에 haptic 발화하는 계약 자체는 그대로다.
+    fireEvent.click(within(detail).getByRole('button', { name: /하트/ }))
     expect(haptic).toHaveBeenCalledTimes(1)
   })
 })
