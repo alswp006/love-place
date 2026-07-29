@@ -31,6 +31,7 @@ export function NaverMap({
   onSelect,
   onClose,
   polyline,
+  orderById,
 }: {
   places: MarkerPlace[]
   visitedIds?: Set<string>
@@ -41,6 +42,9 @@ export function NaverMap({
   onClose?: () => void
   // 리캡 동선(R5) — 정점 순서대로 측지선 폴리라인. 미지정이면 그리지 않음(지도 화면엔 영향 없음).
   polyline?: { lat: number; lng: number }[]
+  // 여행 Day 스톱 순번(placeId → 1-based). 있으면 마커에 글리프 대신 숫자를 그려
+  // 리스트의 번호와 눈으로 잇는다(트리플식). 미지정이면 기존 글리프 그대로 — 지도·리캡 무영향.
+  orderById?: Record<string, number>
 }) {
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<naver.maps.Map | null>(null)
@@ -82,6 +86,10 @@ export function NaverMap({
   // 마커를 재구축할 때 stale 클로저의 선택값을 쓰지 않게(선택 강조가 pan/zoom에서 깜빡 사라짐 방지, R1.6).
   const selectedIdRef = useRef<string | null>(selectedId ?? null)
   selectedIdRef.current = selectedId ?? null
+  // 마커 생성 effect는 orderById를 deps로 갖지 않는다(순번이 바뀔 때마다 전 마커를 다시 만들 필요 없음).
+  // 최신값만 읽으면 되므로 ref로 — 갱신은 아래 selectedId effect가 setIcon으로 처리한다.
+  const orderByIdRef = useRef<Record<string, number> | undefined>(orderById)
+  orderByIdRef.current = orderById
 
   // 리캡 동선 폴리라인(R5) — 정점 2개 이상이면 측지선으로 잇는다(마시멜로 핑크). 변경/언마운트 시 정리.
   useEffect(() => {
@@ -243,6 +251,7 @@ export function NaverMap({
                 selected: isSelected,
                 badge: visual.badge,
                 id: p.id, // 포커스·키 활성화 가능(role=button+tabindex+data-place-id, Task 17/R4.4).
+                order: orderByIdRef.current?.[p.id],
               }),
               anchor: new nv.maps.Point(22, 44),
             },
@@ -418,7 +427,7 @@ export function NaverMap({
       const pinClass = `${styles.pin} ${modifier}`.trim()
       const selected = id === selectedId
       marker.setIcon({
-        content: markerIconHtml({ glyph: visual.glyph, pinClass, label: visual.label, selected, badge: visual.badge, id }),
+        content: markerIconHtml({ glyph: visual.glyph, pinClass, label: visual.label, selected, badge: visual.badge, id, order: orderById?.[id] }),
         anchor: new nv.maps.Point(22, 44),
       })
       marker.setZIndex(selected ? SELECTED_ZINDEX : BASE_ZINDEX)
@@ -427,7 +436,8 @@ export function NaverMap({
       const m = markerMapRef.current.get(selectedId)
       if (m) map.panTo(m.getPosition())
     }
-  }, [selectedId, places, ready, visitedIds])
+    // orderById가 deps에 있어야 Day를 바꿀 때 마커 숫자가 따라 갱신된다(빠뜨리면 이전 Day 번호가 남는다).
+  }, [selectedId, places, ready, visitedIds, orderById])
 
   // 프리뷰(미저장 검색 후보) — 전용 transient 마커만 구동(상세/액션은 시트, Task 12). 말풍선 없음.
   useEffect(() => {

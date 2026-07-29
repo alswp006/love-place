@@ -77,6 +77,8 @@ export default function TripDetailPage() {
   const activeDay = picked ?? (days.some((d) => d.key === today) ? today : (days[0]?.key ?? null))
 
   const [adding, setAdding] = useState(false)
+  // 지도 ↔ 리스트 연동 — 스톱을 탭하면 그 마커가 강조·중앙 이동한다(NaverMap이 selectedId를 이미 받는다).
+  const [focusedPlaceId, setFocusedPlaceId] = useState<string | null>(null)
   // 방금 누른 후보만 비활성 — 담는 동안 목록 전체가 굳지 않게(연속 담기 흐름 유지).
   const [pendingId, setPendingId] = useState<string | null>(null)
 
@@ -116,6 +118,16 @@ export default function TripDetailPage() {
     if (plain.length === 0) return []
     return dir.data ? mergeLegPolylines(plain, dir.data) : mergeLegPolylines(plain, [])
   }, [legs, dir.data])
+  // 스톱 순번(placeId → 1-based) — 리스트 번호와 지도 마커 번호를 같은 값으로 잇는다.
+  // 같은 장소를 하루에 두 번 담으면 첫 번째 순번을 쓴다(마커는 좌표당 하나뿐이라).
+  const orderById = useMemo(() => {
+    const m: Record<string, number> = {}
+    stops.forEach((s, i) => {
+      if (s.place_id && m[s.place_id] === undefined) m[s.place_id] = i + 1
+    })
+    return m
+  }, [stops])
+
   // 미니 지도 마커 = 그날 스톱의 장소들(순서대로).
   const dayPlaces = useMemo(
     () =>
@@ -222,7 +234,14 @@ export default function TripDetailPage() {
           도로 경로가 오기 전엔 직선 베이스라인으로 즉시 그린다(프로그레시브). */}
       {dayPlaces.length >= 2 && isNaverMapConfigured() ? (
         <div className={styles.mapWrap}>
-          <NaverMap places={dayPlaces} snap="full" polyline={polyline} />
+          <NaverMap
+            places={dayPlaces}
+            snap="full"
+            polyline={polyline}
+            orderById={orderById}
+            selectedId={focusedPlaceId}
+            onSelect={setFocusedPlaceId}
+          />
         </div>
       ) : null}
 
@@ -235,7 +254,7 @@ export default function TripDetailPage() {
         />
       ) : (
         <ol className={styles.stops}>
-          {stops.map((s) => {
+          {stops.map((s, idx) => {
             const place = s.place_id ? placeById.get(s.place_id) : undefined
             const name = place?.name ?? s.title
             const track = deriveTrack(s, myId)
@@ -251,7 +270,17 @@ export default function TripDetailPage() {
               : undefined
             return (
               <li key={s.id}>
-                <div className={styles.stop}>
+                <div
+                  className={
+                    s.place_id && s.place_id === focusedPlaceId
+                      ? `${styles.stop} ${styles.stopFocused}`
+                      : styles.stop
+                  }
+                >
+                  {/* 순번 — 지도 마커의 숫자와 같은 값. "순서 있는 하루"가 리스트에서도 읽힌다. */}
+                  <span className={styles.order} aria-hidden>
+                    {idx + 1}
+                  </span>
                   <span className={styles.time}>{formatTime(s.start)}</span>
                   <span className={styles.stopBody}>
                     {/* 시각 편집은 캘린더가 정본(여기서 스톱을 따로 저장하지 않으므로).
@@ -259,10 +288,19 @@ export default function TripDetailPage() {
                     <Link
                       className={styles.stopName}
                       to={`/calendar?date=${activeDay ?? ''}`}
-                      aria-label={`${name} — 캘린더에서 시간 바꾸기`}
+                      aria-label={`${idx + 1}. ${name} — 캘린더에서 시간 바꾸기`}
+                      onMouseEnter={() => setFocusedPlaceId(s.place_id)}
+                      onFocus={() => setFocusedPlaceId(s.place_id)}
                     >
                       {name}
                     </Link>
+                    {/* 카테고리·지역 — places에 이미 있는 값이라 조회 추가 없이 정보 밀도만 올린다.
+                        (사진 썸네일은 하지 않는다 — 사진 기능 미구현이라 회색 플레이스홀더가 될 뿐이다.) */}
+                    {place?.category || place?.region_label ? (
+                      <span className={styles.stopMeta}>
+                        {[place?.category, place?.region_label].filter(Boolean).join(' · ')}
+                      </span>
+                    ) : null}
                     {s.memo ? <span className={styles.stopMemo}>{s.memo}</span> : null}
                     {/* 누구 일정인지 — 캘린더는 트랙으로 구분하는데 여행 탭에서만 사라져 있었다.
                         색만 쓰지 않고 심볼(●▲■)+라벨을 병기한다(§8). */}

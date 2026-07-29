@@ -97,3 +97,22 @@ describe('selectedMarker (선택 마커 강조 — 순수)', () => {
     expect(html).toContain('data-place-id="a&quot;b"')
   })
 })
+
+describe('markerIconHtml — 순번(트리플식 번호 매칭)', () => {
+  it('order가 있으면 글리프 대신 숫자를 그린다', () => {
+    const html = markerIconHtml({ glyph: '★', pinClass: 'p', label: '영금정', selected: false, order: 3 })
+    expect(html).toContain('>3<')
+    expect(html).not.toContain('★')
+  })
+
+  it('접근성 라벨에도 순번이 들어간다(숫자가 시각에만 있지 않게)', () => {
+    const html = markerIconHtml({ glyph: '★', pinClass: 'p', label: '영금정', selected: false, order: 3 })
+    expect(html).toContain('aria-label="3. 영금정"')
+  })
+
+  it('order가 없으면 기존 글리프 그대로 — 지도·리캡 무영향', () => {
+    const html = markerIconHtml({ glyph: '★', pinClass: 'p', label: '영금정', selected: false })
+    expect(html).toContain('★')
+    expect(html).toContain('aria-label="영금정"')
+  })
+})

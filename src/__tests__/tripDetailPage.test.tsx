@@ -324,6 +324,26 @@ describe('TripDetailPage — 여행 Day 계획', () => {
     )
   })
 
+  it('스톱에 순번을 매긴다 — 지도 마커 숫자와 같은 값(트리플식 번호 매칭)', () => {
+    seedTwoStops()
+    renderDetail()
+    const items = screen.getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('1')
+    expect(items[1]).toHaveTextContent('2')
+    // 스크린리더도 순서를 읽는다(숫자가 시각 배지에만 있지 않게).
+    expect(screen.getByRole('link', { name: /^1\. 칠성조선소/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^2\. 영금정/ })).toBeInTheDocument()
+  })
+
+  it('스톱 카드에 카테고리·지역을 보여준다(사진 썸네일은 데이터가 없어 만들지 않는다)', () => {
+    state.places = [{ id: 'p1', name: '칠성조선소', lat: 38.2, lng: 128.59, category: '카페', region_label: '속초' }]
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
+    ]
+    renderDetail()
+    expect(screen.getByText('카페 · 속초')).toBeInTheDocument()
+  })
+
   it('없는 여행이면 친근한 빈 상태로 — 흰 화면 금지', () => {
     state.trips = []
     renderDetail()

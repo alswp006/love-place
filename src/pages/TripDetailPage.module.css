@@ -273,3 +273,30 @@
   min-height: 44px;
   padding: 0 var(--sp-2);
 }
+
+/* 스톱 순번 — 지도 마커의 숫자와 같은 값(트리플식 번호 매칭). 숫자 자체가 정보라 색에 의존하지 않는다. */
+.order {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--c-brand);
+  color: #fff;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 지도에서 고른 스톱 강조 — 테두리로(색만 쓰지 않게 배경도 함께 바뀐다). */
+.stopFocused {
+  border-color: var(--c-brand);
+  background: var(--surface-soft, transparent);
+}
+
+.stopMeta {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
