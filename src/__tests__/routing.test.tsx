@@ -68,10 +68,13 @@ beforeEach(() => {
   mockAuth.session = { user: { id: 'u1' } }
 })
 
-describe('4탭 라우팅 (설계서 §3 IA — 장소→지도 통합)', () => {
+describe('5탭 라우팅 (설계서 §3 IA — 장소는 지도에 통합, 여행은 우리에서 승격)', () => {
   it('루트(/)는 지도 화면을 첫 화면으로 렌더한다(풀블리드 — 라지 타이틀 없이 region 이름 유지)', async () => {
     renderAt('/')
-    expect(await screen.findByTestId('page-map')).toBeInTheDocument()
+    // 이 파일에서 MapPage 청크를 처음 당겨오는 지점이라(React.lazy) 전체 스위트 병렬 실행 중엔
+    // 기본 1초를 넘길 수 있다. 이 단언의 의도는 '라우트가 렌더된다'이지 로드 속도가 아니므로
+    // 넉넉히 준다(뒤따르는 같은 경로 케이스는 청크가 데워져 있어 기본값으로 충분).
+    expect(await screen.findByTestId('page-map', {}, { timeout: 5000 })).toBeInTheDocument()
     // 풀블리드 지도엔 라지 타이틀(h1)이 없고 section aria-label='지도'로 접근성 이름 유지.
     expect(screen.getByRole('region', { name: '지도' })).toBeInTheDocument()
   })

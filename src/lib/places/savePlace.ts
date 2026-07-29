@@ -82,18 +82,32 @@ export async function savePlace(coupleId: string, hit: KakaoPlaceHit, uid: strin
     placeId = inserted.id
   }
 
-  // 2) 내 wish 추가(이미 있으면 무시 — 유니크 제약). upsert로 중복 안전.
-  const { error: wishErr } = await supabase.from('wishes').upsert(
-    {
+  // 2) 내 wish 추가 — select-then-insert(useToggleReaction과 동형).
+  //
+  // upsert(onConflict:'place_id,user_id')를 쓸 수 없다: 매칭 유니크 인덱스가
+  // uq_wishes_place_user(0002) **부분 인덱스**(WHERE deleted_at IS NULL)뿐이고
+  // 0001의 테이블 정의엔 plain UNIQUE가 없다. Postgres는 index_predicate 없이
+  // 부분 인덱스를 arbiter로 추론하지 않으므로 42P10으로 저장 전체가 throw할 수 있다.
+  // 부분 인덱스를 plain UNIQUE로 바꾸는 건 안 된다 — soft-delete된 wish가 재찜을 막는다.
+  const { data: mine, error: selErr } = await supabase
+    .from('wishes')
+    .select('id')
+    .eq('couple_id', coupleId)
+    .eq('place_id', placeId)
+    .eq('user_id', uid)
+    .is('deleted_at', null)
+    .limit(1)
+  if (selErr) throw new Error(selErr.message)
+  if (!mine || mine.length === 0) {
+    const { error: wishErr } = await supabase.from('wishes').insert({
       couple_id: coupleId,
       place_id: placeId,
       user_id: uid,
       created_by: uid,
       updated_by: uid,
-    },
-    { onConflict: 'place_id,user_id', ignoreDuplicates: true },
-  )
-  if (wishErr) throw new Error(wishErr.message)
+    })
+    if (wishErr) throw new Error(wishErr.message)
+  }
 
   return { placeId, jumped }
 }

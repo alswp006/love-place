@@ -71,9 +71,11 @@ export function PlaceSearch({
                 <button
                   className={styles.resultItem}
                   onClick={() => {
+                    // 검색어·키보드를 유지한다 — 여행 계획 중엔 여러 곳을 몰아 담는 게 기본이라
+                    // 한 곳 고를 때마다 지우면 다음 장소가 '입력 탭 + 재타이핑'부터 다시 시작한다.
+                    // 특히 iOS Safari는 한 번 내려간 키보드를 사용자 탭 없이 못 올리므로
+                    // blur()는 되돌릴 수 없는 비용이다. 목록 닫기는 부모의 상세 승격이 담당.
                     onPick(hit)
-                    clear()
-                    inputRef.current?.blur()
                   }}
                   aria-label={saved ? `${hit.name} (이미 저장됨) 지도에서 보기` : `${hit.name} 미리보기`}
                 >

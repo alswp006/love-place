@@ -77,7 +77,10 @@ test('내 위치 버튼은 시트가 half로 펼쳐지면 가려지지 않게 �
   await expect(locBtn).toBeHidden()
 })
 
-test('검색 오버레이는 시트가 half로 펼쳐지면(snap>peek) 접힌다', async ({ page }) => {
+// 계약 변경(의도적): 예전 이름은 "half로 펼쳐지면 접힌다"였다. half에서 접으면 검색결과 탭으로
+// 시트가 자동 승격되는 순간 검색창이 사라져 위시 저장이 4탭이 된다(§8은 ≤3탭을 약속).
+// 이제 half에서는 유지하고 full에서만 접는다.
+test('검색 오버레이는 half에서 유지되고 full에서만 접힌다', async ({ page }) => {
   await seedAuthedMap(page, { places: PLACES })
   await page.goto('/')
   const overlay = page.getByTestId('search-overlay')
@@ -85,6 +88,8 @@ test('검색 오버레이는 시트가 half로 펼쳐지면(snap>peek) 접힌다
   await collapseToPeek(page)
   await expect(overlay).toBeVisible()
   await page.getByRole('button', { name: '시트 펼치기' }).click() // peek→half
+  await expect(overlay).not.toHaveAttribute('data-hidden', 'true')
+  await page.getByRole('button', { name: '시트 펼치기' }).click() // half→full
   await expect(overlay).toHaveAttribute('data-hidden', 'true')
   await expect(overlay).toBeHidden()
 })

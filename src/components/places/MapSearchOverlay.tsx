@@ -19,7 +19,10 @@ export function MapSearchOverlay({
   snap: SnapStop
   initialQuery?: string | null
 }) {
-  const collapsed = snap !== 'peek'
+  // 시트가 half일 땐 검색창을 유지한다 — 예전엔 half만 돼도 숨어서, 상세가 자동 승격되는 순간
+  // 검색창이 사라지고 목록은 "위 검색창에 장소 이름을 입력하면…"이라는 없는 UI를 가리켰다.
+  // full(목록 전체 화면)에서만 접는다.
+  const collapsed = snap === 'full'
   return (
     <div
       className={styles.overlay}

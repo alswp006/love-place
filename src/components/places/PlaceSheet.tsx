@@ -184,11 +184,16 @@ export function PlaceSheet({
   const fullRestY = translateYFor('full', travel, peekPx)
   const progress = dimProgress(translateY, peekRestY, fullRestY) // 0(peek정지)..1(full정지)
 
-  // 마커 클릭/리스트 탭으로 selectedId가 생기고 시트가 peek면 half로 살짝 올린다(§6 (c)).
+  // 마커 클릭/리스트 탭/검색결과 탭으로 상세가 열리고 시트가 peek면 half로 살짝 올린다(§6 (c)).
   // 이미 half/full이면 사용자가 펼친 상태를 존중(강제로 더 올리거나 내리지 않음).
+  //
+  // previewHit(아직 저장 안 한 검색 결과)이 오래 빠져 있었다: 이미 저장된 장소만 자동으로 올라오고
+  // 정작 '저장' 버튼을 눌러야 하는 미저장 후보는 사용자가 시트를 손으로 펼쳐야 했다.
+  // 그래서 §8이 약속한 위시 저장 ≤3탭이 실제로는 4탭이었다(리포 자신의 e2e가 '시트 펼치기'를
+  // 클릭하며 증언하던 마찰). 대칭으로 맞춘다.
   useEffect(() => {
-    if (selectedId && snap === 'peek') setSnap('half')
-  }, [selectedId, snap])
+    if ((selectedId || previewHit) && snap === 'peek') setSnap('half')
+  }, [selectedId, previewHit, snap])
 
   // 빈/미연결이면 첫 화면이 죽지 않게 half로 자동 오픈(spec §3.3). peek에서만(사용자 펼침 존중).
   // ★ 로딩 '중'에는 판단 보류 — 로딩 순간을 빈 상태로 오판해 장소가 있어도 매번 half로 열리면

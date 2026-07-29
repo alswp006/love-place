@@ -27,13 +27,24 @@ describe('MapSearchOverlay (지도 위 상단 검색 오버레이, spec §5)', (
     expect(overlay?.querySelector('[data-testid="place-search-input"]')).not.toBeNull()
   })
 
-  it('snap>peek면 검색 오버레이는 collapse(data-hidden=true)되어 펼친 시트와 겹치지 않는다', () => {
+  // 계약 변경(의도적): 예전엔 snap>peek면 접었다. 그런데 검색결과를 탭하면 시트가 half로
+  // 자동 승격되므로, 그 규칙이면 저장 버튼을 누르기도 전에 검색창이 사라지고 목록은
+  // "위 검색창에 장소 이름을 입력하면…"이라는 없는 UI를 가리켰다. half에선 유지하고
+  // full(목록 전체 화면)에서만 접는다 — 위시 저장 ≤3탭(§8)을 실제로 지키기 위한 변경.
+  it('half에서는 검색 오버레이가 살아 있다 — 승격 직후에도 저장을 이어갈 수 있게', () => {
     const { rerender } = render(
       <MapSearchOverlay coupleId="c1" savedKakaoIds={new Set<string>()} onPick={() => {}} snap="peek" />,
     )
     expect(screen.getByTestId('search-overlay')).not.toHaveAttribute('data-hidden', 'true')
     rerender(
       <MapSearchOverlay coupleId="c1" savedKakaoIds={new Set<string>()} onPick={() => {}} snap="half" />,
+    )
+    expect(screen.getByTestId('search-overlay')).not.toHaveAttribute('data-hidden', 'true')
+  })
+
+  it('full(목록 전체 화면)에서만 접어 시트와 겹치지 않게 한다', () => {
+    render(
+      <MapSearchOverlay coupleId="c1" savedKakaoIds={new Set<string>()} onPick={() => {}} snap="full" />,
     )
     expect(screen.getByTestId('search-overlay')).toHaveAttribute('data-hidden', 'true')
   })
