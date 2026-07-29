@@ -8,6 +8,7 @@ import { tzNote } from '@/lib/calendar/tzLabel'
 import { parseRule, buildRule, type Freq } from '@/lib/calendar/rrule'
 import { buildEventTimes } from '@/lib/calendar/eventTimes'
 import { Button } from '@/components/ui/Button'
+import { CommentThread } from '@/components/calendar/CommentThread'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import styles from './EventSheet.module.css'
 
@@ -15,6 +16,7 @@ type Props = {
   initial: EventRow | null // 있으면 수정 모드
   defaultDate: string // 생성 시 기본 날짜(선택된 날)
   myId: string | null // 사용자별 리마인더 소유자
+  coupleId: string | null // 댓글 조회/작성 범위(RLS와 동일 기준)
   busy: boolean
   profiles: ProfileMap // 소유자 이름 표시(상대 PERSONAL 라벨)
   // 버전충돌 후 부모가 재조회한 최신 서버 행(Task 7). version 재시드 + 메모 append-merge에 쓴다.
@@ -23,9 +25,11 @@ type Props = {
   onCreate: (e: NewEvent) => void
   onUpdate: (id: string, expectedVersion: number, patch: EventPatch) => void
   onDelete: (id: string, expectedVersion: number) => void
+  /** 댓글 삭제가 version 충돌일 때(§4.3) — 부모의 충돌 배너를 띄운다. */
+  onCommentConflict: () => void
 }
 
-export function EventSheet({ initial, defaultDate, myId, busy, profiles, conflictRefresh, onClose, onCreate, onUpdate, onDelete }: Props) {
+export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profiles, conflictRefresh, onClose, onCreate, onUpdate, onDelete, onCommentConflict }: Props) {
   useScrollLock(true) // 열림=마운트. 뒤 캘린더 스크롤 차단(iOS 체이닝)
   const editing = initial != null
   // 상대 PERSONAL 일정은 읽기 전용(canEdit 가드, 조사03 §4 — RLS USING 미러).
@@ -355,6 +359,21 @@ export function EventSheet({ initial, defaultDate, myId, busy, profiles, conflic
             ) : null}
           </div>
         </form>
+
+        {/* 댓글 — 수정 모드에서만(생성 전엔 붙일 일정이 없다). form 밖에 두어 엔터가 일정 저장으로
+            새지 않게 한다(중첩 form 금지). 상대 PERSONAL 일정이어도 읽고 쓸 수 있다 —
+            일정 자체를 못 고치는 것과 "한마디 남기는 것"은 다르다(§4.2 PERSONAL은 숨김이 아니라 색만 갈림). */}
+        {editing && initial ? (
+          <div className={styles.comments}>
+            <CommentThread
+              coupleId={coupleId}
+              myId={myId}
+              eventId={initial.id}
+              profiles={profiles}
+              onConflict={onCommentConflict}
+            />
+          </div>
+        ) : null}
       </div>
     </div>,
     document.body,

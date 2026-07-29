@@ -10,6 +10,7 @@ import { ScopeSheet, type Scope } from '@/components/calendar/ScopeSheet'
 import { DayTimeline } from '@/components/calendar/DayTimeline'
 import { WeekStrip } from '@/components/calendar/WeekStrip'
 import { TrackLegend } from '@/components/calendar/TrackLegend'
+import { QuickAddRow } from '@/components/calendar/QuickAddRow'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useProfiles, type ProfileMap } from '@/hooks/useProfiles'
@@ -181,6 +182,13 @@ export default function CalendarPage() {
     setConflictRefresh(null)
   }
   const onCreate = (e: NewEvent) => create.mutate(e, { onSuccess: closeSheet })
+  // 한 줄 추가 — 시트를 열지 않으므로 닫을 것도 없다. done()으로 입력만 비우고 포커스를 유지해
+  // 연속 입력이 끊기지 않게 한다(실패 시 done을 부르지 않아 입력값이 보존된다 — §7 입력값 보존).
+  const onQuickAdd = (e: NewEvent, done: () => void) =>
+    create.mutate(e, {
+      onSuccess: done,
+      onError: (err) => toast.show(err instanceof Error ? err.message : '추가하지 못했어요.'),
+    })
 
   // 버전충돌이면 시트 유지 + 최신 서버 행을 시트로 내려 version 재시드·메모 머지(§4.3).
   // 권한거부는 시트 유지(배너로 안내) — onError에서 콜백이 갈리므로 여기선 충돌만 재시드한다.
@@ -410,6 +418,7 @@ export default function CalendarPage() {
               onEdit={openEdit}
               onAdd={openCreate}
               onDelete={quickDelete}
+              onQuickAdd={onQuickAdd}
             />
           </>
         )}
@@ -424,6 +433,7 @@ export default function CalendarPage() {
           initial={sheet.editing}
           defaultDate={selected}
           myId={myId}
+          coupleId={coupleId}
           busy={busy}
           profiles={profiles ?? {}}
           conflictRefresh={conflictRefresh}
@@ -431,6 +441,7 @@ export default function CalendarPage() {
           onCreate={onCreate}
           onUpdate={onUpdate}
           onDelete={onDelete}
+          onCommentConflict={conflict.flag}
         />
       ) : null}
 
@@ -575,6 +586,7 @@ function DayAgenda({
   onEdit,
   onAdd,
   onDelete,
+  onQuickAdd,
 }: {
   dateKey: string
   events: Occurrence<EventRow>[]
@@ -584,6 +596,7 @@ function DayAgenda({
   onEdit: (ev: Occurrence<EventRow>) => void
   onAdd: () => void
   onDelete: (ev: Occurrence<EventRow>) => void
+  onQuickAdd: (e: NewEvent, done: () => void) => void
 }) {
   // 목록 바로 삭제도 EventSheet와 같은 계약: 1탭은 지우지 않고 인라인 확인 먼저(실수 삭제 방지).
   const [confirmId, setConfirmId] = useState<string | null>(null)
@@ -659,6 +672,10 @@ function DayAgenda({
           })}
         </ul>
       )}
+
+      {/* 한 줄 추가 — 빈 날에도, 목록 아래에도 항상. 제목만 + 엔터로 끝나는 빠른 경로.
+          위 '＋ 일정 추가'(EventSheet)는 시간·반복까지 정하는 경로로 남는다. */}
+      <QuickAddRow dateKey={dateKey} onCreate={onQuickAdd} />
     </section>
   )
 }

@@ -199,6 +199,23 @@ AI 코스(§5.6). days는 JSON blob.
 
 - UNIQUE (user_id, target_type, target_id, emoji) WHERE deleted_at IS NULL — 같은 리액션 중복 방지. `target_id` 다형이라 FK 불가 → 무결성은 앱 레이어.
 
+### 1.12 `comments`
+일정에 붙는 **평면 댓글**(0018, 2026-07 신설). `ux-and-accessibility.md` §2 개정 참조 — 스레드가 아니라 "공유 데이터에 붙는 메모"다.
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | uuid | PK |
+| couple_id | uuid | NOT NULL FK→couples(id) |
+| event_id | uuid | NOT NULL FK→events(id) |
+| body | text | NOT NULL CHECK (char_length(btrim(body)) BETWEEN 1 AND 500) |
+| author_id | uuid | NOT NULL FK→profiles(id) |
+| (감사/동기화 6필드) | | |
+
+- **`parent_id`·멘션·`reply_count`를 두지 않는다** — 대댓글이 생기면 피드형 소셜로 번진다(§2 취지). 필요해지면 스키마 확장이 아니라 설계 재검토.
+- 대상은 `event_id` FK 하나. reactions처럼 다형(`target_type`)으로 열지 않는다 — 본문이 남는 데이터라 고아 행이 더 아프므로 FK 무결성을 산다.
+- INDEX (event_id, created_at) WHERE deleted_at IS NULL — 한 일정의 댓글을 시간순으로 읽는 것이 유일한 조회 패턴.
+- RLS: 읽기는 커플 전체, 쓰기/삭제는 `author_id = auth.uid()`(0009 reactions와 같은 철학). 휴지통 가산 정책도 0018에서 **같이** 깐다(0009/0010이 reactions·wishes에 빠뜨려 생긴 거짓 충돌 반복 방지).
+
 ---
 
 ## 2. wish/visit 도출 규칙 (§4.2)

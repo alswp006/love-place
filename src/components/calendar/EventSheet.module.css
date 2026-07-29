@@ -198,3 +198,8 @@
 /* 액션 버튼(삭제/삭제확인/취소/저장)은 공용 Button 프리미티브로 통합(R6) —
    variant: danger(삭제·삭제확인) / ghost(취소·닫기) / primary(저장·수정).
    pill 반경·터치 타깃·포커스 링·비활성 처리는 Button.module.css가 담당. */
+
+/* 댓글 영역 — form 밖(중첩 form 금지). 시트 안에서 스스로 스크롤되게 하고 하단 safe-area를 존중. */
+.comments {
+  padding: 0 var(--sp-3) calc(var(--sp-3) + var(--safe-bottom));
+}

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Task 6(R2): 상대 PERSONAL 일정은 읽기 전용(canEdit 가드).
 // canEdit = visibility==='SHARED' || owner_id===myId (RLS USING 미러, 조사03 §4).
@@ -35,19 +36,24 @@ function setup(overrides: Partial<Parameters<typeof EventSheet>[0]> = {}) {
   const onUpdate = vi.fn()
   const onDelete = vi.fn()
   const onClose = vi.fn()
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
+    <QueryClientProvider client={qc}>
     <EventSheet
       initial={baseEvent}
       defaultDate="2026-06-20"
       myId="me"
+      coupleId="c1"
       busy={false}
       profiles={profiles}
       onClose={onClose}
       onCreate={onCreate}
       onUpdate={onUpdate}
       onDelete={onDelete}
+      onCommentConflict={() => {}}
       {...overrides}
-    />,
+    />
+    </QueryClientProvider>,
   )
   return { onCreate, onUpdate, onDelete, onClose }
 }

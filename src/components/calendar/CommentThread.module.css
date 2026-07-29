@@ -1,0 +1,132 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border-top: 1px solid var(--c-border);
+  padding-top: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--sp-2);
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  text-align: center;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  /* 댓글이 쌓여도 시트를 밀어내지 않게 — 목록 안에서 스크롤 */
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.author {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+}
+
+.time {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  font-variant-numeric: tabular-nums;
+}
+
+.text {
+  margin: 2px 0 0;
+  /* 긴 글·URL도 컨테이너를 깨지 않게. 글자 확대에도 안전(고정 높이 없음) */
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.del,
+.confirm {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--c-text-weak);
+  cursor: pointer;
+  /* 터치 타깃 ≥44px(HIG) */
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.confirm {
+  color: var(--c-danger, #d33);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  min-width: auto;
+  padding: 0 var(--sp-2);
+}
+
+.form {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--sp-2);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: var(--fs-body);
+  min-height: 44px;
+}
+
+.send {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--c-brand);
+  font-weight: 600;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-2);
+}
+
+.send:disabled {
+  color: var(--c-text-weak);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-danger, #d33);
+}

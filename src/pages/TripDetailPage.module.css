@@ -152,6 +152,12 @@
 .stopName {
   font-weight: 600;
   overflow-wrap: anywhere;
+  color: inherit;
+  text-decoration: none;
+  /* 터치 타깃 ≥44px(HIG) — 링크가 된 뒤에도 유지 */
+  display: flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 .stopMemo {

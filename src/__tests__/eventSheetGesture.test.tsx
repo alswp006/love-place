@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Task 9(R2): EventSheet 스와이프 다운 닫기 + reduce-motion 전환 축소.
 // 시트 드래그 핸들에서 touchstart(y=100)→touchmove(y=260, 임계 초과)→touchend 시 onClose 호출.
@@ -12,19 +13,24 @@ function setup(overrides: Partial<Parameters<typeof EventSheet>[0]> = {}) {
   const onUpdate = vi.fn()
   const onDelete = vi.fn()
   const onClose = vi.fn()
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
+    <QueryClientProvider client={qc}>
     <EventSheet
       initial={null}
       defaultDate="2026-06-20"
       myId="u1"
+      coupleId="c1"
       busy={false}
       profiles={{}}
       onClose={onClose}
       onCreate={onCreate}
       onUpdate={onUpdate}
       onDelete={onDelete}
+      onCommentConflict={() => {}}
       {...overrides}
-    />,
+    />
+    </QueryClientProvider>,
   )
   return { onCreate, onUpdate, onDelete, onClose }
 }

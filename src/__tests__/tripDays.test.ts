@@ -144,18 +144,37 @@ describe('nextStopStartMin', () => {
   })
 
   it('마지막 스톱 끝에 이어붙인다', () => {
-    const stops = [{ end: kst('2026-07-25', '11:30') }]
+    const stops = [{ start: kst('2026-07-25', '10:30'), end: kst('2026-07-25', '11:30') }]
     expect(nextStopStartMin(stops, '2026-07-25')).toBe(11 * 60 + 30)
   })
 
-  it('늦은 시각은 상한(22:00)으로 눌러 다음 날로 새지 않게 한다', () => {
-    const stops = [{ end: kst('2026-07-25', '23:30') }]
+  it('늦은 시각은 상한(22:00)으로 누른다', () => {
+    const stops = [{ start: kst('2026-07-25', '20:00'), end: kst('2026-07-25', '23:30') }]
     expect(nextStopStartMin(stops, '2026-07-25')).toBe(MAX_STOP_START_MIN)
   })
 
   it('마지막 스톱이 자정을 넘겼으면 상한으로', () => {
-    const stops = [{ end: kst('2026-07-26', '01:00') }]
+    const stops = [{ start: kst('2026-07-25', '20:00'), end: kst('2026-07-26', '01:00') }]
     expect(nextStopStartMin(stops, '2026-07-25')).toBe(MAX_STOP_START_MIN)
+  })
+
+  // 회귀: 상한(22:00)을 지키느라 같은 분에 포개지던 버그. 하루가 찬 뒤에도 시작시각은 단조 증가해야
+  // 정렬(start 오름차순)이 흔들리지 않는다.
+  it('상한에 눌려도 직전 스톱과 같은 분에 놓지 않는다(겹침 금지)', () => {
+    const stops = [{ start: kst('2026-07-25', '22:00'), end: kst('2026-07-25', '23:00') }]
+    expect(nextStopStartMin(stops, '2026-07-25')).toBe(22 * 60 + 1)
+  })
+
+  it('하루를 몰아 담아도 시작시각이 계속 앞서지 않는다(단조 증가)', () => {
+    // 10:00부터 60분짜리로 계속 담는 상황을 시뮬레이션 — 어느 지점에서도 이전과 같아지면 안 된다.
+    const stops: { start: string; end: string }[] = []
+    let prev = -1
+    for (let i = 0; i < 20; i++) {
+      const min = nextStopStartMin(stops, '2026-07-25')
+      expect(min).toBeGreaterThan(prev)
+      prev = min
+      stops.push({ start: slotIso('2026-07-25', min), end: slotIso('2026-07-25', min + 60) })
+    }
   })
 })
 

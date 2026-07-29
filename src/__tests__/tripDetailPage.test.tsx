@@ -21,7 +21,10 @@ const state = vi.hoisted(() => ({
   create: vi.fn(),
   remove: vi.fn(),
   openDirections: vi.fn(),
+  toast: vi.fn(),
 }))
+
+vi.mock('@/components/common/ToastProvider', () => ({ useToast: () => ({ show: state.toast }) }))
 
 vi.mock('@/state/auth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }))
 vi.mock('@/hooks/useCouple', () => ({ useCouple: () => ({ data: { coupleId: 'c1' } }) }))
@@ -73,6 +76,12 @@ beforeEach(() => {
   state.create.mockReset()
   state.remove.mockReset()
   state.openDirections.mockReset()
+  state.toast.mockReset()
+  // create는 기본적으로 성공 콜백을 태워 담기 흐름(토스트·패널 유지)을 검증할 수 있게 한다.
+  state.create.mockImplementation((_vars, opts) => {
+    opts?.onSuccess?.()
+    opts?.onSettled?.()
+  })
 })
 
 // 좌표를 가진 두 스톱이 붙어 있는 Day 1 시나리오(거리 칩 검증용 공통 세팅).
@@ -222,6 +231,39 @@ describe('TripDetailPage — 여행 Day 계획', () => {
     state.legResults = [{ distanceMeters: 1240, polyline: null, degraded: false }]
     renderDetail()
     expect(screen.queryByText(/길찾기/)).not.toBeInTheDocument()
+  })
+
+  it('담은 뒤에도 패널이 열려 있어 연속으로 담을 수 있다 + 성공 토스트', () => {
+    state.places = [
+      { id: 'p1', name: '칠성조선소', lat: 38.2, lng: 128.59 },
+      { id: 'p2', name: '영금정', lat: 38.21, lng: 128.6 },
+    ]
+    state.wishes = {
+      byPlace: {
+        p1: { userIds: ['u1'], totalPriority: 3, maxPriority: 3 },
+        p2: { userIds: ['u1'], totalPriority: 2, maxPriority: 2 },
+      },
+      mine: {},
+    }
+    renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /가고싶은 곳에서 담기/ }))
+    fireEvent.click(screen.getByRole('button', { name: /칠성조선소/ }))
+
+    expect(state.toast).toHaveBeenCalledWith(expect.stringContaining('칠성조선소'))
+    // 패널이 닫히지 않아 다음 후보를 바로 담을 수 있다(곳당 2탭 → 1탭).
+    expect(screen.getByRole('button', { name: /영금정/ })).toBeInTheDocument()
+  })
+
+  it('스톱 이름은 그 날짜 캘린더로 가는 링크 — 시각 편집 경로(6탭→2탭)', () => {
+    state.places = [{ id: 'p1', name: '칠성조선소', lat: 38.2, lng: 128.59 }]
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
+    ]
+    renderDetail()
+    expect(screen.getByRole('link', { name: /칠성조선소 — 캘린더에서 시간 바꾸기/ })).toHaveAttribute(
+      'href',
+      '/calendar?date=2026-07-25',
+    )
   })
 
   it('없는 여행이면 친근한 빈 상태로 — 흰 화면 금지', () => {

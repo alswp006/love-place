@@ -102,8 +102,10 @@ export function stopsOfDay<T extends StopLike>(
 const TZ_OFFSET = '+09:00'
 /** 기본 첫 스톱 10:00. */
 export const DEFAULT_FIRST_STOP_MIN = 10 * 60
-/** 새 스톱이 자정을 넘겨 다음 날로 새지 않게 하는 상한(22:00). */
+/** 기본 착지 상한(22:00) — 자동으로 밤늦게 잡히지 않게 하는 heuristic. */
 export const MAX_STOP_START_MIN = 22 * 60
+/** 그날 안에 있을 수 있는 마지막 분(23:59) — 다음 날짜 버킷으로 새는 것을 막는 하드 한계. */
+export const LAST_MINUTE_OF_DAY = 23 * 60 + 59
 
 /** 'YYYY-MM-DD' + 자정으로부터의 분 → ISO(UTC). 분은 [0, 23:59]로 클램프. */
 export function slotIso(day: string, minutes: number): string {
@@ -115,18 +117,27 @@ export function slotIso(day: string, minutes: number): string {
 
 /**
  * 그 날에 스톱을 하나 더 담을 때의 시작 분 — 마지막 스톱 끝에 이어붙인다.
- * 비어 있으면 기본(10:00). 마지막 스톱이 자정을 넘겼거나 늦으면 상한(22:00)으로 눌러
- * 새 스톱이 다음 날짜 버킷으로 새지 않게 한다.
+ * 비어 있으면 기본(10:00).
+ *
+ * 상한 22:00은 '밤늦게 자동 배치하지 않기' heuristic일 뿐, **겹침을 만들면서까지 지키지 않는다**.
+ * 하루가 22:00까지 찬 뒤에도 계속 담으면 이전 상한 구현은 전부 22:00에 포개져
+ * 순서가 뒤섞였다(스톱 13개째부터 발생). 그래서 항상 마지막 스톱보다 최소 1분 뒤에 놓아
+ * 시작시각이 단조 증가하도록 보장한다 — 정렬(start 오름차순)이 흔들리지 않는다.
+ * 다음 날짜 버킷으로 새는 것은 23:59 하드 한계가 막는다.
  */
-export function nextStopStartMin<T extends { end: string }>(
+export function nextStopStartMin<T extends { start: string; end: string }>(
   stops: readonly T[],
   day: string,
   tz: string = DISPLAY_TZ,
 ): number {
   const last = stops[stops.length - 1]
   if (!last) return DEFAULT_FIRST_STOP_MIN
-  if (dayKey(last.end, tz) !== day) return MAX_STOP_START_MIN
-  return Math.min(minuteOfDay(last.end, tz), MAX_STOP_START_MIN)
+  // 마지막 스톱이 자정을 넘겨 끝났으면 그날 기준으론 '끝까지 찼다'로 본다.
+  const endMin = dayKey(last.end, tz) !== day ? LAST_MINUTE_OF_DAY : minuteOfDay(last.end, tz)
+  const landing = Math.min(endMin, MAX_STOP_START_MIN)
+  // 단조 증가 보장: 상한에 눌렸더라도 직전 스톱과 같은 분에 놓지 않는다.
+  const afterLast = Math.max(landing, minuteOfDay(last.start, tz) + 1)
+  return Math.min(afterLast, LAST_MINUTE_OF_DAY)
 }
 
 /** 여행 기간 전체에 걸친 스톱 수(목록 카드의 "N곳" 표기용). */

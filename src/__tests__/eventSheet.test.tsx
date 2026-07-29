@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Task 5(R2): EventSheet 시간 검증 + 인라인 에러(role="alert") + 입력 보존.
 // buildEventTimes(Task 1)로 검증해서, 동일 시각/역전 범위면 onCreate/onUpdate에 도달하지 않고
@@ -33,19 +34,24 @@ function setup(overrides: Partial<Parameters<typeof EventSheet>[0]> = {}) {
   const onUpdate = vi.fn()
   const onDelete = vi.fn()
   const onClose = vi.fn()
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
+    <QueryClientProvider client={qc}>
     <EventSheet
       initial={null}
       defaultDate="2026-06-20"
       myId="u1"
+      coupleId="c1"
       busy={false}
       profiles={{}}
       onClose={onClose}
       onCreate={onCreate}
       onUpdate={onUpdate}
       onDelete={onDelete}
+      onCommentConflict={() => {}}
       {...overrides}
-    />,
+    />
+    </QueryClientProvider>,
   )
   return { onCreate, onUpdate, onDelete, onClose }
 }

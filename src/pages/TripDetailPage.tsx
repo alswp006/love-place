@@ -8,6 +8,7 @@ import { usePlaces, type PlaceRow } from '@/hooks/usePlaces'
 import { useWishes } from '@/hooks/useWishes'
 import { useEventMutations } from '@/hooks/useEventMutations'
 import { useConflict } from '@/lib/sync/useConflict'
+import { useToast } from '@/components/common/ToastProvider'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Skeleton } from '@/components/common/Skeleton'
@@ -49,6 +50,7 @@ export default function TripDetailPage() {
   const { data: places } = usePlaces(coupleId)
   const { data: wishes } = useWishes(coupleId, myId)
   const conflict = useConflict()
+  const toast = useToast()
   const { create, remove } = useEventMutations(coupleId, myId, conflict.flag)
 
   const trip = useMemo(() => (trips ?? []).find((t) => t.id === tripId) ?? null, [trips, tripId])
@@ -60,6 +62,8 @@ export default function TripDetailPage() {
   const activeDay = picked ?? (days.some((d) => d.key === today) ? today : (days[0]?.key ?? null))
 
   const [adding, setAdding] = useState(false)
+  // 방금 누른 후보만 비활성 — 담는 동안 목록 전체가 굳지 않게(연속 담기 흐름 유지).
+  const [pendingId, setPendingId] = useState<string | null>(null)
 
   const placeById = useMemo(() => {
     const m = new Map<string, PlaceRow>()
@@ -115,9 +119,12 @@ export default function TripDetailPage() {
       .sort((a, b) => (wished[b.id]?.maxPriority ?? 0) - (wished[a.id]?.maxPriority ?? 0))
   }, [places, wishes, stops])
 
+  // 담기: 패널을 닫지 않는다 — 여러 곳을 몰아 담는 게 기본 사용이라 매번 닫으면 곳당 2탭이 된다.
+  // 담긴 곳은 candidates에서 자동으로 빠지므로 목록이 줄어드는 것 자체가 피드백이고, 토스트로 한 번 더 확인해 준다.
   const onAdd = (placeId: string, name: string) => {
     if (!activeDay) return
     const startMin = nextStopStartMin(stops, activeDay)
+    setPendingId(placeId)
     create.mutate(
       {
         title: name,
@@ -128,7 +135,11 @@ export default function TripDetailPage() {
         visibility: 'SHARED',
         placeId,
       },
-      { onSuccess: () => setAdding(false) },
+      {
+        onSuccess: () => toast.show(`‘${name}’ 담았어요.`),
+        onError: (e) => toast.show(e instanceof Error ? e.message : '담지 못했어요.'),
+        onSettled: () => setPendingId(null),
+      },
     )
   }
 
@@ -224,7 +235,15 @@ export default function TripDetailPage() {
                 <div className={styles.stop}>
                   <span className={styles.time}>{formatTime(s.start)}</span>
                   <span className={styles.stopBody}>
-                    <span className={styles.stopName}>{name}</span>
+                    {/* 시각 편집은 캘린더가 정본(여기서 스톱을 따로 저장하지 않으므로).
+                        그 날짜 아젠다로 바로 보내 6탭 왕복을 2탭으로 줄인다. */}
+                    <Link
+                      className={styles.stopName}
+                      to={`/calendar?date=${activeDay ?? ''}`}
+                      aria-label={`${name} — 캘린더에서 시간 바꾸기`}
+                    >
+                      {name}
+                    </Link>
                     {s.memo ? <span className={styles.stopMemo}>{s.memo}</span> : null}
                   </span>
                   <button
@@ -289,7 +308,7 @@ export default function TripDetailPage() {
                     type="button"
                     className={styles.pick}
                     onClick={() => onAdd(p.id, p.name)}
-                    disabled={create.isPending}
+                    disabled={pendingId === p.id}
                   >
                     <span className={styles.pickName}>{p.name}</span>
                     {p.region_label ? (

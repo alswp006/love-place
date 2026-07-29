@@ -1,0 +1,57 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2);
+  border: 1px dashed var(--c-border);
+  border-radius: var(--radius-sm);
+  /* 터치 타깃 ≥44px(HIG) */
+  min-height: 44px;
+}
+
+.row:focus-within {
+  border-style: solid;
+  border-color: var(--c-brand);
+}
+
+.plus {
+  color: var(--c-text-weak);
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--c-text);
+  /* rem 기반 — 사용자 글자 크기 설정 존중(Dynamic Type) */
+  font-size: var(--fs-body);
+  min-height: 44px;
+}
+
+.input:focus {
+  outline: none; /* 포커스 링은 .row:focus-within 테두리가 담당 */
+}
+
+.input::placeholder {
+  color: var(--c-text-weak);
+}
+
+.submit {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--c-brand);
+  font-weight: 600;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-2);
+}
+
+.submit:disabled {
+  color: var(--c-text-weak);
+  opacity: 0.5;
+  cursor: default;
+}
