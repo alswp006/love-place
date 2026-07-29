@@ -52,7 +52,15 @@
 - [ ] couple A의 JWT로 couple B 행 `update/delete` → 0행 영향(또는 거부)
 - [ ] couple A의 JWT로 `insert` 시 `couple_id`를 B로 위조 → 거부
 - [ ] 미인증 요청 → 전부 거부
-이 테스트는 P0부터 존재하고 CI 게이트에 포함된다.
+이 테스트는 P0부터 존재한다.
+
+> ⚠️ **정정(2026-07): 이 테스트는 현재 기본 CI 게이트가 아니다.** `src/__tests__/rls.integration.test.ts`는
+> `describe.skipIf(!ready)`이고 `ready`는 `RLS_TEST_URL / RLS_TEST_ANON / RLS_TEST_A_EMAIL /
+> RLS_TEST_A_PASSWORD / RLS_TEST_B_EMAIL / RLS_TEST_B_PASSWORD` **6개가 전부 있을 때만** 참이다.
+> `.github/workflows/ci.yml`은 이 변수들을 주입하지 않으므로 CI에서는 통째로 스킵된다.
+> 여기에 케이스를 추가해도 자동으로 지켜지지 않는다는 뜻이다 — 실 DB를 붙여 로컬에서
+> 돌리거나(docs/rls-testing.md), CI에 시크릿을 넣어 활성화해야 실효가 생긴다.
+> 그때까지 RLS 변경의 1차 방어선은 **마이그레이션 리뷰**다.
 
 ---
 

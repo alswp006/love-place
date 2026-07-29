@@ -8,6 +8,7 @@ import { PlaceDetail } from '@/components/places/PlaceDetail'
 import { PlacePreviewDetail } from '@/components/places/PlacePreviewDetail'
 import { useToggleReaction, type ReactionMap } from '@/hooks/useReactions'
 import { reactionLabel } from '@/lib/places/aggregateReactions'
+import { useToggleWish } from '@/hooks/useToggleWish'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import { useMarkVisited, useUnmarkVisited } from '@/hooks/useVisits'
 import { useSetWishPriority } from '@/hooks/useSetWishPriority'
@@ -87,6 +88,8 @@ export function PlaceSheet({
   const { restorePlace } = useRestorePlace(coupleId, myId, conflict.flag)
   // 시트 소유 리액션 토글(말풍선 폐지). 끄기는 version 조건부 softDelete — 충돌 시 conflict.flag로 배너.
   const toggleReaction = useToggleReaction(coupleId, myId, conflict.flag)
+  // '나도 찜' — 상대가 담은 장소에 내 의도를 더하는 유일한 경로(bothWished ✦에 도달하려면 필요).
+  const toggleWish = useToggleWish(coupleId, myId, conflict.flag)
   // 컬렉션(저장 목록) 쓰기 — 데이터(collections/placeCollections)는 상위(MapPage)에서 props로,
   // 쓰기 mutation만 시트가 보유(다른 mutation과 동일 패턴). 변경계는 conflict.flag로 충돌 배너.
   const createCollection = useCreateCollection(coupleId, myId)
@@ -511,6 +514,15 @@ export function PlaceSheet({
                 onSelect={onSelect}
                 setPriority={setPriority}
                 priorityPending={priorityPending}
+                onToggleWish={(placeId) =>
+                  toggleWish.mutate(
+                    { placeId },
+                    {
+                      onError: (e) =>
+                        toast.show(e instanceof Error ? e.message : '찜하지 못했어요.'),
+                    },
+                  )
+                }
                 markVisited={markVisited}
                 onUnvisit={(placeId) =>
                   unmarkVisited.mutate(

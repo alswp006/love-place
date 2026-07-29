@@ -163,3 +163,18 @@
   opacity: 0.4;
   cursor: default;
 }
+
+/* '＋ 나도 찜' — 내 wish가 없는 장소(상대가 담아둔 곳)에만. 색이 아니라 텍스트로 뜻을 말한다(§8). */
+.alsoWish {
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-brand);
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  cursor: pointer;
+  /* 터치 타깃 ≥44px(HIG) */
+  min-height: 44px;
+  white-space: nowrap;
+}

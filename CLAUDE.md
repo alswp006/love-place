@@ -91,7 +91,7 @@ public/             # PWA manifest, 아이콘 등
 - [ ] **vitest 통과** — 단위/통합 테스트, 특히 동기화·충돌·오프라인 시나리오(P1부터). `npm run test`.
 - [ ] **build 성공** — `npm run build`(Vite 프로덕션 빌드).
 - [ ] **Playwright 비주얼 스모크** — `e2e/` 핵심 화면 렌더/스냅샷. `npm run e2e`(또는 정의된 스크립트).
-- [ ] **RLS 격리 확인** — 다른 couple의 행이 보이지 않고 쓰지 못함을 마이그레이션/테스트로 검증(§10.2). 새 공유 테이블엔 RLS 정책 필수.
+- [ ] **RLS 격리 확인** — 다른 couple의 행이 보이지 않고 쓰지 못함을 마이그레이션/테스트로 검증(§10.2). 새 공유 테이블엔 RLS 정책 필수. ⚠️ `rls.integration.test.ts`는 환경변수 6개가 있을 때만 도는 `describe.skipIf`라 **기본 CI에서는 스킵된다** — 실효 방어선은 마이그레이션 리뷰다(`.claude/rules/security-privacy.md` §2 정정 참조). 새 테이블엔 살아있는 행 정책 + **휴지통 가산 정책**을 처음부터 같이 깔 것(0018 참조).
 - [ ] **EXIF 스트립 확인** — 발행 경로 변경 시 가공본에 GPS/EXIF가 남지 않음을 확인(§7). 발행 미관련 변경이면 N/A 명시.
 - [ ] **접근성 회귀 없음** — 색+패턴 이중화, VoiceOver 라벨, Reduce Motion 유지(§8).
 

@@ -24,7 +24,7 @@ type LegacyTrashAlias = 'place' | 'event'
 
 export type OutboxKind =
   | 'wish.setPriority' | 'place.save'
-  | 'visit.add' | 'visit.remove' | 'reaction.toggle'
+  | 'visit.add' | 'visit.remove' | 'reaction.toggle' | 'wish.toggle'
   | `${TrashTable}.delete` | `${TrashTable}.restore` // = 6×2(place/event/visit/photo/trip/itinerary delete·restore)
   | `${LegacyTrashAlias}.delete` | `${LegacyTrashAlias}.restore` // 레거시 단수(place/event) — 매핑 후 재생
 
@@ -34,6 +34,7 @@ type SavePayload = { coupleId: string; hit: KakaoPlaceHit; uid: string }
 type VisitAddPayload = { coupleId: string; placeId: string; visitDate: string; myId: string }
 type VisitRemovePayload = { placeId: string; myId: string; coupleId: string }
 type ReactionTogglePayload = { coupleId: string; placeId: string; myId: string }
+type WishTogglePayload = { coupleId: string; placeId: string; myId: string }
 
 export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
   switch (entry.kind) {
@@ -90,6 +91,22 @@ export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
       const { error } = await supabase.from('reactions').insert({
         couple_id: p.coupleId, user_id: p.myId, target_type: 'PLACE', target_id: p.placeId,
         emoji: '❤️', created_by: p.myId, updated_by: p.myId,
+      })
+      if (error) throw new Error(error.message)
+      return 'ok'
+    }
+    case 'wish.toggle': {
+      // 재연결 시점의 실제 상태로 토글한다(큐에 담을 땐 방향을 고정하지 않음 — reaction.toggle과 동형).
+      const p = entry.payload as WishTogglePayload
+      const { data: mine } = await supabase
+        .from('wishes').select('id, version').eq('couple_id', p.coupleId)
+        .eq('place_id', p.placeId).eq('user_id', p.myId).is('deleted_at', null).limit(1)
+      const existing = mine?.[0]
+      if (existing) return (await softDelete('wishes', existing.id as string, existing.version as number, p.myId)).status
+      // insert(upsert 아님) — uq_wishes_place_user가 부분 유니크라 onConflict 추론이 42P10을 낼 수 있다.
+      const { error } = await supabase.from('wishes').insert({
+        couple_id: p.coupleId, place_id: p.placeId, user_id: p.myId,
+        created_by: p.myId, updated_by: p.myId,
       })
       if (error) throw new Error(error.message)
       return 'ok'

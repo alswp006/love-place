@@ -33,6 +33,7 @@ export function PlaceList({
   onToast,
   onToastAction,
   restorePlace,
+  onToggleWish,
 }: {
   visible: WithWish<PlaceRow>[]
   wishes: WishData | undefined
@@ -43,6 +44,8 @@ export function PlaceList({
   onSelect: (id: string) => void
   setPriority: (v: { wishId: string; expectedVersion: number; priority: number }) => void
   priorityPending: boolean
+  /** 내 wish가 없는 장소에 '＋ 나도 찜'을 붙인다. 미지정이면 컨트롤을 숨긴다(점진 도입). */
+  onToggleWish?: (placeId: string) => void
   markVisited: MarkVisited
   onUnvisit: (placeId: string) => void
   unvisitPending: boolean
@@ -123,6 +126,20 @@ export function PlaceList({
                         haptic() // 낙관적 시점 — 시각(하트 채움) 피드백 병행(ux §1).
                       }}
                     />
+                  ) : onToggleWish ? (
+                    // 내 wish가 없는 장소(상대가 담아둔 곳) — 여기에 내 의도를 더할 경로가 없었다.
+                    // 이게 있어야 '둘 다 찜'(✦) 신호에 정상적으로 도달한다. 색만 쓰지 않고 텍스트 병기(§8).
+                    <button
+                      type="button"
+                      className={styles.alsoWish}
+                      onClick={() => {
+                        onToggleWish(p.id)
+                        haptic()
+                      }}
+                      aria-label={`${p.name} 나도 가고싶어요`}
+                    >
+                      ＋ 나도 찜
+                    </button>
                   ) : null}
                   {visited ? (
                     // 방문 토글(spec §3.3): 다시 누르면 가봤음 취소(soft-delete). 색+텍스트 이중화(§8).
