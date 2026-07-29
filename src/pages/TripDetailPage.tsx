@@ -7,6 +7,10 @@ import { useEvents } from '@/hooks/useEvents'
 import { usePlaces, type PlaceRow } from '@/hooks/usePlaces'
 import { useWishes } from '@/hooks/useWishes'
 import { useEventMutations } from '@/hooks/useEventMutations'
+import { useSoftDeleteWithUndo } from '@/hooks/useTrash'
+import { useProfiles } from '@/hooks/useProfiles'
+import { SourceAvatar } from '@/components/common/SourceAvatar'
+import { deriveTrack, TRACK_META } from '@/lib/calendar/track'
 import { useConflict } from '@/lib/sync/useConflict'
 import { useToast } from '@/components/common/ToastProvider'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
@@ -49,9 +53,20 @@ export default function TripDetailPage() {
   const { data: events } = useEvents(coupleId)
   const { data: places } = usePlaces(coupleId)
   const { data: wishes } = useWishes(coupleId, myId)
+  const { data: profiles } = useProfiles(coupleId)
   const conflict = useConflict()
   const toast = useToast()
-  const { create, remove } = useEventMutations(coupleId, myId, conflict.flag)
+  const { create } = useEventMutations(coupleId, myId, conflict.flag)
+  // 스톱 빼기 = events soft-delete. 캘린더·방문·여행·장소가 전부 쓰는 공용 훅으로 통일해
+  // "1탭 확인 → 2탭 삭제 + 되돌리기 토스트" 계약을 화면 간에 맞춘다(이전엔 여기만 1탭 즉시 삭제였다).
+  const { deleteWithUndo, isPending: removing } = useSoftDeleteWithUndo(
+    'events',
+    coupleId,
+    myId,
+    conflict.flag,
+  )
+  // 삭제는 1탭으로 지우지 않는다 — 인라인 확인 먼저(아젠다와 동일, 실수 삭제 방지).
+  const [confirmId, setConfirmId] = useState<string | null>(null)
 
   const trip = useMemo(() => (trips ?? []).find((t) => t.id === tripId) ?? null, [trips, tripId])
   const days = useMemo(() => (trip ? tripDays(trip) : []), [trip])
@@ -223,6 +238,10 @@ export default function TripDetailPage() {
           {stops.map((s) => {
             const place = s.place_id ? placeById.get(s.place_id) : undefined
             const name = place?.name ?? s.title
+            const track = deriveTrack(s, myId)
+            // 캘린더 EventSheet의 canEdit과 같은 규칙(RLS events_update USING 미러):
+            // SHARED이거나 내 것이면 뺄 수 있고, 상대의 PERSONAL이면 못 뺀다.
+            const canRemove = s.visibility === 'SHARED' || s.owner_id === myId
             const li = legIndex[s.id]
             const leg = li === undefined ? undefined : legs[li]
             const dist = li === undefined ? null : formatDistance(dir.data?.[li]?.distanceMeters)
@@ -245,16 +264,52 @@ export default function TripDetailPage() {
                       {name}
                     </Link>
                     {s.memo ? <span className={styles.stopMemo}>{s.memo}</span> : null}
+                    {/* 누구 일정인지 — 캘린더는 트랙으로 구분하는데 여행 탭에서만 사라져 있었다.
+                        색만 쓰지 않고 심볼(●▲■)+라벨을 병기한다(§8). */}
+                    <span className={styles.stopOwner}>
+                      <SourceAvatar
+                        userId={s.owner_id}
+                        profiles={profiles ?? {}}
+                        myId={myId}
+                        context=" 일정"
+                      />
+                      <span className={styles.stopTrack} style={{ color: TRACK_META[track].cssVar }}>
+                        {TRACK_META[track].symbol} {TRACK_META[track].label}
+                      </span>
+                    </span>
                   </span>
-                  <button
-                    type="button"
-                    className={styles.stopDel}
-                    onClick={() => remove.mutate({ id: s.id, expectedVersion: s.version })}
-                    disabled={remove.isPending}
-                    aria-label={`${name} 빼기`}
-                  >
-                    ✕
-                  </button>
+
+                  {/* 상대의 PERSONAL 일정은 뺄 수 없다(RLS events_update 미러).
+                      예전엔 ✕가 보였고 누르면 0행 → 앱이 이를 '상대가 먼저 수정했어요'라는
+                      충돌로 잘못 안내했다. 실제로는 권한 문제라 아예 감춘다. */}
+                  {canRemove ? (
+                    confirmId === s.id ? (
+                      <button
+                        type="button"
+                        className={styles.stopConfirm}
+                        onClick={() => {
+                          setConfirmId(null)
+                          deleteWithUndo({
+                            id: s.id,
+                            expectedVersion: s.version,
+                            message: `‘${name}’을 뺐어요`,
+                          })
+                        }}
+                      >
+                        정말 뺄까요?
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.stopDel}
+                        onClick={() => setConfirmId(s.id)}
+                        disabled={removing}
+                        aria-label={`${name} 빼기`}
+                      >
+                        ✕
+                      </button>
+                    )
+                  ) : null}
                 </div>
 
                 {/* 구간 칩 — 이미 보여줘야 하는 정보(거리)에 길찾기 탭 타깃을 얹는다(화면을 안 늘림).

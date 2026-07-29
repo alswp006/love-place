@@ -247,3 +247,29 @@
   display: flex;
   align-items: center;
 }
+
+/* 스톱 소유자 — 아바타 + 트랙 심볼·라벨(색만 의존 금지 §8). 글자 확대에도 깨지지 않게 줄바꿈 허용. */
+.stopOwner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.stopTrack {
+  font-size: var(--fs-caption);
+}
+
+/* 빼기 확인 — 1탭 확인 → 2탭 실행(아젠다 삭제와 같은 계약). */
+.stopConfirm {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--c-danger, #d33);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-2);
+}

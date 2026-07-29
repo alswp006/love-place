@@ -35,7 +35,19 @@ vi.mock('@/hooks/useWishes', () => ({ useWishes: () => ({ data: state.wishes }) 
 vi.mock('@/hooks/useEventMutations', () => ({
   useEventMutations: () => ({
     create: { mutate: state.create, isPending: false },
-    remove: { mutate: state.remove, isPending: false },
+    remove: { mutate: vi.fn(), isPending: false },
+  }),
+}))
+// 스톱 빼기는 공용 soft-delete+Undo 훅으로 통일됐다(캘린더·장소·여행과 같은 계약).
+vi.mock('@/hooks/useTrash', () => ({
+  useSoftDeleteWithUndo: () => ({ deleteWithUndo: state.remove, isPending: false }),
+}))
+vi.mock('@/hooks/useProfiles', () => ({
+  useProfiles: () => ({
+    data: {
+      u1: { id: 'u1', displayName: '나', color: '#3b6db5', avatarUrl: null },
+      u2: { id: 'u2', displayName: '지민', color: '#e58', avatarUrl: null },
+    },
   }),
 }))
 
@@ -91,8 +103,8 @@ function seedTwoStops() {
     { id: 'p2', name: '영금정', lat: 38.21, lng: 128.6 },
   ]
   state.events = [
-    { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
-    { id: 'e2', title: '영금정', start: kst('2026-07-25', '14:00'), end: kst('2026-07-25', '15:00'), place_id: 'p2', memo: null, version: 1 },
+    { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
+    { id: 'e2', title: '영금정', start: kst('2026-07-25', '14:00'), end: kst('2026-07-25', '15:00'), place_id: 'p2', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
   ]
 }
 
@@ -114,9 +126,9 @@ describe('TripDetailPage — 여행 Day 계획', () => {
   it('그 날의 스톱을 시간순으로 보여준다 — 장소 없는 일정은 빼고', () => {
     state.places = [{ id: 'p1', name: '칠성조선소' }, { id: 'p2', name: '영금정' }]
     state.events = [
-      { id: 'e2', title: '영금정', start: kst('2026-07-25', '14:00'), end: kst('2026-07-25', '15:00'), place_id: 'p2', memo: null, version: 1 },
-      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
-      { id: 'e0', title: '휴가 신청', start: kst('2026-07-25', '08:00'), end: kst('2026-07-25', '08:30'), place_id: null, memo: null, version: 1 },
+      { id: 'e2', title: '영금정', start: kst('2026-07-25', '14:00'), end: kst('2026-07-25', '15:00'), place_id: 'p2', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
+      { id: 'e0', title: '휴가 신청', start: kst('2026-07-25', '08:00'), end: kst('2026-07-25', '08:30'), place_id: null, memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
     ]
     renderDetail()
     const items = screen.getAllByRole('listitem')
@@ -130,8 +142,8 @@ describe('TripDetailPage — 여행 Day 계획', () => {
   it('Day를 바꾸면 그 날 스톱만 보인다', () => {
     state.places = [{ id: 'p1', name: '칠성조선소' }, { id: 'p3', name: '속초해변' }]
     state.events = [
-      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
-      { id: 'e3', title: '속초해변', start: kst('2026-07-26', '09:00'), end: kst('2026-07-26', '10:00'), place_id: 'p3', memo: null, version: 1 },
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
+      { id: 'e3', title: '속초해변', start: kst('2026-07-26', '09:00'), end: kst('2026-07-26', '10:00'), place_id: 'p3', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
     ]
     renderDetail()
     expect(screen.getByText('칠성조선소')).toBeInTheDocument()
@@ -164,21 +176,67 @@ describe('TripDetailPage — 여행 Day 계획', () => {
     state.places = [{ id: 'p1', name: '칠성조선소' }]
     state.wishes = { byPlace: { p1: { userIds: ['u1'], totalPriority: 3, maxPriority: 3 } }, mine: {} }
     state.events = [
-      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
     ]
     renderDetail()
     fireEvent.click(screen.getByRole('button', { name: /가고싶은 곳에서 담기/ }))
     expect(screen.getByText(/담을 수 있는 가고싶은 곳이 없어요/)).toBeInTheDocument()
   })
 
-  it('스톱 빼기는 낙관적 락(version)으로 보낸다 — LWW 금지(§4.3)', () => {
+  // 계약 변경(의도적): 예전엔 ✕ 1탭에 즉시 삭제였다. 같은 events를 캘린더는 '확인 2탭 + 되돌리기'로
+  // 지우는데 여행 탭만 달라서, 오탭 한 번에 상대가 담아둔 스톱이 날아갔다. 공용 훅으로 통일했다.
+  it('스톱 빼기는 1탭으로 지우지 않는다 — 인라인 확인 먼저', () => {
     state.places = [{ id: 'p1', name: '칠성조선소' }]
     state.events = [
-      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 7 },
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 7, visibility: 'SHARED', owner_id: 'u1' },
     ]
     renderDetail()
     fireEvent.click(screen.getByLabelText('칠성조선소 빼기'))
-    expect(state.remove).toHaveBeenCalledWith({ id: 'e1', expectedVersion: 7 })
+    expect(state.remove).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: '정말 뺄까요?' })).toBeInTheDocument()
+  })
+
+  it('스톱 빼기는 낙관적 락(version)으로 보낸다 — LWW 금지(§4.3)', () => {
+    state.places = [{ id: 'p1', name: '칠성조선소' }]
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 7, visibility: 'SHARED', owner_id: 'u1' },
+    ]
+    renderDetail()
+    fireEvent.click(screen.getByLabelText('칠성조선소 빼기'))
+    fireEvent.click(screen.getByRole('button', { name: '정말 뺄까요?' }))
+    // 되돌리기 토스트 문구까지 공용 훅에 넘긴다(캘린더 삭제와 같은 계약).
+    expect(state.remove).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'e1', expectedVersion: 7 }),
+    )
+  })
+
+  it('상대의 PERSONAL 스톱은 ✕가 없다 — 눌러도 못 지우는데 충돌로 오안내하던 것 차단', () => {
+    state.places = [{ id: 'p1', name: '상대만의 일정 장소' }]
+    state.events = [
+      { id: 'e1', title: '지민 개인 일정', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'PERSONAL', owner_id: 'u2' },
+    ]
+    renderDetail()
+    expect(screen.queryByLabelText(/빼기/)).not.toBeInTheDocument()
+  })
+
+  it('내 PERSONAL·SHARED 스톱에는 ✕가 있다', () => {
+    state.places = [{ id: 'p1', name: '내 일정 장소' }]
+    state.events = [
+      { id: 'e1', title: '내 개인 일정', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'PERSONAL', owner_id: 'u1' },
+    ]
+    renderDetail()
+    expect(screen.getByLabelText(/빼기/)).toBeInTheDocument()
+  })
+
+  it('스톱에 소유자 트랙을 색이 아니라 심볼+라벨로 표시한다(§8)', () => {
+    state.places = [{ id: 'p1', name: '칠성조선소' }, { id: 'p2', name: '지민 일정' }]
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
+      { id: 'e2', title: '지민 일정', start: kst('2026-07-25', '11:00'), end: kst('2026-07-25', '12:00'), place_id: 'p2', memo: null, version: 1, visibility: 'PERSONAL', owner_id: 'u2' },
+    ]
+    renderDetail()
+    expect(screen.getByText('● 함께')).toBeInTheDocument()
+    expect(screen.getByText('■ 상대')).toBeInTheDocument()
   })
 
   it('거리 칩 — 스톱 사이에 거리 + 길찾기를 텍스트로 보여준다', () => {
@@ -225,8 +283,8 @@ describe('TripDetailPage — 여행 Day 계획', () => {
       { id: 'p2', name: '이름만 있는 곳', lat: null, lng: null },
     ]
     state.events = [
-      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
-      { id: 'e2', title: '이름만 있는 곳', start: kst('2026-07-25', '14:00'), end: kst('2026-07-25', '15:00'), place_id: 'p2', memo: null, version: 1 },
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
+      { id: 'e2', title: '이름만 있는 곳', start: kst('2026-07-25', '14:00'), end: kst('2026-07-25', '15:00'), place_id: 'p2', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
     ]
     state.legResults = [{ distanceMeters: 1240, polyline: null, degraded: false }]
     renderDetail()
@@ -257,7 +315,7 @@ describe('TripDetailPage — 여행 Day 계획', () => {
   it('스톱 이름은 그 날짜 캘린더로 가는 링크 — 시각 편집 경로(6탭→2탭)', () => {
     state.places = [{ id: 'p1', name: '칠성조선소', lat: 38.2, lng: 128.59 }]
     state.events = [
-      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1 },
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
     ]
     renderDetail()
     expect(screen.getByRole('link', { name: /칠성조선소 — 캘린더에서 시간 바꾸기/ })).toHaveAttribute(
