@@ -241,6 +241,7 @@ export default function TripDetailPage() {
             orderById={orderById}
             selectedId={focusedPlaceId}
             onSelect={setFocusedPlaceId}
+            compact
           />
         </div>
       ) : null}

@@ -150,8 +150,12 @@
     --lavender-ink: #c3aef0;
     --like: #ff8fa6;
     --ok: #6fb98a;
+    /* soft(칩 배경)도 반드시 다크값을 준다 — ink만 밝게 바꾸고 soft를 라이트값(#def3ea)으로 두면
+       밝은 잉크가 밝은 배경에 얹혀 대비 1.23:1로 글자가 사라진다('여행 중' 상태 칩). */
+    --ok-soft: #1f3a31;
     --ok-ink: #a8e6c6;
     --danger: #e87a6d;
+    --danger-soft: #4a2523;
     --danger-ink: #ffb3aa;
     /* 다크 그림자는 어두운 표면 위 깊이 표현용으로 검정 알파 허용(라이트 '검정 금지'는 밝은 표면 전용). */
     --shadow-raised: 0 2px 10px rgba(0, 0, 0, 0.4);

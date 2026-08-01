@@ -32,6 +32,7 @@ export function NaverMap({
   onClose,
   polyline,
   orderById,
+  compact,
 }: {
   places: MarkerPlace[]
   visitedIds?: Set<string>
@@ -45,6 +46,9 @@ export function NaverMap({
   // 여행 Day 스톱 순번(placeId → 1-based). 있으면 마커에 글리프 대신 숫자를 그려
   // 리스트의 번호와 눈으로 잇는다(트리플식). 미지정이면 기존 글리프 그대로 — 지도·리캡 무영향.
   orderById?: Record<string, number>
+  // 인셋 지도(부모가 높이를 정하는 미니 지도)일 때 .map의 min-height:60vh를 해제한다.
+  // 미지정이면 클래스가 한 글자도 달라지지 않아 지도탭·리캡은 기존과 완전히 동일하다.
+  compact?: boolean
 }) {
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<naver.maps.Map | null>(null)
@@ -538,7 +542,11 @@ export function NaverMap({
 
   return (
     <div className={styles.mapHost}>
-      <div ref={elRef} className={styles.map} aria-label="장소 지도" />
+      <div
+        ref={elRef}
+        className={compact ? `${styles.map} ${styles.mapCompact}` : styles.map}
+        aria-label="장소 지도"
+      />
       <button
         type="button"
         className={styles.myLocBtn}
