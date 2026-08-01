@@ -10,6 +10,7 @@ import { ScopeSheet, type Scope } from '@/components/calendar/ScopeSheet'
 import { DayTimeline } from '@/components/calendar/DayTimeline'
 import { WeekStrip } from '@/components/calendar/WeekStrip'
 import { QuickAddRow } from '@/components/calendar/QuickAddRow'
+import { CategoryFilterRow } from '@/components/calendar/CategoryFilterRow'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useProfiles, type ProfileMap } from '@/hooks/useProfiles'
@@ -425,6 +426,8 @@ export default function CalendarPage() {
               placeById={placeById}
               categoryById={categoryById}
               readOnly={track === 'partner'}
+              // 지금 보고 있는 캘린더에 그대로 들어간다 — 함께 탭에서 적으면 함께 일정.
+              quickAddVisibility={track === 'shared' ? 'SHARED' : 'PERSONAL'}
               onEdit={openEdit}
               onAdd={openCreate}
               onDelete={quickDelete}
@@ -593,6 +596,7 @@ function DayAgenda({
   placeById,
   categoryById,
   readOnly,
+  quickAddVisibility,
   onEdit,
   onAdd,
   onDelete,
@@ -607,6 +611,8 @@ function DayAgenda({
   categoryById: Record<string, { name: string; color: string }>
   /** 상대 캘린더를 볼 때 — 보기 전용. 추가 경로(한 줄 추가·빈 상태 CTA)를 렌더하지 않는다. */
   readOnly: boolean
+  /** 한 줄 추가로 만들 일정의 트랙 — 지금 보고 있는 캘린더와 일치시킨다. */
+  quickAddVisibility: 'SHARED' | 'PERSONAL'
   onEdit: (ev: Occurrence<EventRow>) => void
   onAdd: () => void
   onDelete: (ev: Occurrence<EventRow>) => void
@@ -614,18 +620,41 @@ function DayAgenda({
 }) {
   // 목록 바로 삭제도 EventSheet와 같은 계약: 1탭은 지우지 않고 인라인 확인 먼저(실수 삭제 방지).
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  // 카테고리 선택 하나가 '거르기'와 '붙이기'를 겸한다 — 지금 보고 있는 분류에 그대로 적힌다.
+  // null = 전체(거르지 않음 + 분류 없이 저장).
+  const [category, setCategory] = useState<string | null>(null)
+  const shown = useMemo(
+    () => (category === null ? events : events.filter((e) => e.category_id === category)),
+    [events, category],
+  )
   return (
     <section className={styles.agenda} aria-label={`${dateKey} 일정`}>
       <h2 className={styles.agendaTitle}>{dateKey}</h2>
 
+      {/* 카테고리 줄 — 거르기 + 붙이기 겸용. 상대 캘린더는 보기 전용이지만 거르기는 유용하므로 남긴다
+          (새로 만들기 버튼도 함께 남는다 — 분류를 만드는 건 상대 일정을 건드리는 일이 아니다). */}
+      <CategoryFilterRow
+        coupleId={coupleId}
+        myId={myId}
+        value={category}
+        onChange={setCategory}
+      />
+
       {/* 한 줄 추가 — 날짜 바로 아래(투두메이트 구조). 상대 캘린더는 보기 전용이라 렌더하지 않는다:
-          상대 트랙에서 적으면 내 PERSONAL 일정이 만들어져 '상대 칸에 썼는데 내 것이 되는' 오해를 부른다. */}
-      {readOnly ? null : <QuickAddRow dateKey={dateKey} coupleId={coupleId} myId={myId} onCreate={onQuickAdd} />}
-      {events.length === 0 ? (
+          상대 트랙에서 적으면 내 일정이 만들어져 '상대 칸에 썼는데 내 것이 되는' 오해를 부른다. */}
+      {readOnly ? null : (
+        <QuickAddRow
+          dateKey={dateKey}
+          visibility={quickAddVisibility}
+          categoryId={category}
+          onCreate={onQuickAdd}
+        />
+      )}
+      {shown.length === 0 ? (
         // 연결됨-빈: 죽은 <p> 대신 친근한 EmptyState + add-event CTA(§7).
         <EmptyState
           emoji="🗓️"
-          title="이 날 일정이 없어요"
+          title={category === null ? '이 날 일정이 없어요' : '이 분류에는 없어요'}
           action={
             readOnly ? undefined : (
               <button type="button" className={styles.agendaAddBtn} onClick={onAdd}>
@@ -636,7 +665,7 @@ function DayAgenda({
         />
       ) : (
         <ul className={styles.eventList}>
-          {events.map((ev) => {
+          {shown.map((ev) => {
             const t = deriveTrack(ev, myId)
             const meta = TRACK_META[t]
             // place_id가 가리키는 장소가 우리 목록에 있으면 칩+지도 딥링크(?place=)를 함께 표시.

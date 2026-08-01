@@ -131,6 +131,67 @@ test('한 줄 추가 — 캘린더 아래 빈 줄이 항상 있다', async ({ pa
   await expect(page.getByRole('button', { name: '일정 추가' })).toHaveCount(0)
 })
 
+test('카테고리 — 전체가 기본, 고르면 그 분류만 남는다', async ({ page }) => {
+  const CATS = [
+    { id: 'k1', name: '운동', color: '#4fb58a', sort_order: 0, version: 1 },
+    { id: 'k2', name: '업무', color: '#6e8ac8', sort_order: 1, version: 1 },
+  ]
+  const withCat = [
+    { ...EVENTS[1]!, category_id: 'k1' }, // 내 운동
+    { ...EVENTS[0]!, category_id: 'k2' }, // 함께 점심
+  ]
+  await seedAuthedMap(page, { events: withCat, eventCategories: CATS })
+  await page.goto(`/calendar?date=${D}`)
+  await page.getByRole('group', { name: '어느 캘린더를 볼지' }).getByRole('button', { name: /나/ }).click()
+
+  const cats = page.getByRole('group', { name: '카테고리' })
+  // 기본은 '전체' — 거르지 않는다.
+  await expect(cats.getByRole('button', { name: '전체' })).toHaveAttribute('aria-pressed', 'true')
+  // 월 셀 버튼도 제목을 접근 이름에 담고, 아젠다 행에는 항목/삭제 버튼이 둘 다 있다 → 영역 + 텍스트로 좁힌다.
+  const agenda = page.getByRole('region', { name: `${D} 일정` })
+  await expect(agenda.getByText('내 운동')).toHaveCount(1)
+
+  // '업무'를 고르면 그 분류가 아닌 '내 운동'은 목록에서 빠진다.
+  await cats.getByRole('button', { name: /업무/ }).click()
+  await expect(agenda.getByText('내 운동')).toHaveCount(0)
+  // 죽은 화면 대신 분류 기준 빈 상태(§7 다층 빈 상태).
+  await expect(page.getByText('이 분류에는 없어요')).toBeVisible()
+
+  // '전체'로 돌아오면 다시 보인다.
+  await cats.getByRole('button', { name: '전체' }).click()
+  await expect(agenda.getByText('내 운동')).toHaveCount(1)
+})
+
+test('한 줄 추가는 지금 보고 있는 캘린더로 들어간다(함께=SHARED / 나=PERSONAL)', async ({ page }) => {
+  await seedAuthedMap(page, { events: EVENTS })
+  // 생성 POST 본문을 가로채 실제로 나가는 visibility를 본다(페이지→컴포넌트 배선 회귀).
+  const posted: Record<string, unknown>[] = []
+  await page.route('**/e2e.supabase.co/rest/v1/events**', async (route) => {
+    if (route.request().method() === 'POST') {
+      posted.push(JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>)
+      return route.fulfill({ status: 201, contentType: 'application/json', body: '[]' })
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EVENTS) })
+  })
+  await page.goto(`/calendar?date=${D}`)
+
+  const switcher = page.getByRole('group', { name: '어느 캘린더를 볼지' })
+  // 기본은 '함께' — 여기서 적으면 함께 일정이어야 한다(내 일정이 되면 안 된다).
+  await expect(switcher.getByRole('button', { name: /함께/ })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByPlaceholder('할 일 입력').fill('같이 장보기')
+  await page.getByRole('button', { name: '추가', exact: true }).click()
+  await expect.poll(() => posted.length).toBe(1)
+  expect(posted[0]!.visibility).toBe('SHARED')
+  expect(posted[0]!.is_all_day).toBe(true)
+
+  // '나'로 바꾸면 내 일정으로 들어간다.
+  await switcher.getByRole('button', { name: /나/ }).click()
+  await page.getByPlaceholder('할 일 입력').fill('스쿼트')
+  await page.getByRole('button', { name: '추가', exact: true }).click()
+  await expect.poll(() => posted.length).toBe(2)
+  expect(posted[1]!.visibility).toBe('PERSONAL')
+})
+
 test('상대 캘린더는 보기 전용 — 추가 경로가 아예 없다', async ({ page }) => {
   await seedAuthedMap(page, { events: EVENTS })
   await page.goto(`/calendar?date=${D}`)

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -124,7 +124,9 @@ describe('반복 일정 범위 선택 시트 배선(Task 10)', () => {
     expect(dialog).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '이 일정만' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '이후 모두' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '전체' })).toBeInTheDocument()
+    // '전체'는 카테고리 줄에도 있으므로(전체 분류) 범위 시트 안으로 좁혀 찾는다.
+    const sheet = screen.getByRole('dialog', { name: /반복 일정 .* 범위/ })
+    expect(within(sheet).getByRole('button', { name: '전체' })).toBeInTheDocument()
   })
 
   it("'이 일정만' 삭제 → 시리즈 update(EXDATE append), softDelete 아님", () => {
@@ -149,7 +151,8 @@ describe('반복 일정 범위 선택 시트 배선(Task 10)', () => {
     openEditSheet()
     fireEvent.click(screen.getByRole('button', { name: '삭제' }))
     fireEvent.click(screen.getByRole('button', { name: '정말 삭제할까요?' }))
-    fireEvent.click(screen.getByRole('button', { name: '전체' }))
+    const scopeSheet = screen.getByRole('dialog', { name: /반복 일정 .* 범위/ })
+    fireEvent.click(within(scopeSheet).getByRole('button', { name: '전체' }))
     expect(h.updateMutate).not.toHaveBeenCalled()
     await waitFor(() => expect(h.softDelete).toHaveBeenCalledWith('events', 'e1', 4, 'u1'))
   })

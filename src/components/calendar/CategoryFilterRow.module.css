@@ -1,0 +1,57 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* 카테고리 줄 — 가로 스크롤(칩이 늘어나도 줄바꿈으로 화면을 먹지 않게). */
+.chips {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+/* 선택은 색이 아니라 테두리 두께(형태)로 말한다 — aria-pressed가 스크린리더 몫(§8). */
+.chip,
+.newChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-weak);
+  border-radius: var(--r-pill);
+  padding: 0 var(--sp-3);
+  /* 터치 타깃 ≥44px(HIG) */
+  min-height: 44px;
+  font-size: var(--fs-label);
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  color: var(--c-text);
+  border-color: var(--c-brand);
+  box-shadow: inset 0 0 0 1px var(--c-brand);
+  font-weight: 600;
+}
+
+.newChip {
+  border-style: dashed;
+  color: var(--c-brand);
+}
+
+.chip:disabled,
+.newChip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.dot {
+  width: 0.65em;
+  height: 0.65em;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+
