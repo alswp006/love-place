@@ -5,36 +5,46 @@
   position: relative;
 }
 
+/* 상단 한 줄 — 좌: 월 이동 / 우: 뷰 전환. 각각 한 줄씩 쓰던 것을 합쳐 달력을 위로 끌어올린다. */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
 /* 월 이동 */
 .monthNav {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--sp-4);
+  gap: var(--sp-1);
 }
 
 .navBtn {
   border: none;
-  background: var(--c-surface-2);
+  background: transparent;
   color: var(--c-text);
   border-radius: 999px;
-  width: 40px;
-  height: 40px;
+  /* 시각적으로는 작게, 터치 타깃은 HIG 44px 유지 */
+  min-width: 44px;
+  min-height: 44px;
   font-size: var(--fs-h2);
+  line-height: 1;
   cursor: pointer;
 }
 
 .monthLabel {
   font-weight: 600;
-  min-width: 7rem;
-  text-align: center;
+  font-size: var(--fs-h2);
+  white-space: nowrap;
 }
 
 /* 트랙 칩 */
 .chips {
   display: flex;
   gap: var(--sp-2);
-  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .chip {
@@ -402,7 +412,7 @@
 /* 뷰 전환 세그먼트 컨트롤(월/주/일) */
 .viewSeg {
   display: inline-flex;
-  align-self: center;
+  flex-shrink: 0;
   border: 1px solid var(--c-border);
   border-radius: 999px;
   overflow: hidden;
@@ -412,10 +422,11 @@
   border: none;
   background: var(--c-surface);
   color: var(--c-text-weak);
-  padding: 6px 16px;
+  /* 가로 패딩을 줄여 자리를 아끼되 세로는 44px(HIG)로 키운다 — 이전 36px는 타깃 미달이었다. */
+  padding: 0 var(--sp-3);
   font-size: var(--fs-caption);
   cursor: pointer;
-  min-height: 36px;
+  min-height: 44px;
 }
 
 .viewSegBtnOn {

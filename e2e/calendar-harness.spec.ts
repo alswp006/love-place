@@ -47,13 +47,26 @@ test('연결됨-빈 — 일정 없을 때 친근한 CTA', async ({ page }) => {
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
 })
 
-test('월 뷰 — 셀 제목 칩(색+심볼) + 트랙 범례', async ({ page }) => {
+test('월 뷰 — 셀 제목 칩(색+심볼) + 트랙 전환', async ({ page }) => {
   await seedAuthedMap(page, { events: EVENTS })
   await page.goto(`/calendar?date=${D}`)
-  // 트랙 범례(Task 6) — '함께'·'내 일정' 등 색+이름칩이 항상 보인다.
-  await expect(page.getByText('함께', { exact: true })).toBeVisible()
+  // 별도 범례는 없앴다 — 트랙 전환 자체가 색+심볼+이름을 보여주므로 중복이었다.
+  // 셋 중 하나만 보는 단일 선택이고 기본은 '함께'(§1 공유가 기본값).
+  const switcher = page.getByRole('group', { name: '어느 캘린더를 볼지' })
+  await expect(switcher.getByRole('button', { name: /함께/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(switcher.getByRole('button', { name: /나/ })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
   // 월 셀에 제목 칩이 뜬다(조사 §4) — 비인터랙티브 span이라 텍스트로 확인.
   await expect(page.getByText('함께 점심').first()).toBeVisible()
+  // 트랙을 '나'로 바꾸면 함께 일정은 사라지고 내 일정만 남는다(캘린더 분리).
+  await switcher.getByRole('button', { name: /나/ }).click()
+  await expect(page.getByText('내 운동').first()).toBeVisible()
+  await expect(page.getByText('함께 점심')).toHaveCount(0)
   const s = shot('cal-month')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })

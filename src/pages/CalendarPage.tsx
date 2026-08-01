@@ -9,7 +9,6 @@ import { EventSheet } from '@/components/calendar/EventSheet'
 import { ScopeSheet, type Scope } from '@/components/calendar/ScopeSheet'
 import { DayTimeline } from '@/components/calendar/DayTimeline'
 import { WeekStrip } from '@/components/calendar/WeekStrip'
-import { TrackLegend } from '@/components/calendar/TrackLegend'
 import { QuickAddRow } from '@/components/calendar/QuickAddRow'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
@@ -110,7 +109,9 @@ export default function CalendarPage() {
       { replace: true },
     )
   }
-  const [filter, setFilter] = useState<Set<Track>>(() => new Set(ALL_TRACKS))
+  // 트랙은 필터가 아니라 '어느 캘린더를 볼지'다 — 셋을 겹쳐 도형으로 구분하지 않고 하나씩 분리해 본다.
+  // 기본은 함께(공유가 이 앱의 기본값 §1).
+  const [track, setTrack] = useState<Track>('shared')
   // 편집 시트는 시리즈 행(editing)을 보여주되, 클릭한 occurrence의 시작 ISO/dayKey도 함께 보존한다
   // (조사 01 §3 — 현재는 시리즈로 덮어써 occurrence가 소실 → 범위 분기에 occurrence 시각이 필요).
   const [sheet, setSheet] = useState<{
@@ -123,8 +124,8 @@ export default function CalendarPage() {
   const [scope, setScope] = useState<{ mode: 'edit' | 'delete'; series: EventRow; occStartIso: string; occDayKey: string; patch: EventPatch | null } | null>(null)
 
   const visibleEvents = useMemo(
-    () => (events ?? []).filter((e) => filter.has(deriveTrack(e, myId))),
-    [events, filter, myId],
+    () => (events ?? []).filter((e) => deriveTrack(e, myId) === track),
+    [events, track, myId],
   )
   const cells = useMemo(() => monthMatrix(view.year, view.month0), [view])
   // 반복 일정을 보이는 달 윈도우로 회차 전개(비반복은 그대로). 편집은 시리즈 기준(_seriesStart).
@@ -147,7 +148,7 @@ export default function CalendarPage() {
 
   if (!coupleLoading && couple?.status !== 'ACTIVE') {
     return (
-      <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+      <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
         <EmptyState
           emoji="💑"
           title="먼저 상대와 연결해요"
@@ -160,19 +161,11 @@ export default function CalendarPage() {
   // 연결됨이지만 일정 로딩 중 → 죽은 빈 캘린더 대신 스켈레톤(§7). 그리드 모양 placeholder.
   if (eventsLoading) {
     return (
-      <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+      <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
         <Skeleton count={6} label="일정 불러오는 중" />
       </ScreenScaffold>
     )
   }
-
-  const toggleTrack = (t: Track) =>
-    setFilter((prev) => {
-      const next = new Set(prev)
-      if (next.has(t)) next.delete(t)
-      else next.add(t)
-      return next
-    })
 
   const busy = create.isPending || update.isPending || deletePending
   // occurrence 클릭 → 편집 시트. 폼은 시리즈 기준(start/end를 _seriesStart/End로 복원)이되,
@@ -353,14 +346,46 @@ export default function CalendarPage() {
   }
 
   return (
-    <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+    <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
       <div className={styles.container}>
         {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
         {permission.conflict ? (
           <ConflictBanner message="이 일정은 상대만 수정할 수 있어요." onDismiss={permission.clear} />
         ) : null}
 
-        <ViewSegment mode={mode} onChange={changeMode} />
+        {/* 상단 한 줄 — 월 이동 + 뷰 전환을 합쳐 세로 공간을 아낀다(투두메이트 구조).
+            이전에는 뷰 세그먼트·월 이동·범례·필터가 각각 한 줄씩 차지해 달력이 밀려 있었다. */}
+        <div className={styles.topBar}>
+          {mode === 'month' ? (
+            <div className={styles.monthNav}>
+              <button
+                type="button"
+                className={styles.navBtn}
+                onClick={() => setView(addMonths(view.year, view.month0, -1))}
+                aria-label="이전 달"
+              >
+                ‹
+              </button>
+              <span className={styles.monthLabel} aria-live="polite">
+                {view.year}년 {view.month0 + 1}월
+              </span>
+              <button
+                type="button"
+                className={styles.navBtn}
+                onClick={() => setView(addMonths(view.year, view.month0, 1))}
+                aria-label="다음 달"
+              >
+                ›
+              </button>
+            </div>
+          ) : (
+            <span className={styles.monthLabel}>{selected}</span>
+          )}
+          <ViewSegment mode={mode} onChange={changeMode} />
+        </div>
+
+        {/* 트랙 = 어느 캘린더를 볼지(단일 선택). 범례는 지웠다 — 선택지 자체가 색·심볼·이름을 다 보여준다. */}
+        <TrackSwitch track={track} onChange={setTrack} />
 
         {mode === 'day' ? (
           <DayTimeline
@@ -372,32 +397,6 @@ export default function CalendarPage() {
           />
         ) : (
           <>
-            {mode === 'month' ? (
-              <div className={styles.monthNav}>
-                <button
-                  type="button"
-                  className={styles.navBtn}
-                  onClick={() => setView(addMonths(view.year, view.month0, -1))}
-                  aria-label="이전 달"
-                >
-                  ‹
-                </button>
-                <span className={styles.monthLabel} aria-live="polite">
-                  {view.year}년 {view.month0 + 1}월
-                </span>
-                <button
-                  type="button"
-                  className={styles.navBtn}
-                  onClick={() => setView(addMonths(view.year, view.month0, 1))}
-                  aria-label="다음 달"
-                >
-                  ›
-                </button>
-              </div>
-            ) : null}
-
-            <TrackLegend />
-            <TrackChips filter={filter} onToggle={toggleTrack} />
 
             {mode === 'month' ? (
               <MonthGrid
@@ -495,13 +494,14 @@ function ViewSegment({
   )
 }
 
-// 트랙 칩 — 색 + 심볼 + 라벨 이중화(§8). aria-pressed로 토글 상태.
-function TrackChips({ filter, onToggle }: { filter: Set<Track>; onToggle: (t: Track) => void }) {
+// 트랙 전환 — 셋 중 하나만 본다(투두메이트의 사람 전환과 같은 모델).
+// 색 + 심볼 + 라벨 이중화는 유지(§8): 선택은 색뿐 아니라 aria-pressed·굵기·테두리로도 드러난다.
+function TrackSwitch({ track, onChange }: { track: Track; onChange: (t: Track) => void }) {
   return (
-    <div className={styles.chips} role="group" aria-label="트랙 필터">
+    <div className={styles.chips} role="group" aria-label="어느 캘린더를 볼지">
       {ALL_TRACKS.map((t) => {
         const meta = TRACK_META[t]
-        const on = filter.has(t)
+        const on = track === t
         return (
           <button
             key={t}
@@ -509,7 +509,7 @@ function TrackChips({ filter, onToggle }: { filter: Set<Track>; onToggle: (t: Tr
             className={`${styles.chip} ${on ? styles.chipOn : ''}`}
             style={on ? { borderColor: meta.cssVar, color: meta.cssVar } : undefined}
             aria-pressed={on}
-            onClick={() => onToggle(t)}
+            onClick={() => onChange(t)}
           >
             <span aria-hidden>{meta.symbol}</span> {meta.label}
           </button>
@@ -614,6 +614,10 @@ function DayAgenda({
   return (
     <section className={styles.agenda} aria-label={`${dateKey} 일정`}>
       <h2 className={styles.agendaTitle}>{dateKey}</h2>
+
+      {/* 한 줄 추가 — 날짜 바로 아래(투두메이트 구조). 목록 끝까지 스크롤해야 닿던 위치를 올렸다.
+          제목만 + 엔터로 끝나는 빠른 경로이고, '＋ 일정 추가'(EventSheet)는 시간·반복까지 정하는 경로로 남는다. */}
+      <QuickAddRow dateKey={dateKey} onCreate={onQuickAdd} />
       {events.length === 0 ? (
         // 연결됨-빈: 죽은 <p> 대신 친근한 EmptyState + add-event CTA(§7).
         <EmptyState
@@ -695,10 +699,6 @@ function DayAgenda({
           })}
         </ul>
       )}
-
-      {/* 한 줄 추가 — 빈 날에도, 목록 아래에도 항상. 제목만 + 엔터로 끝나는 빠른 경로.
-          위 '＋ 일정 추가'(EventSheet)는 시간·반복까지 정하는 경로로 남는다. */}
-      <QuickAddRow dateKey={dateKey} onCreate={onQuickAdd} />
     </section>
   )
 }
