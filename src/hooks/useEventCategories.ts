@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
@@ -27,6 +27,12 @@ export const CATEGORY_COLORS = [
 
 export function useEventCategories(coupleId: string | null) {
   const queryClient = useQueryClient()
+  // 채널 토픽은 훅 인스턴스마다 달라야 한다. 이 훅은 한 화면에서 두 번 이상 쓰인다
+  // (CalendarPage의 칩 조회맵 + EventSheet의 CategoryPicker). 토픽이 같으면 supabase-js가
+  // 이미 subscribe()된 채널을 재사용해 `.on()`이 던진다:
+  //   "cannot add `postgres_changes` callbacks ... after `subscribe()`"
+  // → 캘린더 화면 전체가 에러 폴백으로 떨어졌다(⋯를 열 때마다 재현).
+  const channelKey = useId()
 
   const query = useQuery<EventCategoryRow[]>({
     queryKey: ['event_categories', coupleId],
@@ -49,7 +55,7 @@ export function useEventCategories(coupleId: string | null) {
   useEffect(() => {
     if (!coupleId || !isSupabaseConfigured) return
     const channel = supabase
-      .channel(`event_categories:${coupleId}`)
+      .channel(`event_categories:${coupleId}:${channelKey}`)
       .on(
         'postgres_changes',
         {
@@ -64,7 +70,7 @@ export function useEventCategories(coupleId: string | null) {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [coupleId, queryClient])
+  }, [coupleId, queryClient, channelKey])
 
   return query
 }
