@@ -74,10 +74,11 @@ describe('QuickAddRow', () => {
 
   it('엔터 주 경로 외에 버튼 대체 경로도 있다(제스처 전용 금지 — ux §1)', () => {
     const input = renderRow()
-    const btn = screen.getByRole('button', { name: '추가' })
-    // 비어 있으면 비활성 → 오조작 방지
-    expect(btn).toBeDisabled()
+    // 비어 있으면 버튼을 아예 렌더하지 않는다 — 쉬는 상태의 글자를 '＋ 할 일 입력'으로 줄이기 위해서다.
+    // (누를 이유가 없는 버튼을 비활성으로 남겨두던 것을 없앴다. 대체 경로 자체는 아래처럼 살아 있다.)
+    expect(screen.queryByRole('button', { name: '추가' })).toBeNull()
     fireEvent.change(input, { target: { value: '짐 싸기' } })
+    const btn = screen.getByRole('button', { name: '추가' })
     expect(btn).not.toBeDisabled()
     fireEvent.click(btn)
     expect(onCreate).toHaveBeenCalledOnce()

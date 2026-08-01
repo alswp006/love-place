@@ -71,20 +71,24 @@ export function QuickAddRow({ dateKey, onCreate, disabled = false }: Props) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="할 일을 적고 엔터"
+        placeholder="할 일 입력"
         aria-label={`${dateKey}에 할 일 추가`}
         enterKeyHint="done"
         disabled={disabled}
       />
-      {/* 엔터가 주 경로지만 버튼도 둔다 — 제스처/키보드만으로 되는 기능은 발견성이 낮다(ux §1). */}
-      <button
-        type="submit"
-        className={styles.submit}
-        disabled={disabled || busy || !title.trim()}
-        aria-label="추가"
-      >
-        추가
-      </button>
+      {/* 엔터가 주 경로지만 버튼도 둔다 — 키보드만으로 되는 기능은 발견성이 낮다(ux §1).
+          다만 비어 있을 땐 숨긴다: 쉬는 상태의 글자를 '＋ 할 일 입력' 하나로 줄이기 위해서다.
+          아이콘만 남으므로 접근 이름은 aria-label로 준다(§4 아이콘 전용 컨트롤). */}
+      {title.trim() ? (
+        <button
+          type="submit"
+          className={styles.submit}
+          disabled={disabled || busy}
+          aria-label="추가"
+        >
+          ↵
+        </button>
+      ) : null}
     </form>
   )
 }

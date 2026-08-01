@@ -423,6 +423,7 @@ export default function CalendarPage() {
               profiles={profiles ?? {}}
               placeById={placeById}
               categoryById={categoryById}
+              readOnly={track === 'partner'}
               onEdit={openEdit}
               onAdd={openCreate}
               onDelete={quickDelete}
@@ -430,10 +431,6 @@ export default function CalendarPage() {
             />
           </>
         )}
-
-        <button type="button" className={styles.fab} onClick={openCreate} aria-label="일정 추가">
-          ＋
-        </button>
       </div>
 
       {sheet.open ? (
@@ -593,6 +590,7 @@ function DayAgenda({
   profiles,
   placeById,
   categoryById,
+  readOnly,
   onEdit,
   onAdd,
   onDelete,
@@ -604,6 +602,8 @@ function DayAgenda({
   profiles: ProfileMap
   placeById: Record<string, PlaceRow>
   categoryById: Record<string, { name: string; color: string }>
+  /** 상대 캘린더를 볼 때 — 보기 전용. 추가 경로(한 줄 추가·빈 상태 CTA)를 렌더하지 않는다. */
+  readOnly: boolean
   onEdit: (ev: Occurrence<EventRow>) => void
   onAdd: () => void
   onDelete: (ev: Occurrence<EventRow>) => void
@@ -615,18 +615,20 @@ function DayAgenda({
     <section className={styles.agenda} aria-label={`${dateKey} 일정`}>
       <h2 className={styles.agendaTitle}>{dateKey}</h2>
 
-      {/* 한 줄 추가 — 날짜 바로 아래(투두메이트 구조). 목록 끝까지 스크롤해야 닿던 위치를 올렸다.
-          제목만 + 엔터로 끝나는 빠른 경로이고, '＋ 일정 추가'(EventSheet)는 시간·반복까지 정하는 경로로 남는다. */}
-      <QuickAddRow dateKey={dateKey} onCreate={onQuickAdd} />
+      {/* 한 줄 추가 — 날짜 바로 아래(투두메이트 구조). 상대 캘린더는 보기 전용이라 렌더하지 않는다:
+          상대 트랙에서 적으면 내 PERSONAL 일정이 만들어져 '상대 칸에 썼는데 내 것이 되는' 오해를 부른다. */}
+      {readOnly ? null : <QuickAddRow dateKey={dateKey} onCreate={onQuickAdd} />}
       {events.length === 0 ? (
         // 연결됨-빈: 죽은 <p> 대신 친근한 EmptyState + add-event CTA(§7).
         <EmptyState
           emoji="🗓️"
           title="이 날 일정이 없어요"
           action={
-            <button type="button" className={styles.agendaAddBtn} onClick={onAdd}>
-              ＋ 일정 추가
-            </button>
+            readOnly ? undefined : (
+              <button type="button" className={styles.agendaAddBtn} onClick={onAdd}>
+                ＋ 일정 추가
+              </button>
+            )
           }
         />
       ) : (

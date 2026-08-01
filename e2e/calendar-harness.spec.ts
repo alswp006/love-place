@@ -117,23 +117,35 @@ test('상세 — 메모칸 없음 + ⋯로 카테고리·반복 펼치기', asyn
 test('한 줄 추가 — 캘린더 아래 빈 줄이 항상 있다', async ({ page }) => {
   await seedAuthedMap(page, { events: EVENTS })
   await page.goto(`/calendar?date=${D}`)
-  // 투두메이트식 상시 입력줄 — 일정이 있든 없든 아래에 있다.
+  // 투두메이트식 상시 입력줄 — 일정이 있든 없든 날짜 바로 아래에 있다.
   await expect(page.getByRole('form', { name: '빠른 일정 추가' })).toBeVisible()
-  await expect(page.getByPlaceholder('할 일을 적고 엔터')).toBeVisible()
+  await expect(page.getByPlaceholder('할 일 입력')).toBeVisible()
 
-  // '추가' 버튼이 플로팅 +(FAB)에 덮이면 안 된다 — 엔터 말고 버튼 경로도 살아 있어야 한다(ux §1).
-  const addBtn = page.getByRole('button', { name: '추가', exact: true })
-  await addBtn.scrollIntoViewIfNeeded()
-  const a = await addBtn.boundingBox()
-  const fab = await page.getByRole('button', { name: '일정 추가' }).boundingBox()
-  expect(a).not.toBeNull()
-  expect(fab).not.toBeNull()
-  const overlap =
-    !(a!.x + a!.width <= fab!.x ||
-      fab!.x + fab!.width <= a!.x ||
-      a!.y + a!.height <= fab!.y ||
-      fab!.y + fab!.height <= a!.y)
-  expect(overlap).toBe(false)
+  // 쉬는 상태에선 '추가' 버튼을 렌더하지 않는다(문구 최소화). 글자를 넣으면 나타난다 —
+  // 엔터 말고 버튼 경로도 살아 있어야 한다(ux §1).
+  await expect(page.getByRole('button', { name: '추가', exact: true })).toHaveCount(0)
+  await page.getByPlaceholder('할 일 입력').fill('짐 싸기')
+  await expect(page.getByRole('button', { name: '추가', exact: true })).toBeVisible()
+
+  // 플로팅 +(FAB)는 없앴다 — 상시 입력줄과 중복이고 입력줄을 덮던 원인이었다.
+  await expect(page.getByRole('button', { name: '일정 추가' })).toHaveCount(0)
+})
+
+test('상대 캘린더는 보기 전용 — 추가 경로가 아예 없다', async ({ page }) => {
+  await seedAuthedMap(page, { events: EVENTS })
+  await page.goto(`/calendar?date=${D}`)
+  const switcher = page.getByRole('group', { name: '어느 캘린더를 볼지' })
+  await switcher.getByRole('button', { name: /상대/ }).click()
+
+  // 상대 트랙에서 적으면 내 PERSONAL 일정이 만들어져 오해를 부른다 → 입력줄 자체를 없앤다.
+  await expect(page.getByRole('form', { name: '빠른 일정 추가' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '＋ 일정 추가' })).toHaveCount(0)
+  // 상대 일정은 그대로 보인다(숨김이 아니라 보기 전용).
+  await expect(page.getByText('상대 미팅').first()).toBeVisible()
+
+  // 내 트랙으로 돌아오면 입력줄이 다시 나온다.
+  await switcher.getByRole('button', { name: /나/ }).click()
+  await expect(page.getByRole('form', { name: '빠른 일정 추가' })).toBeVisible()
 })
 
 test('다크 모드 — 월 뷰', async ({ page }) => {

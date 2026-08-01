@@ -7,9 +7,6 @@
   border-radius: var(--radius-sm);
   /* 터치 타깃 ≥44px(HIG) */
   min-height: 44px;
-  /* .fab(56px, position:fixed, right:--sp-4)이 '추가' 버튼을 완전히 덮어 탭이 불가능했다.
-     세로 여백으로는 스크롤 위치에 따라 다시 겹치므로 가로로 자리를 비운다(ux §1 버튼 대체 경로 유지). */
-  padding-right: calc(56px + var(--sp-4) + var(--sp-2));
 }
 
 .row:focus-within {
