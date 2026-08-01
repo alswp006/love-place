@@ -21,6 +21,7 @@ export type NewEvent = {
   // place_id는 '일정만 관리'하는 수동 폼(EventSheet)에서는 보내지 않는다. 남아있는 유일한 경로는
   // 반복 시리즈 분할/override(CalendarPage patchToNewEvent)에서 기존 place_id를 보존하는 경우뿐 — map linkage 유지.
   placeId?: string | null
+  categoryId?: string | null
   memo?: string | null
   recurrenceRule?: string | null
   reminders?: Reminder[]
@@ -35,6 +36,7 @@ export type EventPatch = Partial<{
   visibility: 'SHARED' | 'PERSONAL'
   // place_id는 수동 폼에서는 갱신하지 않는다(폼에서 생략 → 서버 값 보존). 반복 분할 보존용으로만 남김.
   place_id: string | null
+  category_id: string | null
   memo: string | null
   recurrence_rule: string | null
   reminders: Reminder[]
@@ -63,6 +65,7 @@ export function useEventMutations(
         participants: 'BOTH',
         owner_id: myId,
         place_id: e.placeId ?? null,
+        category_id: e.categoryId ?? null,
         memo: e.memo ?? null,
         recurrence_rule: e.recurrenceRule ?? null,
         reminders: e.reminders ?? [],

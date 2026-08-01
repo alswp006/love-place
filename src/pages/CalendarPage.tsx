@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/useToast'
 import { useConflict } from '@/lib/sync/useConflict'
 import { refetchEventRow, ConflictError } from '@/lib/sync/versionedUpdate'
 import { deriveTrack, TRACK_META, ALL_TRACKS, type Track } from '@/lib/calendar/track'
+import { useEventCategories } from '@/hooks/useEventCategories'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
 import { expandEvents, buildRule, parseRule, type Occurrence } from '@/lib/calendar/rrule'
 import { exdateOccurrence, splitFollowing, shiftTimesToOccurrence } from '@/lib/calendar/recurrenceScope'
@@ -40,6 +41,13 @@ export default function CalendarPage() {
   const coupleId = couple?.coupleId ?? null
   const { data: events, isLoading: eventsLoading } = useEvents(coupleId)
   const { data: profiles } = useProfiles(coupleId)
+  const { data: eventCategories } = useEventCategories(coupleId)
+  // id → {name,color} 조회맵. 목록 칩이 매 항목마다 배열을 훑지 않게 한 번만 만든다.
+  const categoryById = useMemo(() => {
+    const m: Record<string, { name: string; color: string }> = {}
+    for (const c of eventCategories ?? []) m[c.id] = { name: c.name, color: c.color }
+    return m
+  }, [eventCategories])
   // 저장된 장소 목록 — Task 13: 아젠다 장소 칩(place_id→이름·지도 링크)에 id로 인덱싱해 쓴다.
   // (일정 폼은 '일정만' 관리 — 장소 연결 피커 제거. place_id는 추천 코스→일정·아젠다 칩에서만.)
   const { data: places } = usePlaces(coupleId)
@@ -51,7 +59,7 @@ export default function CalendarPage() {
   const { deleteWithUndo, isPending: deletePending } = useSoftDeleteWithUndo('events', coupleId, myId, conflict.flag)
   const toast = useToast()
   // 충돌 후 시트로 내려보낼 최신 서버 행(version 재시드 + 메모 append-merge용, §4.3).
-  const [conflictRefresh, setConflictRefresh] = useState<{ version: number; memo: string | null } | null>(null)
+  const [conflictRefresh, setConflictRefresh] = useState<{ version: number } | null>(null)
 
   const todayKey = dayKey(new Date().toISOString())
   // ?date=YYYY-MM-DD 딥링크(R1.1) — 코스 추가 후 그 날로 점프. 형식 검증 후 시드, 아니면 오늘.
@@ -200,7 +208,7 @@ export default function CalendarPage() {
         onError: (err) => {
           if (err instanceof ConflictError) {
             void refetchEventRow(id).then((fresh) => {
-              if (fresh) setConflictRefresh({ version: fresh.version, memo: fresh.memo })
+              if (fresh) setConflictRefresh({ version: fresh.version })
             })
           }
         },
@@ -415,6 +423,7 @@ export default function CalendarPage() {
               myId={myId}
               profiles={profiles ?? {}}
               placeById={placeById}
+              categoryById={categoryById}
               onEdit={openEdit}
               onAdd={openCreate}
               onDelete={quickDelete}
@@ -583,6 +592,7 @@ function DayAgenda({
   myId,
   profiles,
   placeById,
+  categoryById,
   onEdit,
   onAdd,
   onDelete,
@@ -593,6 +603,7 @@ function DayAgenda({
   myId: string | null
   profiles: ProfileMap
   placeById: Record<string, PlaceRow>
+  categoryById: Record<string, { name: string; color: string }>
   onEdit: (ev: Occurrence<EventRow>) => void
   onAdd: () => void
   onDelete: (ev: Occurrence<EventRow>) => void
@@ -622,6 +633,8 @@ function DayAgenda({
             // place_id가 가리키는 장소가 우리 목록에 있으면 칩+지도 딥링크(?place=)를 함께 표시.
             // (지도쪽 ?place= 포커스 수신은 후속 패킷 — 여기선 딥링크 발신만, 조사 04 §3.)
             const place = ev.place_id ? placeById[ev.place_id] : undefined
+            // 삭제된 카테고리를 가리키는 일정은 조용히 '분류 없음'으로 — 없는 이름을 지어내지 않는다.
+            const category = ev.category_id ? categoryById[ev.category_id] : undefined
             return (
               <li key={ev.id}>
                 <div className={styles.eventRow}>
@@ -629,6 +642,16 @@ function DayAgenda({
                     <span className={styles.eventBar} style={{ background: meta.cssVar }} aria-hidden />
                     <span className={styles.eventTime}>{ev.is_all_day ? '종일' : formatTime(ev.start)}</span>
                     <span className={styles.eventTitle}>{ev.title}</span>
+                    {category ? (
+                      <span className={styles.eventCategory}>
+                        <span
+                          className={styles.eventCategoryDot}
+                          style={{ background: category.color }}
+                          aria-hidden
+                        />
+                        {category.name}
+                      </span>
+                    ) : null}
                     {ev.recurrence_rule ? <span aria-label="반복 일정">🔁</span> : null}
                     {myId && ev.reminders?.some((r) => r.userId === myId) ? (
                       <span aria-label="리마인더 설정됨">🔔</span>

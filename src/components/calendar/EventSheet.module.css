@@ -38,10 +38,50 @@
 }
 
 /* 스와이프 다운 닫기 핸들(§1) — 손가락 끌기 영역. touch-action:none으로 스크롤 가로채 제스처 안정. */
+/* 헤더 행 — 가운데 드래그 핸들 + 우상단 ⋯ 버튼. 핸들은 계속 가운데에 있어야 하므로
+   ⋯를 absolute로 띄우지 않고 핸들을 flex:1로 늘려 시각적 중앙을 유지한다. */
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.moreBtn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--c-text-weak);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  /* 터치 타깃 ≥44px(HIG) */
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--r-pill);
+}
+
+.moreBtn[aria-expanded='true'] {
+  color: var(--c-brand);
+  background: var(--pink-100);
+}
+
+/* 접히는 설정 묶음 — 시각적으로 본문과 구분되게 얇은 카드로. */
+.morePanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
+  background: var(--c-surface-2);
+}
+
 .handle {
   display: flex;
   justify-content: center;
   align-items: center;
+  flex: 1;
   min-height: 28px;
   margin: calc(-1 * var(--sp-2)) 0 var(--sp-1);
   cursor: grab;
@@ -171,17 +211,6 @@
   align-items: center;
   gap: var(--sp-1);
   min-height: 44px;
-}
-
-.memo {
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  padding: var(--sp-2);
-  font-family: inherit;
-  font-size: var(--fs-body);
-  background: var(--c-surface);
-  color: var(--c-text);
-  resize: vertical;
 }
 
 .actions {

@@ -37,7 +37,11 @@ export function QuickAddRow({ dateKey, onCreate, disabled = false }: Props) {
         end: times.end,
         isAllDay: true,
         timeZone: DISPLAY_TZ,
-        visibility: 'SHARED', // 공유가 기본값(§1) — 개인 일정은 EventSheet에서 바꾼다
+        // 한 줄 추가는 '내 할 일'을 적는 자리다 — 기본은 나만(PERSONAL).
+        // 공유가 기본값(§1)인 것은 데이터 접근 얘기이고, PERSONAL도 둘 다 보이며 색만 갈린다(§4.2).
+        // 즉 여기서 PERSONAL은 상대에게 숨기는 게 아니라 '내 트랙에 놓는다'는 뜻이다.
+        // 함께 할 일이면 항목을 눌러 EventSheet에서 '● 함께'로 바꾼다.
+        visibility: 'PERSONAL',
       },
       () => {
         // 연속 입력: 입력값만 비우고 포커스는 유지한다(키보드가 내려가지 않게).

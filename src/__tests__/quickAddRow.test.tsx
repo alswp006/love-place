@@ -17,7 +17,7 @@ function renderRow(dateKey = '2026-07-25') {
 }
 
 describe('QuickAddRow', () => {
-  it('제목만 넣고 엔터 → 그 날짜의 종일 SHARED 이벤트', () => {
+  it('제목만 넣고 엔터 → 그 날짜의 종일 PERSONAL(나만) 이벤트', () => {
     const input = renderRow()
     fireEvent.change(input, { target: { value: '숙소 예약하기' } })
     fireEvent.submit(input.form!)
@@ -27,7 +27,8 @@ describe('QuickAddRow', () => {
     expect(ev.title).toBe('숙소 예약하기')
     expect(ev.isAllDay).toBe(true)
     // 공유가 기본값(§1) — 개인 일정으로 돌리는 건 EventSheet의 몫.
-    expect(ev.visibility).toBe('SHARED')
+    // 한 줄 추가는 '내 할 일'을 적는 자리라 기본이 나만이다(함께는 상세에서 바꾼다).
+    expect(ev.visibility).toBe('PERSONAL')
     // 표시 tz 기준으로 그 날짜 버킷에 떨어져야 한다(다음 날로 새면 안 됨).
     expect(dayKey(ev.start)).toBe('2026-07-25')
     expect(dayKey(ev.end)).toBe('2026-07-25')

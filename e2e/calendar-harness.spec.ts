@@ -77,6 +77,52 @@ test('주 뷰 — WeekStrip 전환', async ({ page }) => {
   await expect(page.getByText('함께 점심').first()).toBeVisible()
 })
 
+test('상세 — 메모칸 없음 + ⋯로 카테고리·반복 펼치기', async ({ page }) => {
+  await seedAuthedMap(page, { events: EVENTS })
+  await page.goto(`/calendar?date=${D}`)
+  // 아젠다 항목을 눌러 상세 시트를 연다(한 줄 추가로 만든 일정도 같은 경로로 열린다).
+  await page.getByRole('button', { name: /함께 점심/ }).first().click()
+  const sheet = page.getByRole('dialog', { name: '일정 수정' })
+  await expect(sheet).toBeVisible()
+
+  // 메모칸은 없앴다 — 일정 얘기는 댓글로.
+  await expect(sheet.getByLabel('메모', { exact: true })).toHaveCount(0)
+
+  // 카테고리·반복은 접혀 있다가 ⋯로 펼쳐진다.
+  const more = sheet.getByRole('button', { name: '카테고리·반복 설정' })
+  await expect(more).toHaveAttribute('aria-expanded', 'false')
+  // getByLabel은 부분 일치 — '카테고리·반복 설정'(⋯ 버튼)까지 잡히므로 exact로 좁힌다.
+  await expect(sheet.getByLabel('반복', { exact: true })).toHaveCount(0)
+  await more.click()
+  await expect(more).toHaveAttribute('aria-expanded', 'true')
+  await expect(sheet.getByLabel('반복', { exact: true })).toBeVisible()
+  await expect(sheet.getByText('카테고리', { exact: true })).toBeVisible()
+  // 카테고리가 없어도 죽은 화면을 두지 않는다(§7 빈 상태).
+  await expect(sheet.getByText('아직 카테고리가 없어요. 하나 만들어 보세요.')).toBeVisible()
+})
+
+test('한 줄 추가 — 캘린더 아래 빈 줄이 항상 있다', async ({ page }) => {
+  await seedAuthedMap(page, { events: EVENTS })
+  await page.goto(`/calendar?date=${D}`)
+  // 투두메이트식 상시 입력줄 — 일정이 있든 없든 아래에 있다.
+  await expect(page.getByRole('form', { name: '빠른 일정 추가' })).toBeVisible()
+  await expect(page.getByPlaceholder('할 일을 적고 엔터')).toBeVisible()
+
+  // '추가' 버튼이 플로팅 +(FAB)에 덮이면 안 된다 — 엔터 말고 버튼 경로도 살아 있어야 한다(ux §1).
+  const addBtn = page.getByRole('button', { name: '추가', exact: true })
+  await addBtn.scrollIntoViewIfNeeded()
+  const a = await addBtn.boundingBox()
+  const fab = await page.getByRole('button', { name: '일정 추가' }).boundingBox()
+  expect(a).not.toBeNull()
+  expect(fab).not.toBeNull()
+  const overlap =
+    !(a!.x + a!.width <= fab!.x ||
+      fab!.x + fab!.width <= a!.x ||
+      a!.y + a!.height <= fab!.y ||
+      fab!.y + fab!.height <= a!.y)
+  expect(overlap).toBe(false)
+})
+
 test('다크 모드 — 월 뷰', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await seedAuthedMap(page, { events: EVENTS })

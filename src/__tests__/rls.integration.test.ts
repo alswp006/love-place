@@ -235,4 +235,54 @@ describe.skipIf(!ready)('RLS 커플 격리 (라이브 통합)', () => {
     })
     expect(error).not.toBeNull()
   })
+  // ── 일정 카테고리(0020) — 새 공유 테이블이므로 격리·위조 차단을 명시 검증(CLAUDE.md §6, security-privacy §2).
+  it('A는 B 커플의 event_categories를 못 본다 (교차 SELECT 0건)', async () => {
+    const { data: bCat } = await cb
+      .from('event_categories')
+      .select('id')
+      .is('deleted_at', null)
+      .limit(1)
+    const someBId = bCat?.[0]?.id
+    if (!someBId) {
+      expect(true).toBe(true)
+      return
+    }
+    const { data: leaked } = await ca.from('event_categories').select('id').eq('id', someBId)
+    expect(leaked ?? []).toHaveLength(0)
+  })
+
+  it('A는 couple_id를 B로 위조해 event_category를 만들 수 없다 (WITH CHECK 거부)', async () => {
+    const { data: bCouple } = await cb.rpc('current_couple_id')
+    const { error } = await ca.from('event_categories').insert({
+      couple_id: bCouple,
+      name: '위조 카테고리',
+      color: '#e2638a',
+      created_by: aUserId,
+      updated_by: aUserId,
+    })
+    expect(error).not.toBeNull()
+  })
+
+  it('A는 자기 커플 event_category를 본인 명의로 만들 수 있다', async () => {
+    const { data: aCouple } = await ca.rpc('current_couple_id')
+    const { data: inserted, error } = await ca
+      .from('event_categories')
+      .insert({
+        couple_id: aCouple,
+        name: `테스트분류-${Date.now()}`,
+        color: '#4fb58a',
+        created_by: aUserId,
+        updated_by: aUserId,
+      })
+      .select('id')
+    expect(error).toBeNull()
+    // 정리 — soft-delete(테스트 격리 유지).
+    const newId = inserted?.[0]?.id
+    if (newId) {
+      await ca
+        .from('event_categories')
+        .update({ deleted_at: new Date().toISOString(), updated_by: aUserId })
+        .eq('id', newId)
+    }
+  })
 })

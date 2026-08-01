@@ -14,6 +14,8 @@ export type EventRow = {
   participants: 'OWNER_ONLY' | 'BOTH'
   owner_id: string
   place_id: string | null
+  /** 일정 카테고리(event_categories) — 없으면 '분류 없음'. 삭제된 카테고리를 가리킬 수도 있다. */
+  category_id: string | null
   memo: string | null
   recurrence_rule: string | null
   reminders: { userId: string; offsetMinutes: number }[]
@@ -31,7 +33,7 @@ export function useEvents(coupleId: string | null) {
       const { data, error } = await supabase
         .from('events')
         .select(
-          'id, title, start, end, is_all_day, time_zone, visibility, participants, owner_id, place_id, memo, recurrence_rule, reminders, version',
+          'id, title, start, end, is_all_day, time_zone, visibility, participants, owner_id, place_id, category_id, memo, recurrence_rule, reminders, version',
         )
         .eq('couple_id', coupleId)
         .is('deleted_at', null)

@@ -33,6 +33,7 @@ function ev(id: string, title: string, hour: number): EventRow {
     participants: 'BOTH',
     owner_id: 'u1',
     place_id: null,
+    category_id: null,
     memo: null,
     recurrence_rule: null,
     reminders: [],

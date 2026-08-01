@@ -9,7 +9,9 @@ import { parseRule, buildRule, type Freq } from '@/lib/calendar/rrule'
 import { buildEventTimes } from '@/lib/calendar/eventTimes'
 import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/calendar/CommentThread'
+import { CategoryPicker } from '@/components/calendar/CategoryPicker'
 import { useScrollLock } from '@/hooks/useScrollLock'
+import { prefersReducedMotion } from '@/lib/motion/prefersReducedMotion'
 import styles from './EventSheet.module.css'
 
 type Props = {
@@ -19,8 +21,9 @@ type Props = {
   coupleId: string | null // 댓글 조회/작성 범위(RLS와 동일 기준)
   busy: boolean
   profiles: ProfileMap // 소유자 이름 표시(상대 PERSONAL 라벨)
-  // 버전충돌 후 부모가 재조회한 최신 서버 행(Task 7). version 재시드 + 메모 append-merge에 쓴다.
-  conflictRefresh?: { version: number; memo: string | null } | null
+  // 버전충돌 후 부모가 재조회한 최신 서버 행(Task 7). version 재시드에 쓴다.
+  // 메모 append-merge는 없어졌다 — 폼이 memo를 더는 보내지 않으므로 병합할 내 입력값 자체가 없다.
+  conflictRefresh?: { version: number } | null
   onClose: () => void
   onCreate: (e: NewEvent) => void
   onUpdate: (id: string, expectedVersion: number, patch: EventPatch) => void
@@ -50,7 +53,12 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
   const [visibility, setVisibility] = useState<'SHARED' | 'PERSONAL'>(initial?.visibility ?? 'SHARED')
   // 일정 폼은 '일정만' 관리한다 — 장소 연결 필드 없음. 기존 place_id(추천 코스→일정 addCourse·지도 연동)는
   // 폼이 건드리지 않는다: 수정 시 EventPatch에서 place_id를 생략하면 서버 값이 그대로 보존된다(map linkage 유지).
-  const [memo, setMemo] = useState(initial?.memo ?? '')
+  // 메모 입력칸은 없앴다(일정 얘기는 댓글로). events.memo 컬럼·기존 값은 그대로 두고,
+  // 폼은 place_id와 같은 방식으로 memo를 '건드리지 않는다' — 패치에서 생략하면 서버 값이 보존된다.
+  const [categoryId, setCategoryId] = useState<string | null>(initial?.category_id ?? null)
+  // 카테고리·반복은 본문에서 빼고 우상단 '⋯ 더보기' 패널로 접었다(자주 안 쓰는 설정).
+  const [moreOpen, setMoreOpen] = useState(false)
+  const morePanelRef = useRef<HTMLDivElement>(null)
   // 낙관적 락 기준 버전 — 기본은 원본 version, 버전충돌 후엔 재조회 버전으로 재시드(다음 저장이 같은 충돌 반복 방지).
   const [expectedVersion, setExpectedVersion] = useState(initial?.version ?? 0)
   const initRule = parseRule(initial?.recurrence_rule)
@@ -72,6 +80,16 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
     titleRef.current?.focus()
   }, [])
 
+  // ⋯ 패널은 폼 아래쪽에 열려 화면 밖에 놓이기 쉽다 — 열릴 때 시야로 끌어온다.
+  // Reduce Motion이면 부드러운 스크롤을 생략한다(§5).
+  useEffect(() => {
+    if (!moreOpen) return
+    morePanelRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'nearest',
+    })
+  }, [moreOpen])
+
   const onHandleTouchStart = (e: ReactTouchEvent) => {
     dragStartY.current = e.touches[0]?.clientY ?? null
     dragY.current = 0
@@ -90,16 +108,10 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
 
   // 버전충돌 후 부모가 내려준 최신 서버 행으로 재시드(Task 7, §4.3 LWW 금지):
   //  (1) expectedVersion을 서버 version으로 갱신 → 다음 저장이 같은 충돌을 반복하지 않음.
-  //  (2) 메모 손실 방지(CLAUDE.md §4): 내 미저장 메모와 서버 메모가 다르면 `\n---\n`로 append-merge.
+  // 메모 병합은 더 이상 없다 — 폼에 메모 입력이 없어 잃을 내 입력값이 없다(서버 값은 손대지 않음).
   useEffect(() => {
     if (!conflictRefresh) return
     setExpectedVersion(conflictRefresh.version)
-    const server = conflictRefresh.memo ?? ''
-    setMemo((prev) => {
-      if (!server) return prev
-      if (!prev) return server
-      return prev !== server ? `${prev}\n---\n${server}` : prev
-    })
   }, [conflictRefresh])
 
   // 포커스 트랩(§8) — Tab이 시트 밖으로 새지 않게 첫/마지막 포커서블을 순환.
@@ -122,11 +134,17 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key !== 'Escape') return
+      // 더보기가 열려 있으면 그것부터 닫는다 — 한 번의 ESC로 시트까지 사라지면 입력이 날아간다.
+      if (moreOpen) {
+        setMoreOpen(false)
+        return
+      }
+      onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, moreOpen])
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -148,7 +166,6 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
     }
     setTimeError(null)
     const { start, end } = times
-    const cleanMemo = memo.trim() || null
     const recurrenceRule =
       recurrence === 'none' ? null : buildRule(recurrence, 1, recurCount > 0 ? recurCount : undefined, initRule?.exdates)
     // 사용자별 리마인더: 상대 것은 보존, 내 것만 갱신(§4.2 사용자별).
@@ -164,7 +181,7 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
         // 다음 표시/저장 round-trip이 동일하다(컬럼 드리프트 방지).
         time_zone: evTz,
         visibility,
-        memo: cleanMemo,
+        category_id: categoryId,
         recurrence_rule: recurrenceRule,
         reminders,
       })
@@ -176,7 +193,7 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
         isAllDay: allDay,
         timeZone: DISPLAY_TZ,
         visibility,
-        memo: cleanMemo,
+        categoryId,
         recurrenceRule,
         reminders,
       })
@@ -196,15 +213,30 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
         onClick={(e) => e.stopPropagation()}
         onKeyDown={trapTab}
       >
-        <div
-          className={styles.handle}
-          data-testid="sheet-handle"
-          onTouchStart={onHandleTouchStart}
-          onTouchMove={onHandleTouchMove}
-          onTouchEnd={onHandleTouchEnd}
-          aria-hidden="true"
-        >
-          <span className={styles.grip} />
+        <div className={styles.head}>
+          <div
+            className={styles.handle}
+            data-testid="sheet-handle"
+            onTouchStart={onHandleTouchStart}
+            onTouchMove={onHandleTouchMove}
+            onTouchEnd={onHandleTouchEnd}
+            aria-hidden="true"
+          >
+            <span className={styles.grip} />
+          </div>
+          {/* 아이콘 전용 컨트롤이라 접근 이름 필수(§4). 상대 PERSONAL(읽기전용)에도 열 수는 있게 두되
+              안의 컨트롤이 disabled라 값이 바뀌지 않는다 — 무엇이 설정돼 있는지는 볼 수 있어야 한다. */}
+          <button
+            type="button"
+            id="event-more-btn"
+            className={styles.moreBtn}
+            onClick={() => setMoreOpen((v) => !v)}
+            aria-expanded={moreOpen}
+            aria-controls="event-more-panel"
+            aria-label="카테고리·반복 설정"
+          >
+            ⋯
+          </button>
         </div>
         <form onSubmit={onSubmit} className={styles.form} data-sheet-scroll>
           {isPartnerPersonal ? (
@@ -278,35 +310,6 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
           </fieldset>
 
           <label className={styles.field}>
-            <span>반복</span>
-            <select
-              value={recurrence}
-              onChange={(e) => setRecurrence(e.target.value as Freq | 'none')}
-              aria-label="반복"
-              disabled={!canEdit}
-            >
-              <option value="none">안 함</option>
-              <option value="DAILY">매일</option>
-              <option value="WEEKLY">매주</option>
-              <option value="MONTHLY">매월</option>
-            </select>
-          </label>
-          {recurrence !== 'none' ? (
-            <label className={styles.field}>
-              <span>반복 횟수 (0=계속)</span>
-              <input
-                type="number"
-                min={0}
-                max={365}
-                value={recurCount}
-                onChange={(e) => setRecurCount(Number(e.target.value) || 0)}
-                aria-label="반복 횟수"
-                disabled={!canEdit}
-              />
-            </label>
-          ) : null}
-
-          <label className={styles.field}>
             <span>내 리마인더</span>
             <select value={myReminder} onChange={(e) => setMyReminder(Number(e.target.value))} aria-label="내 리마인더" disabled={!canEdit}>
               <option value={0}>없음</option>
@@ -316,15 +319,53 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
             </select>
           </label>
 
-          <textarea
-            className={styles.memo}
-            placeholder="메모(선택)"
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            aria-label="메모"
-            rows={2}
-            disabled={!canEdit}
-          />
+          {/* ⋯ 더보기 — 자주 안 쓰는 설정(카테고리·반복)을 접어 둔다. 열림은 aria-expanded로,
+              패널은 aria-labelledby로 버튼과 잇는다. 메뉴가 아니라 폼 컨트롤 묶음이라 role=menu는 쓰지 않는다. */}
+          {moreOpen ? (
+            <div
+              ref={morePanelRef}
+              className={styles.morePanel}
+              id="event-more-panel"
+              aria-labelledby="event-more-btn"
+            >
+              <CategoryPicker
+                coupleId={coupleId}
+                myId={myId}
+                value={categoryId}
+                onChange={setCategoryId}
+                disabled={!canEdit}
+              />
+
+              <label className={styles.field}>
+                <span>반복</span>
+                <select
+                  value={recurrence}
+                  onChange={(e) => setRecurrence(e.target.value as Freq | 'none')}
+                  aria-label="반복"
+                  disabled={!canEdit}
+                >
+                  <option value="none">안 함</option>
+                  <option value="DAILY">매일</option>
+                  <option value="WEEKLY">매주</option>
+                  <option value="MONTHLY">매월</option>
+                </select>
+              </label>
+              {recurrence !== 'none' ? (
+                <label className={styles.field}>
+                  <span>반복 횟수 (0=계속)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={365}
+                    value={recurCount}
+                    onChange={(e) => setRecurCount(Number(e.target.value) || 0)}
+                    aria-label="반복 횟수"
+                    disabled={!canEdit}
+                  />
+                </label>
+              ) : null}
+            </div>
+          ) : null}
 
           {timeError ? (
             <p role="alert" className={styles.formError}>

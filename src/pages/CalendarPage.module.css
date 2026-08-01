@@ -257,6 +257,28 @@
   flex-shrink: 0;
 }
 
+/* 카테고리 칩 — 색 점 + 이름을 함께 낸다(색만으로 구분 금지 §8).
+   제목이 길면 카테고리부터 줄어들되 완전히 사라지지는 않게 최소 폭을 둔다. */
+.eventCategory {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-size: var(--fs-micro);
+  color: var(--c-text-weak);
+  max-width: 8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eventCategoryDot {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+
 /* Day 타임라인 뷰(Task 12) */
 .timeline {
   display: flex;
