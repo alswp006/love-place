@@ -93,7 +93,7 @@ export default function RecommendPage() {
 
   if (!coupleLoading && couple?.status !== 'ACTIVE') {
     return (
-      <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+      <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
         <EmptyState
           emoji="💑"
           title="먼저 상대와 연결해요"
@@ -106,14 +106,14 @@ export default function RecommendPage() {
   // 콜드스타트 플래시 제거(Task 9): 데이터 로딩 중엔 빈 상태/SEED 대신 추천 카드 자리 스켈레톤.
   if (placesLoading || visitsLoading) {
     return (
-      <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+      <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
         <Skeleton count={3} label="추천 불러오는 중" />
       </ScreenScaffold>
     )
   }
 
   return (
-    <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+    <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
       <div className={styles.container}>
         {ready.length > 0 ? (
           <section aria-label="코스 추천">

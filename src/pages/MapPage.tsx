@@ -145,7 +145,7 @@ export default function MapPage() {
   }, [qParam, setSearchParams])
 
   return (
-    <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId} fullBleed>
+    <ScreenScaffold title={tab.title} testId={tab.testId} fullBleed>
       {isNaverMapConfigured() ? (
         <div className={styles.mapWrap}>
           {conflict.conflict ? (

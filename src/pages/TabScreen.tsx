@@ -8,7 +8,7 @@ import type { TabDef } from '@/app/tabs'
 export function TabScreen({ tab }: { tab: TabDef }) {
   const { emoji, title, hint, action } = tab.empty
   return (
-    <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+    <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
       <EmptyState
         emoji={emoji}
         title={title}

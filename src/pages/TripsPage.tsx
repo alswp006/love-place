@@ -95,7 +95,7 @@ export default function TripsPage() {
   }
 
   return (
-    <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+    <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
       <div className={styles.actions}>
         <Button
           variant={formOpen ? 'ghost' : 'primary'}
