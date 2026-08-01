@@ -1,9 +1,6 @@
 import { useState } from 'react'
-import {
-  useEventCategories,
-  useEventCategoryMutations,
-  CATEGORY_COLORS,
-} from '@/hooks/useEventCategories'
+import { useEventCategories } from '@/hooks/useEventCategories'
+import { NewCategoryForm } from './NewCategoryForm'
 import styles from './CategoryPicker.module.css'
 
 // 일정 카테고리 선택 + 즉석 생성. 데이터 접근은 여기서 격리한다(CommentThread와 같은 패턴).
@@ -18,29 +15,9 @@ type Props = {
 
 export function CategoryPicker({ coupleId, myId, value, onChange, disabled = false }: Props) {
   const { data: categories, isLoading, isError, refetch } = useEventCategories(coupleId)
-  const { create } = useEventCategoryMutations(coupleId, myId)
   const [adding, setAdding] = useState(false)
-  const [name, setName] = useState('')
-  const [color, setColor] = useState<string>(CATEGORY_COLORS[0])
-  const [error, setError] = useState<string | null>(null)
 
   const list = categories ?? []
-
-  const submitNew = () => {
-    setError(null)
-    create.mutate(
-      { name, color },
-      {
-        // 만들자마자 그 카테고리를 고른 상태로 — 만들고 다시 고르게 하면 2탭이 된다.
-        onSuccess: (row) => {
-          onChange(row.id)
-          setName('')
-          setAdding(false)
-        },
-        onError: (e) => setError(e.message),
-      },
-    )
-  }
 
   return (
     <div className={styles.wrap}>
@@ -87,57 +64,17 @@ export function CategoryPicker({ coupleId, myId, value, onChange, disabled = fal
       ) : null}
 
       {adding ? (
-        <div className={styles.newBox}>
-          <input
-            className={styles.newName}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="카테고리 이름"
-            aria-label="새 카테고리 이름"
-            maxLength={20}
-            disabled={disabled || create.isPending}
-          />
-          <div className={styles.swatches} role="group" aria-label="카테고리 색">
-            {CATEGORY_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                className={styles.swatch}
-                style={{ background: c }}
-                aria-label={`색 ${c}`}
-                aria-pressed={color === c}
-                onClick={() => setColor(c)}
-                disabled={disabled || create.isPending}
-              />
-            ))}
-          </div>
-          {error ? (
-            <p role="alert" className={styles.error}>
-              {error}
-            </p>
-          ) : null}
-          <div className={styles.newActions}>
-            <button
-              type="button"
-              className={styles.textBtn}
-              onClick={() => {
-                setAdding(false)
-                setError(null)
-              }}
-              disabled={create.isPending}
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              className={styles.textBtn}
-              onClick={submitNew}
-              disabled={disabled || create.isPending || !name.trim()}
-            >
-              만들기
-            </button>
-          </div>
-        </div>
+        <NewCategoryForm
+          coupleId={coupleId}
+          myId={myId}
+          disabled={disabled}
+          // 만들자마자 그 카테고리를 고른 상태로 — 만들고 다시 고르게 하면 2탭이 된다.
+          onCreated={(row) => {
+            onChange(row.id)
+            setAdding(false)
+          }}
+          onCancel={() => setAdding(false)}
+        />
       ) : (
         <button
           type="button"

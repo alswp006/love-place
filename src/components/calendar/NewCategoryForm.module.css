@@ -1,0 +1,67 @@
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2);
+}
+
+.name {
+  min-height: 44px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-body);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+/* 선택은 링(형태)으로 — 색 견본은 색 자체가 내용이라 색 대비만으로 상태를 말하면 안 된다(§8). */
+.swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-border);
+  cursor: pointer;
+}
+
+.swatch[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 3px var(--c-bg),
+    0 0 0 5px var(--c-brand);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+.textBtn {
+  border: none;
+  background: transparent;
+  color: var(--c-brand);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 var(--sp-2);
+}
+
+.textBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-danger);
+}

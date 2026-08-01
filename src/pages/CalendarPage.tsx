@@ -420,6 +420,7 @@ export default function CalendarPage() {
               dateKey={selected}
               events={dayEvents}
               myId={myId}
+              coupleId={coupleId}
               profiles={profiles ?? {}}
               placeById={placeById}
               categoryById={categoryById}
@@ -587,6 +588,7 @@ function DayAgenda({
   dateKey,
   events,
   myId,
+  coupleId,
   profiles,
   placeById,
   categoryById,
@@ -599,6 +601,7 @@ function DayAgenda({
   dateKey: string
   events: Occurrence<EventRow>[]
   myId: string | null
+  coupleId: string | null
   profiles: ProfileMap
   placeById: Record<string, PlaceRow>
   categoryById: Record<string, { name: string; color: string }>
@@ -617,7 +620,7 @@ function DayAgenda({
 
       {/* 한 줄 추가 — 날짜 바로 아래(투두메이트 구조). 상대 캘린더는 보기 전용이라 렌더하지 않는다:
           상대 트랙에서 적으면 내 PERSONAL 일정이 만들어져 '상대 칸에 썼는데 내 것이 되는' 오해를 부른다. */}
-      {readOnly ? null : <QuickAddRow dateKey={dateKey} onCreate={onQuickAdd} />}
+      {readOnly ? null : <QuickAddRow dateKey={dateKey} coupleId={coupleId} myId={myId} onCreate={onQuickAdd} />}
       {events.length === 0 ? (
         // 연결됨-빈: 죽은 <p> 대신 친근한 EmptyState + add-event CTA(§7).
         <EmptyState

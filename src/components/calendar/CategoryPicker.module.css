@@ -56,50 +56,11 @@
   color: var(--c-text-weak);
 }
 
-.newBox {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  padding: var(--sp-2);
-}
 
-.newName {
-  min-height: 44px;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  background: var(--c-surface);
-  color: var(--c-text);
-  padding: 0 var(--sp-2);
-  font-size: var(--fs-body);
-}
 
-.swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-}
 
-/* 색 견본은 색 자체가 내용이라 텍스트를 못 넣는다 — aria-label로 이름을 주고,
-   선택은 링(형태)으로 표시해 색각 이상에서도 '무엇이 선택됐는지'는 읽힌다. */
-.swatch {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--c-border);
-  cursor: pointer;
-}
 
-.swatch[aria-pressed='true'] {
-  box-shadow: 0 0 0 3px var(--c-bg), 0 0 0 5px var(--c-brand);
-}
 
-.newActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--sp-2);
-}
 
 .textBtn {
   border: none;

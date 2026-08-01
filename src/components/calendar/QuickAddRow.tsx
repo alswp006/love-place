@@ -2,6 +2,8 @@ import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { buildEventTimes } from '@/lib/calendar/eventTimes'
 import { DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import type { NewEvent } from '@/hooks/useEventMutations'
+import { useEventCategories } from '@/hooks/useEventCategories'
+import { NewCategoryForm } from './NewCategoryForm'
 import styles from './QuickAddRow.module.css'
 
 // 한 줄 추가 — 제목만 넣고 엔터로 끝낸다(투두메이트식 빠른 입력).
@@ -14,14 +16,21 @@ import styles from './QuickAddRow.module.css'
 type Props = {
   /** 'YYYY-MM-DD' — 이 날짜에 추가한다. */
   dateKey: string
+  coupleId: string | null
+  myId: string | null
   onCreate: (e: NewEvent, done: () => void) => void
   disabled?: boolean
 }
 
-export function QuickAddRow({ dateKey, onCreate, disabled = false }: Props) {
+export function QuickAddRow({ dateKey, coupleId, myId, onCreate, disabled = false }: Props) {
   const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  // 고른 카테고리로 계속 적을 수 있게 선택은 추가 후에도 유지한다(연속 입력이 이 화면의 주 사용).
+  const [categoryId, setCategoryId] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
+  const { data: categories } = useEventCategories(coupleId)
+  const list = categories ?? []
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -42,6 +51,7 @@ export function QuickAddRow({ dateKey, onCreate, disabled = false }: Props) {
         // 즉 여기서 PERSONAL은 상대에게 숨기는 게 아니라 '내 트랙에 놓는다'는 뜻이다.
         // 함께 할 일이면 항목을 눌러 EventSheet에서 '● 함께'로 바꾼다.
         visibility: 'PERSONAL',
+        categoryId,
       },
       () => {
         // 연속 입력: 입력값만 비우고 포커스는 유지한다(키보드가 내려가지 않게).
@@ -61,7 +71,60 @@ export function QuickAddRow({ dateKey, onCreate, disabled = false }: Props) {
   }
 
   return (
-    <form className={styles.row} onSubmit={submit} aria-label="빠른 일정 추가">
+    <div className={styles.wrap}>
+      {/* 카테고리 칩 — 고른 채로 적으면 그 분류로 저장된다. 상세를 열지 않고도 분류가 되는 유일한 경로라
+          여기가 카테고리를 만드는 자리이기도 하다(＋ 새 카테고리). 색 + 이름을 함께 낸다(§8). */}
+      <div className={styles.cats} role="group" aria-label="카테고리 선택">
+        <button
+          type="button"
+          className={styles.cat}
+          aria-pressed={categoryId === null}
+          onClick={() => setCategoryId(null)}
+          disabled={disabled}
+        >
+          없음
+        </button>
+        {list.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            className={styles.cat}
+            aria-pressed={categoryId === c.id}
+            onClick={() => setCategoryId(c.id)}
+            disabled={disabled}
+          >
+            <span className={styles.dot} style={{ background: c.color }} aria-hidden />
+            {c.name}
+          </button>
+        ))}
+        {adding ? null : (
+          <button
+            type="button"
+            className={styles.newCat}
+            onClick={() => setAdding(true)}
+            disabled={disabled}
+          >
+            ＋ 새 카테고리
+          </button>
+        )}
+      </div>
+
+      {adding ? (
+        <NewCategoryForm
+          coupleId={coupleId}
+          myId={myId}
+          disabled={disabled}
+          // 만들자마자 고른 상태로 — 만들고 다시 고르게 하면 한 탭이 더 든다.
+          onCreated={(row) => {
+            setCategoryId(row.id)
+            setAdding(false)
+            inputRef.current?.focus()
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      ) : null}
+
+      <form className={styles.row} onSubmit={submit} aria-label="빠른 일정 추가">
       <span className={styles.plus} aria-hidden>
         ＋
       </span>
@@ -89,6 +152,7 @@ export function QuickAddRow({ dateKey, onCreate, disabled = false }: Props) {
           ↵
         </button>
       ) : null}
-    </form>
+      </form>
+    </div>
   )
 }

@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
+
+// 카테고리 칩 줄이 붙으면서 훅을 쓰게 됐다 — 네트워크/QueryClient 없이 목록만 주입한다.
+const cats = vi.hoisted(() => ({
+  list: [] as { id: string; name: string; color: string; sort_order: number; version: number }[],
+}))
+vi.mock('@/hooks/useEventCategories', () => ({
+  useEventCategories: () => ({ data: cats.list }),
+  useEventCategoryMutations: () => ({ create: { mutate: vi.fn(), isPending: false } }),
+  CATEGORY_COLORS: ['#e2638a'],
+}))
+
 import { QuickAddRow } from '@/components/calendar/QuickAddRow'
 import { dayKey } from '@/lib/calendar/eventDays'
 import type { NewEvent } from '@/hooks/useEventMutations'
@@ -9,10 +20,11 @@ const onCreate = vi.fn<(e: NewEvent, done: () => void) => void>()
 
 beforeEach(() => {
   onCreate.mockReset()
+  cats.list = []
 })
 
 function renderRow(dateKey = '2026-07-25') {
-  render(<QuickAddRow dateKey={dateKey} onCreate={onCreate} />)
+  render(<QuickAddRow dateKey={dateKey} coupleId="c1" myId="u1" onCreate={onCreate} />)
   return screen.getByLabelText(`${dateKey}에 할 일 추가`) as HTMLInputElement
 }
 
@@ -98,5 +110,41 @@ describe('QuickAddRow', () => {
     fireEvent.submit(input.form!)
     fireEvent.submit(input.form!)
     expect(onCreate).toHaveBeenCalledOnce()
+  })
+
+  it('기본은 분류 없음 — 카테고리를 고르지 않으면 categoryId가 없다', () => {
+    cats.list = [{ id: 'k1', name: '운동', color: '#4fb58a', sort_order: 0, version: 1 }]
+    const input = renderRow()
+    fireEvent.change(input, { target: { value: '장보기' } })
+    fireEvent.submit(input.form!)
+    expect(onCreate.mock.calls[0]![0].categoryId).toBeNull()
+  })
+
+  it('칩을 고른 채로 적으면 그 카테고리로 저장된다', () => {
+    cats.list = [
+      { id: 'k1', name: '운동', color: '#4fb58a', sort_order: 0, version: 1 },
+      { id: 'k2', name: '업무', color: '#6e8ac8', sort_order: 1, version: 1 },
+    ]
+    const input = renderRow()
+    fireEvent.click(screen.getByRole('button', { name: /업무/ }))
+    fireEvent.change(input, { target: { value: '보고서' } })
+    fireEvent.submit(input.form!)
+    expect(onCreate.mock.calls[0]![0].categoryId).toBe('k2')
+  })
+
+  it('선택은 추가 후에도 유지된다 — 같은 분류로 연속 입력', () => {
+    cats.list = [{ id: 'k1', name: '운동', color: '#4fb58a', sort_order: 0, version: 1 }]
+    const input = renderRow()
+    const chip = screen.getByRole('button', { name: /운동/ })
+    fireEvent.click(chip)
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.change(input, { target: { value: '스쿼트' } })
+    fireEvent.submit(input.form!)
+    act(() => onCreate.mock.calls[0]![1]())
+
+    // 비워지는 건 제목뿐 — 칩은 그대로 눌린 상태.
+    expect(input.value).toBe('')
+    expect(screen.getByRole('button', { name: /운동/ })).toHaveAttribute('aria-pressed', 'true')
   })
 })
