@@ -6,14 +6,6 @@
  * - 마시멜로 1급 토큰 + 호환 별칭(--c-*) 레이어(R7에서 별칭 삭제).
  */
 
-/* Cafe24 Ssurround(OFL) — public/fonts/에 woff2를 두면 디스플레이 폰트로 사용, 없으면 Quicksand/Pretendard 폴백. */
-@font-face {
-  font-family: 'Cafe24Ssurround';
-  src: url('/fonts/Cafe24Ssurround.woff2') format('woff2');
-  font-weight: 400 600;
-  font-display: swap;
-}
-
 :root {
   color-scheme: light dark;
 
@@ -83,9 +75,12 @@
   --c-success: var(--ok);
   --c-accent: var(--pink-600); /* 미정의였던 accent(포커스 아웃라인/선택) → 핑크로 정의(R6에서 정리) */
 
-  /* 타이포 — Pretendard 우선(self-host, R1 Task4) + 디스플레이 스택. 상대단위(Dynamic Type 존중). */
+  /* 타이포 — 본문 Pretendard / 제목 Jua. 둘 다 npm self-host(main.tsx에서 CSS import).
+     이전 디스플레이 폰트는 Quicksand였는데 라틴 전용이라 한글 제목이 전부 Pretendard로
+     폴백됐다 = 제목과 본문이 같은 폰트. 한글 글리프가 있는 Jua로 바꿔 실제로 갈리게 한다.
+     상대단위만 쓴다(Dynamic Type 존중 §4). */
   --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-display: 'Quicksand', 'Cafe24Ssurround', 'Pretendard', sans-serif;
+  --font-display: 'Jua', 'Pretendard', -apple-system, sans-serif;
   --fs-h1: 1.75rem; /* 페이지 라지 타이틀 상향 */
   --fs-title: 1.5rem;
   --fs-h2: 1.125rem; /* 섹션 <h2> */

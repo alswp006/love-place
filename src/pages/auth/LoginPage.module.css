@@ -23,6 +23,7 @@
 }
 
 .title {
+  font-family: var(--font-display); /* 로그인 라지 타이틀 */
   font-size: var(--fs-title);
   font-weight: 600;
   margin: 0;

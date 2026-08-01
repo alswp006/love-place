@@ -8,11 +8,11 @@ import { router } from '@/app/router'
 import { registerPwa } from '@/lib/pwa'
 import { initNativeAuthDeepLink } from '@/lib/native/authDeepLink'
 import { initNative } from '@/lib/native/initNative'
-// self-host 웹폰트(OFL) — 본문 Pretendard, 디스플레이 Quicksand(400/500/600만). Cafe24는 tokens.css @font-face.
+// self-host 웹폰트(OFL) — 본문 Pretendard, 제목 Jua.
+// Quicksand는 라틴 전용이라 한글 제목이 Pretendard로 폴백돼 본문과 구분이 없었다 → Jua로 교체.
 import 'pretendard/dist/web/static/pretendard.css'
-import '@fontsource/quicksand/400.css'
-import '@fontsource/quicksand/500.css'
-import '@fontsource/quicksand/600.css'
+import '@fontsource/jua/korean-400.css'
+import '@fontsource/jua/latin-400.css'
 import './styles/tokens.css'
 
 const rootEl = document.getElementById('root')

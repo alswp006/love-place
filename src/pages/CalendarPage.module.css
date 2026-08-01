@@ -35,6 +35,7 @@
 }
 
 .monthLabel {
+  font-family: var(--font-display); /* 2026년 8월 */
   font-weight: 600;
   font-size: var(--fs-h2);
   white-space: nowrap;
@@ -154,6 +155,7 @@
 }
 
 .agendaTitle {
+  font-family: var(--font-display); /* 선택일 날짜 */
   font-size: var(--fs-body);
   font-weight: 600;
   margin: 0;
