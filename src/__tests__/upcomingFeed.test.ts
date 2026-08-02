@@ -19,6 +19,7 @@ function ev(over: Partial<EventRow> & { id: string; start: string; end: string }
     participants: over.participants ?? 'BOTH',
     owner_id: over.owner_id ?? 'me',
     place_id: over.place_id ?? null,
+    category_id: over.category_id ?? null,
     memo: over.memo ?? null,
     recurrence_rule: over.recurrence_rule ?? null,
     reminders: over.reminders ?? [],

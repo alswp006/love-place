@@ -12,6 +12,7 @@ export type SeedTables = {
   reactions?: unknown[]
   profiles?: unknown[]
   events?: unknown[]
+  eventCategories?: unknown[]
   trips?: unknown[]
   /** directions 프록시 leg 결과. 미시드면 프록시를 실패시켜 '미배포' 폴백 경로를 재현한다. */
   directionLegs?: { polyline: { lat: number; lng: number }[] | null; distanceMeters: number | null; degraded: boolean }[]
@@ -83,6 +84,11 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
   await page.route('**/e2e.supabase.co/rest/v1/reactions**', jsonRoute(tables.reactions ?? []))
   // 캘린더(§5.1) — events REST. 미시드 시 빈 배열(연결됨-빈 CTA 경로). Realtime은 abort로 폴백.
   await page.route('**/e2e.supabase.co/rest/v1/events**', jsonRoute(tables.events ?? []))
+  // 일정 카테고리(0020) — 미시드면 빈 목록. 라우팅을 빼두면 쿼리가 끝나지 않아 '불러오는 중'에 갇힌다.
+  await page.route(
+    '**/e2e.supabase.co/rest/v1/event_categories**',
+    jsonRoute(tables.eventCategories ?? []),
+  )
   // 여행(§5.3) — trips REST. 여행 탭 목록/상세가 읽는다. 미시드 시 빈 배열(빈 상태 경로).
   await page.route('**/e2e.supabase.co/rest/v1/trips**', jsonRoute(tables.trips ?? []))
   // 길찾기 프록시(P4c) — 시드하면 거리 칩·도로 폴리라인이 뜨고, 미시드면 500으로 '미배포' 폴백을 재현한다.

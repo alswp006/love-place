@@ -10,6 +10,13 @@
   isolation: isolate;
 }
 
+/* 인셋(미니) 지도 — 부모가 높이를 정한다. min-height:60vh를 남겨두면 200px 컨테이너 안에서
+   지도가 503px(60vh)로 그려져 overflow:hidden에 61%가 잘리고, fitBounds가 맞춘 중심이
+   잘린 영역 아래에 놓인다(여행 상세 미니 지도). compact prop을 줄 때만 붙는다. */
+.mapCompact {
+  min-height: 0;
+}
+
 /* ≥44px 투명 터치 타깃(HIG, ux §1). 시각 tip은 글리프 하단이 anchor(12,24)에 닿도록
    translate로 위치(글리프를 좌우 가운데·하단 정렬). reduce-motion 안전: tap-scale은 transition만. */
 .pinHit {

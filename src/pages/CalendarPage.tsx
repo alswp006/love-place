@@ -9,8 +9,8 @@ import { EventSheet } from '@/components/calendar/EventSheet'
 import { ScopeSheet, type Scope } from '@/components/calendar/ScopeSheet'
 import { DayTimeline } from '@/components/calendar/DayTimeline'
 import { WeekStrip } from '@/components/calendar/WeekStrip'
-import { TrackLegend } from '@/components/calendar/TrackLegend'
 import { QuickAddRow } from '@/components/calendar/QuickAddRow'
+import { CategoryFilterRow } from '@/components/calendar/CategoryFilterRow'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useProfiles, type ProfileMap } from '@/hooks/useProfiles'
@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/useToast'
 import { useConflict } from '@/lib/sync/useConflict'
 import { refetchEventRow, ConflictError } from '@/lib/sync/versionedUpdate'
 import { deriveTrack, TRACK_META, ALL_TRACKS, type Track } from '@/lib/calendar/track'
+import { useEventCategories } from '@/hooks/useEventCategories'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
 import { expandEvents, buildRule, parseRule, type Occurrence } from '@/lib/calendar/rrule'
 import { exdateOccurrence, splitFollowing, shiftTimesToOccurrence } from '@/lib/calendar/recurrenceScope'
@@ -40,6 +41,13 @@ export default function CalendarPage() {
   const coupleId = couple?.coupleId ?? null
   const { data: events, isLoading: eventsLoading } = useEvents(coupleId)
   const { data: profiles } = useProfiles(coupleId)
+  const { data: eventCategories } = useEventCategories(coupleId)
+  // id → {name,color} 조회맵. 목록 칩이 매 항목마다 배열을 훑지 않게 한 번만 만든다.
+  const categoryById = useMemo(() => {
+    const m: Record<string, { name: string; color: string }> = {}
+    for (const c of eventCategories ?? []) m[c.id] = { name: c.name, color: c.color }
+    return m
+  }, [eventCategories])
   // 저장된 장소 목록 — Task 13: 아젠다 장소 칩(place_id→이름·지도 링크)에 id로 인덱싱해 쓴다.
   // (일정 폼은 '일정만' 관리 — 장소 연결 피커 제거. place_id는 추천 코스→일정·아젠다 칩에서만.)
   const { data: places } = usePlaces(coupleId)
@@ -51,7 +59,7 @@ export default function CalendarPage() {
   const { deleteWithUndo, isPending: deletePending } = useSoftDeleteWithUndo('events', coupleId, myId, conflict.flag)
   const toast = useToast()
   // 충돌 후 시트로 내려보낼 최신 서버 행(version 재시드 + 메모 append-merge용, §4.3).
-  const [conflictRefresh, setConflictRefresh] = useState<{ version: number; memo: string | null } | null>(null)
+  const [conflictRefresh, setConflictRefresh] = useState<{ version: number } | null>(null)
 
   const todayKey = dayKey(new Date().toISOString())
   // ?date=YYYY-MM-DD 딥링크(R1.1) — 코스 추가 후 그 날로 점프. 형식 검증 후 시드, 아니면 오늘.
@@ -102,7 +110,9 @@ export default function CalendarPage() {
       { replace: true },
     )
   }
-  const [filter, setFilter] = useState<Set<Track>>(() => new Set(ALL_TRACKS))
+  // 트랙은 필터가 아니라 '어느 캘린더를 볼지'다 — 셋을 겹쳐 도형으로 구분하지 않고 하나씩 분리해 본다.
+  // 기본은 함께(공유가 이 앱의 기본값 §1).
+  const [track, setTrack] = useState<Track>('shared')
   // 편집 시트는 시리즈 행(editing)을 보여주되, 클릭한 occurrence의 시작 ISO/dayKey도 함께 보존한다
   // (조사 01 §3 — 현재는 시리즈로 덮어써 occurrence가 소실 → 범위 분기에 occurrence 시각이 필요).
   const [sheet, setSheet] = useState<{
@@ -115,8 +125,8 @@ export default function CalendarPage() {
   const [scope, setScope] = useState<{ mode: 'edit' | 'delete'; series: EventRow; occStartIso: string; occDayKey: string; patch: EventPatch | null } | null>(null)
 
   const visibleEvents = useMemo(
-    () => (events ?? []).filter((e) => filter.has(deriveTrack(e, myId))),
-    [events, filter, myId],
+    () => (events ?? []).filter((e) => deriveTrack(e, myId) === track),
+    [events, track, myId],
   )
   const cells = useMemo(() => monthMatrix(view.year, view.month0), [view])
   // 반복 일정을 보이는 달 윈도우로 회차 전개(비반복은 그대로). 편집은 시리즈 기준(_seriesStart).
@@ -139,7 +149,7 @@ export default function CalendarPage() {
 
   if (!coupleLoading && couple?.status !== 'ACTIVE') {
     return (
-      <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+      <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
         <EmptyState
           emoji="💑"
           title="먼저 상대와 연결해요"
@@ -152,19 +162,11 @@ export default function CalendarPage() {
   // 연결됨이지만 일정 로딩 중 → 죽은 빈 캘린더 대신 스켈레톤(§7). 그리드 모양 placeholder.
   if (eventsLoading) {
     return (
-      <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+      <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
         <Skeleton count={6} label="일정 불러오는 중" />
       </ScreenScaffold>
     )
   }
-
-  const toggleTrack = (t: Track) =>
-    setFilter((prev) => {
-      const next = new Set(prev)
-      if (next.has(t)) next.delete(t)
-      else next.add(t)
-      return next
-    })
 
   const busy = create.isPending || update.isPending || deletePending
   // occurrence 클릭 → 편집 시트. 폼은 시리즈 기준(start/end를 _seriesStart/End로 복원)이되,
@@ -205,7 +207,7 @@ export default function CalendarPage() {
         onError: (err) => {
           if (err instanceof ConflictError) {
             void refetchEventRow(id).then((fresh) => {
-              if (fresh) setConflictRefresh({ version: fresh.version, memo: fresh.memo })
+              if (fresh) setConflictRefresh({ version: fresh.version })
             })
           }
         },
@@ -350,14 +352,46 @@ export default function CalendarPage() {
   }
 
   return (
-    <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+    <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
       <div className={styles.container}>
         {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
         {permission.conflict ? (
           <ConflictBanner message="이 일정은 상대만 수정할 수 있어요." onDismiss={permission.clear} />
         ) : null}
 
-        <ViewSegment mode={mode} onChange={changeMode} />
+        {/* 상단 한 줄 — 월 이동 + 뷰 전환을 합쳐 세로 공간을 아낀다(투두메이트 구조).
+            이전에는 뷰 세그먼트·월 이동·범례·필터가 각각 한 줄씩 차지해 달력이 밀려 있었다. */}
+        <div className={styles.topBar}>
+          {mode === 'month' ? (
+            <div className={styles.monthNav}>
+              <button
+                type="button"
+                className={styles.navBtn}
+                onClick={() => setView(addMonths(view.year, view.month0, -1))}
+                aria-label="이전 달"
+              >
+                ‹
+              </button>
+              <span className={styles.monthLabel} aria-live="polite">
+                {view.year}년 {view.month0 + 1}월
+              </span>
+              <button
+                type="button"
+                className={styles.navBtn}
+                onClick={() => setView(addMonths(view.year, view.month0, 1))}
+                aria-label="다음 달"
+              >
+                ›
+              </button>
+            </div>
+          ) : (
+            <span className={styles.monthLabel}>{selected}</span>
+          )}
+          <ViewSegment mode={mode} onChange={changeMode} />
+        </div>
+
+        {/* 트랙 = 어느 캘린더를 볼지(단일 선택). 범례는 지웠다 — 선택지 자체가 색·심볼·이름을 다 보여준다. */}
+        <TrackSwitch track={track} onChange={setTrack} />
 
         {mode === 'day' ? (
           <DayTimeline
@@ -369,32 +403,6 @@ export default function CalendarPage() {
           />
         ) : (
           <>
-            {mode === 'month' ? (
-              <div className={styles.monthNav}>
-                <button
-                  type="button"
-                  className={styles.navBtn}
-                  onClick={() => setView(addMonths(view.year, view.month0, -1))}
-                  aria-label="이전 달"
-                >
-                  ‹
-                </button>
-                <span className={styles.monthLabel} aria-live="polite">
-                  {view.year}년 {view.month0 + 1}월
-                </span>
-                <button
-                  type="button"
-                  className={styles.navBtn}
-                  onClick={() => setView(addMonths(view.year, view.month0, 1))}
-                  aria-label="다음 달"
-                >
-                  ›
-                </button>
-              </div>
-            ) : null}
-
-            <TrackLegend />
-            <TrackChips filter={filter} onToggle={toggleTrack} />
 
             {mode === 'month' ? (
               <MonthGrid
@@ -418,8 +426,13 @@ export default function CalendarPage() {
               dateKey={selected}
               events={dayEvents}
               myId={myId}
+              coupleId={coupleId}
               profiles={profiles ?? {}}
               placeById={placeById}
+              categoryById={categoryById}
+              readOnly={track === 'partner'}
+              // 지금 보고 있는 캘린더에 그대로 들어간다 — 함께 탭에서 적으면 함께 일정.
+              quickAddVisibility={track === 'shared' ? 'SHARED' : 'PERSONAL'}
               onEdit={openEdit}
               onAdd={openCreate}
               onDelete={quickDelete}
@@ -427,10 +440,6 @@ export default function CalendarPage() {
             />
           </>
         )}
-
-        <button type="button" className={styles.fab} onClick={openCreate} aria-label="일정 추가">
-          ＋
-        </button>
       </div>
 
       {sheet.open ? (
@@ -491,13 +500,14 @@ function ViewSegment({
   )
 }
 
-// 트랙 칩 — 색 + 심볼 + 라벨 이중화(§8). aria-pressed로 토글 상태.
-function TrackChips({ filter, onToggle }: { filter: Set<Track>; onToggle: (t: Track) => void }) {
+// 트랙 전환 — 셋 중 하나만 본다(투두메이트의 사람 전환과 같은 모델).
+// 색 + 심볼 + 라벨 이중화는 유지(§8): 선택은 색뿐 아니라 aria-pressed·굵기·테두리로도 드러난다.
+function TrackSwitch({ track, onChange }: { track: Track; onChange: (t: Track) => void }) {
   return (
-    <div className={styles.chips} role="group" aria-label="트랙 필터">
+    <div className={styles.chips} role="group" aria-label="어느 캘린더를 볼지">
       {ALL_TRACKS.map((t) => {
         const meta = TRACK_META[t]
-        const on = filter.has(t)
+        const on = track === t
         return (
           <button
             key={t}
@@ -505,7 +515,7 @@ function TrackChips({ filter, onToggle }: { filter: Set<Track>; onToggle: (t: Tr
             className={`${styles.chip} ${on ? styles.chipOn : ''}`}
             style={on ? { borderColor: meta.cssVar, color: meta.cssVar } : undefined}
             aria-pressed={on}
-            onClick={() => onToggle(t)}
+            onClick={() => onChange(t)}
           >
             <span aria-hidden>{meta.symbol}</span> {meta.label}
           </button>
@@ -586,8 +596,12 @@ function DayAgenda({
   dateKey,
   events,
   myId,
+  coupleId,
   profiles,
   placeById,
+  categoryById,
+  readOnly,
+  quickAddVisibility,
   onEdit,
   onAdd,
   onDelete,
@@ -596,8 +610,14 @@ function DayAgenda({
   dateKey: string
   events: Occurrence<EventRow>[]
   myId: string | null
+  coupleId: string | null
   profiles: ProfileMap
   placeById: Record<string, PlaceRow>
+  categoryById: Record<string, { name: string; color: string }>
+  /** 상대 캘린더를 볼 때 — 보기 전용. 추가 경로(한 줄 추가·빈 상태 CTA)를 렌더하지 않는다. */
+  readOnly: boolean
+  /** 한 줄 추가로 만들 일정의 트랙 — 지금 보고 있는 캘린더와 일치시킨다. */
+  quickAddVisibility: 'SHARED' | 'PERSONAL'
   onEdit: (ev: Occurrence<EventRow>) => void
   onAdd: () => void
   onDelete: (ev: Occurrence<EventRow>) => void
@@ -605,28 +625,59 @@ function DayAgenda({
 }) {
   // 목록 바로 삭제도 EventSheet와 같은 계약: 1탭은 지우지 않고 인라인 확인 먼저(실수 삭제 방지).
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  // 카테고리 선택 하나가 '거르기'와 '붙이기'를 겸한다 — 지금 보고 있는 분류에 그대로 적힌다.
+  // null = 전체(거르지 않음 + 분류 없이 저장).
+  const [category, setCategory] = useState<string | null>(null)
+  const shown = useMemo(
+    () => (category === null ? events : events.filter((e) => e.category_id === category)),
+    [events, category],
+  )
   return (
     <section className={styles.agenda} aria-label={`${dateKey} 일정`}>
       <h2 className={styles.agendaTitle}>{dateKey}</h2>
-      {events.length === 0 ? (
+
+      {/* 카테고리 줄 — 거르기 + 붙이기 겸용. 상대 캘린더는 보기 전용이지만 거르기는 유용하므로 남긴다
+          (새로 만들기 버튼도 함께 남는다 — 분류를 만드는 건 상대 일정을 건드리는 일이 아니다). */}
+      <CategoryFilterRow
+        coupleId={coupleId}
+        myId={myId}
+        value={category}
+        onChange={setCategory}
+      />
+
+      {/* 한 줄 추가 — 날짜 바로 아래(투두메이트 구조). 상대 캘린더는 보기 전용이라 렌더하지 않는다:
+          상대 트랙에서 적으면 내 일정이 만들어져 '상대 칸에 썼는데 내 것이 되는' 오해를 부른다. */}
+      {readOnly ? null : (
+        <QuickAddRow
+          dateKey={dateKey}
+          visibility={quickAddVisibility}
+          categoryId={category}
+          onCreate={onQuickAdd}
+        />
+      )}
+      {shown.length === 0 ? (
         // 연결됨-빈: 죽은 <p> 대신 친근한 EmptyState + add-event CTA(§7).
         <EmptyState
           emoji="🗓️"
-          title="이 날 일정이 없어요"
+          title={category === null ? '이 날 일정이 없어요' : '이 분류에는 없어요'}
           action={
-            <button type="button" className={styles.agendaAddBtn} onClick={onAdd}>
-              ＋ 일정 추가
-            </button>
+            readOnly ? undefined : (
+              <button type="button" className={styles.agendaAddBtn} onClick={onAdd}>
+                ＋ 일정 추가
+              </button>
+            )
           }
         />
       ) : (
         <ul className={styles.eventList}>
-          {events.map((ev) => {
+          {shown.map((ev) => {
             const t = deriveTrack(ev, myId)
             const meta = TRACK_META[t]
             // place_id가 가리키는 장소가 우리 목록에 있으면 칩+지도 딥링크(?place=)를 함께 표시.
             // (지도쪽 ?place= 포커스 수신은 후속 패킷 — 여기선 딥링크 발신만, 조사 04 §3.)
             const place = ev.place_id ? placeById[ev.place_id] : undefined
+            // 삭제된 카테고리를 가리키는 일정은 조용히 '분류 없음'으로 — 없는 이름을 지어내지 않는다.
+            const category = ev.category_id ? categoryById[ev.category_id] : undefined
             return (
               <li key={ev.id}>
                 <div className={styles.eventRow}>
@@ -634,6 +685,16 @@ function DayAgenda({
                     <span className={styles.eventBar} style={{ background: meta.cssVar }} aria-hidden />
                     <span className={styles.eventTime}>{ev.is_all_day ? '종일' : formatTime(ev.start)}</span>
                     <span className={styles.eventTitle}>{ev.title}</span>
+                    {category ? (
+                      <span className={styles.eventCategory}>
+                        <span
+                          className={styles.eventCategoryDot}
+                          style={{ background: category.color }}
+                          aria-hidden
+                        />
+                        {category.name}
+                      </span>
+                    ) : null}
                     {ev.recurrence_rule ? <span aria-label="반복 일정">🔁</span> : null}
                     {myId && ev.reminders?.some((r) => r.userId === myId) ? (
                       <span aria-label="리마인더 설정됨">🔔</span>
@@ -677,10 +738,6 @@ function DayAgenda({
           })}
         </ul>
       )}
-
-      {/* 한 줄 추가 — 빈 날에도, 목록 아래에도 항상. 제목만 + 엔터로 끝나는 빠른 경로.
-          위 '＋ 일정 추가'(EventSheet)는 시간·반복까지 정하는 경로로 남는다. */}
-      <QuickAddRow dateKey={dateKey} onCreate={onQuickAdd} />
     </section>
   )
 }

@@ -85,12 +85,10 @@ describe('5탭 라우팅 (설계서 §3 IA — 장소는 지도에 통합, 여�
     async (path, testId, heading) => {
       renderAt(path)
       expect(await screen.findByTestId(testId)).toBeInTheDocument()
-      if (path === '/') {
-        // 지도는 풀블리드 — h1 대신 region 이름으로 접근성 이름 확인.
-        expect(screen.getByRole('region', { name: heading })).toBeInTheDocument()
-      } else {
-        expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument()
-      }
+      // 이제 다섯 탭 모두 시각적 헤더가 없다(지도=fullBleed, 나머지=headerHidden).
+      // 화면이 세로 공간을 다 쓰게 하되 접근성 이름은 section aria-label로 남긴다.
+      expect(screen.getByRole('region', { name: heading })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: heading })).toBeNull()
     },
   )
 

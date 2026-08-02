@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
+
 import { QuickAddRow } from '@/components/calendar/QuickAddRow'
 import { dayKey } from '@/lib/calendar/eventDays'
 import type { NewEvent } from '@/hooks/useEventMutations'
@@ -11,13 +12,23 @@ beforeEach(() => {
   onCreate.mockReset()
 })
 
-function renderRow(dateKey = '2026-07-25') {
-  render(<QuickAddRow dateKey={dateKey} onCreate={onCreate} />)
+function renderRow(
+  dateKey = '2026-07-25',
+  opts: { visibility?: 'SHARED' | 'PERSONAL'; categoryId?: string | null } = {},
+) {
+  render(
+    <QuickAddRow
+      dateKey={dateKey}
+      visibility={opts.visibility ?? 'PERSONAL'}
+      categoryId={opts.categoryId ?? null}
+      onCreate={onCreate}
+    />,
+  )
   return screen.getByLabelText(`${dateKey}에 할 일 추가`) as HTMLInputElement
 }
 
 describe('QuickAddRow', () => {
-  it('제목만 넣고 엔터 → 그 날짜의 종일 SHARED 이벤트', () => {
+  it('제목만 넣고 엔터 → 그 날짜의 종일 PERSONAL(나만) 이벤트', () => {
     const input = renderRow()
     fireEvent.change(input, { target: { value: '숙소 예약하기' } })
     fireEvent.submit(input.form!)
@@ -27,7 +38,8 @@ describe('QuickAddRow', () => {
     expect(ev.title).toBe('숙소 예약하기')
     expect(ev.isAllDay).toBe(true)
     // 공유가 기본값(§1) — 개인 일정으로 돌리는 건 EventSheet의 몫.
-    expect(ev.visibility).toBe('SHARED')
+    // 한 줄 추가는 '내 할 일'을 적는 자리라 기본이 나만이다(함께는 상세에서 바꾼다).
+    expect(ev.visibility).toBe('PERSONAL')
     // 표시 tz 기준으로 그 날짜 버킷에 떨어져야 한다(다음 날로 새면 안 됨).
     expect(dayKey(ev.start)).toBe('2026-07-25')
     expect(dayKey(ev.end)).toBe('2026-07-25')
@@ -73,10 +85,11 @@ describe('QuickAddRow', () => {
 
   it('엔터 주 경로 외에 버튼 대체 경로도 있다(제스처 전용 금지 — ux §1)', () => {
     const input = renderRow()
-    const btn = screen.getByRole('button', { name: '추가' })
-    // 비어 있으면 비활성 → 오조작 방지
-    expect(btn).toBeDisabled()
+    // 비어 있으면 버튼을 아예 렌더하지 않는다 — 쉬는 상태의 글자를 '＋ 할 일 입력'으로 줄이기 위해서다.
+    // (누를 이유가 없는 버튼을 비활성으로 남겨두던 것을 없앴다. 대체 경로 자체는 아래처럼 살아 있다.)
+    expect(screen.queryByRole('button', { name: '추가' })).toBeNull()
     fireEvent.change(input, { target: { value: '짐 싸기' } })
+    const btn = screen.getByRole('button', { name: '추가' })
     expect(btn).not.toBeDisabled()
     fireEvent.click(btn)
     expect(onCreate).toHaveBeenCalledOnce()
@@ -96,5 +109,32 @@ describe('QuickAddRow', () => {
     fireEvent.submit(input.form!)
     fireEvent.submit(input.form!)
     expect(onCreate).toHaveBeenCalledOnce()
+  })
+
+  it('트랙은 부모가 정한다 — 함께 캘린더에서 적으면 함께 일정', () => {
+    const input = renderRow('2026-07-25', { visibility: 'SHARED' })
+    fireEvent.change(input, { target: { value: '같이 장보기' } })
+    fireEvent.submit(input.form!)
+    expect(onCreate.mock.calls[0]![0].visibility).toBe('SHARED')
+  })
+
+  it('나 캘린더에서 적으면 내 일정', () => {
+    const input = renderRow('2026-07-25', { visibility: 'PERSONAL' })
+    fireEvent.change(input, { target: { value: '스쿼트' } })
+    fireEvent.submit(input.form!)
+    expect(onCreate.mock.calls[0]![0].visibility).toBe('PERSONAL')
+  })
+
+  it('고른 카테고리가 그대로 실린다(전체면 분류 없음)', () => {
+    const a = renderRow('2026-07-25', { categoryId: null })
+    fireEvent.change(a, { target: { value: '분류 없음' } })
+    fireEvent.submit(a.form!)
+    expect(onCreate.mock.calls[0]![0].categoryId).toBeNull()
+
+    onCreate.mockReset()
+    const b = renderRow('2026-07-26', { categoryId: 'k2' })
+    fireEvent.change(b, { target: { value: '보고서' } })
+    fireEvent.submit(b.form!)
+    expect(onCreate.mock.calls[0]![0].categoryId).toBe('k2')
   })
 })

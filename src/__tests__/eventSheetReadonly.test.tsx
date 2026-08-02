@@ -20,6 +20,7 @@ const baseEvent: EventRow = {
   participants: 'OWNER_ONLY',
   owner_id: 'partner',
   place_id: null,
+  category_id: null,
   memo: '운동',
   recurrence_rule: null,
   reminders: [],
@@ -74,7 +75,9 @@ describe('EventSheet 상대 PERSONAL 읽기 전용(R2, Task 6)', () => {
     expect(screen.getByText(/지민/)).toBeInTheDocument()
     // 입력들이 비활성화
     expect(screen.getByLabelText('일정 제목')).toBeDisabled()
-    expect(screen.getByLabelText('메모')).toBeDisabled()
+    // 메모 입력칸은 제거됐다(일정 얘기는 댓글로) — disabled 검증은 남아있는 입력으로 한다.
+    expect(screen.queryByLabelText('메모')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('날짜')).toBeDisabled()
     expect(screen.getByLabelText('시작 시각')).toBeDisabled()
   })
 

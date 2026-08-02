@@ -21,6 +21,7 @@ function makeRow(over: Partial<EventRow> = {}): EventRow {
     participants: 'BOTH',
     owner_id: 'u1',
     place_id: null,
+    category_id: null,
     memo: null,
     recurrence_rule: null,
     reminders: [],
@@ -117,6 +118,47 @@ describe('EventSheet 일정-전용 폼(장소 연결 필드 제거)', () => {
     const payload = onCreate.mock.calls[0]![0]
     expect(payload).not.toHaveProperty('placeId')
     expect(payload).not.toHaveProperty('place_id')
+  })
+
+  it('메모 입력칸이 없다 — 일정 얘기는 댓글로', () => {
+    setup({ initial: makeRow({ memo: '예전에 적어둔 메모' }) })
+    expect(screen.queryByLabelText('메모')).toBeNull()
+    expect(screen.queryByPlaceholderText('메모(선택)')).toBeNull()
+  })
+
+  it('수정 payload에 memo가 없다 — 서버의 기존 메모를 덮어쓰지 않는다', () => {
+    const { onUpdate } = setup({ initial: makeRow({ memo: '예전에 적어둔 메모' }) })
+    fireEvent.click(screen.getByRole('button', { name: '수정' }))
+    expect(onUpdate).toHaveBeenCalledTimes(1)
+    const patch = onUpdate.mock.calls[0]![2]
+    // place_id와 같은 계약: 폼이 안 건드리는 필드는 패치에서 생략 → 서버 값 보존.
+    expect(patch).not.toHaveProperty('memo')
+  })
+
+  it('카테고리·반복은 기본으로 접혀 있고 ⋯ 버튼으로 펼친다', () => {
+    setup()
+    expect(screen.queryByLabelText('반복')).toBeNull()
+    expect(screen.queryByText('카테고리')).toBeNull()
+
+    const more = screen.getByRole('button', { name: '카테고리·반복 설정' })
+    expect(more).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(more)
+
+    expect(more).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByLabelText('반복')).toBeInTheDocument()
+    expect(screen.getByText('카테고리')).toBeInTheDocument()
+  })
+
+  it('ESC는 열린 ⋯ 패널부터 닫는다 — 한 번에 시트까지 사라지지 않는다', () => {
+    const { onClose } = setup()
+    fireEvent.click(screen.getByRole('button', { name: '카테고리·반복 설정' }))
+    fireEvent.keyDown(window, { key: 'Escape' })
+    // 패널만 닫히고 시트는 그대로.
+    expect(screen.queryByLabelText('반복')).toBeNull()
+    expect(onClose).not.toHaveBeenCalled()
+    // 한 번 더 누르면 시트가 닫힌다.
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })
 

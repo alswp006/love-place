@@ -16,7 +16,10 @@
 
 .titleBlock {
   flex: 1;
-  min-width: 0;
+  /* min-width:0을 두면 제목이 한 글자 폭까지 짜부라진다(글자 200%에서 헤더가 세로로 붕괴).
+     한글은 CJK라 음절 사이에서 끊겨 min-content가 한 글자이므로 overflow-wrap으로는 못 막는다 —
+     최소 폭을 rem으로 명시해(글자 크기를 따라 커짐) 못 맞추면 flex-wrap이 제목을 다음 줄로 내린다. */
+  min-width: 9rem;
 }
 
 .title {
@@ -38,6 +41,9 @@
   gap: var(--sp-2);
   overflow-x: auto;
   padding-bottom: 2px;
+  /* .wrap이 flex 컬럼이라 기본 flex-shrink:1이면 글자가 커질 때 Day 바가 12px까지 눌려
+     라벨이 잘리고 44px 터치 타깃이 무너진다. 눌리는 대신 .wrap이 스크롤되게 한다. */
+  flex-shrink: 0;
 }
 
 .dayBtn,
@@ -82,6 +88,8 @@
 .mapWrap {
   position: relative;
   height: 200px;
+  /* Day 바와 같은 이유 — 눌려서 43px짜리 지도가 되지 않게. */
+  flex-shrink: 0;
   border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--c-border);
@@ -128,6 +136,8 @@
 .stop {
   display: flex;
   align-items: center;
+  /* 글자가 커지면 순번·시각 옆에 이름이 못 들어간다 — 짜부라뜨리는 대신 줄을 바꾼다. */
+  flex-wrap: wrap;
   gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-3);
   border: 1px solid var(--c-border);
@@ -146,7 +156,9 @@
   flex-direction: column;
   gap: 2px;
   flex: 1;
-  min-width: 0;
+  /* .titleBlock과 같은 이유(한글 min-content = 한 글자) — 최소 폭을 주고, 못 맞추면
+     .stop의 flex-wrap이 본문을 다음 줄로 내린다. 글자 200%에서 '칠성/조선/소' 방지. */
+  min-width: 8rem;
 }
 
 .stopName {

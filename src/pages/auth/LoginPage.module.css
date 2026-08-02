@@ -23,6 +23,7 @@
 }
 
 .title {
+  font-family: var(--font-display); /* 로그인 라지 타이틀 */
   font-size: var(--fs-title);
   font-weight: 600;
   margin: 0;
@@ -89,6 +90,15 @@
 .appleBtn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+/* 다크에서는 흰 버튼 — Apple HIG가 어두운 배경에 규정하는 형태이고,
+   검정(#1a1a1a) 유지 시 --bg(#241016) 대비가 1.04:1이라 버튼 형태가 사라진다(WCAG 1.4.11 3:1 미달). */
+@media (prefers-color-scheme: dark) {
+  .appleBtn {
+    color: #000;
+    background: #fff;
+  }
 }
 
 .divider {

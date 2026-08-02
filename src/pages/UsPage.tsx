@@ -134,14 +134,14 @@ export default function UsPage() {
   // 콜드스타트 플래시 제거(Task 9): 커플 정보 로딩 중엔 프로필/연결 블록 대신 페이지 스켈레톤.
   if (coupleLoading) {
     return (
-      <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+      <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
         <Skeleton count={4} label="우리 정보 불러오는 중" />
       </ScreenScaffold>
     )
   }
 
   return (
-    <ScreenScaffold title={tab.title} subtitle={tab.subtitle} testId={tab.testId}>
+    <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
       <div className={styles.container}>
         {/* 연결된 상대 */}
         {partner ? (

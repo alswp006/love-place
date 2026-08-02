@@ -54,6 +54,7 @@ function makeEvent(over: Partial<EventRow> = {}): EventRow {
     participants: 'BOTH',
     owner_id: 'u1',
     place_id: null,
+    category_id: null,
     memo: null,
     recurrence_rule: null,
     reminders: [],
