@@ -1,4 +1,5 @@
 import { TRASH_KINDS, type TrashRow, type TrashKind } from '@/hooks/useTrash'
+import { Icon, type IconName } from '@/components/ui/Icon'
 import { daysUntilPurge } from '@/lib/trash/purgeDate'
 import styles from './TrashSection.module.css'
 
@@ -8,13 +9,13 @@ import styles from './TrashSection.module.css'
 
 // kind 배지의 심볼(라벨은 TRASH_KINDS[kind].label). 마시멜로 2색 규율 — 무지개 색 제거,
 // 구분은 심볼+라벨이 전담(색만 의존 금지 §4). 배지 색은 단일 토큰(CSS .kindBadge).
-const KIND_BADGE: Record<TrashKind, { symbol: string }> = {
-  places: { symbol: '📍' },
-  events: { symbol: '📅' },
-  visits: { symbol: '✓' },
-  photos: { symbol: '🖼' },
-  trips: { symbol: '🧳' },
-  itineraries: { symbol: '🗺' },
+const KIND_BADGE: Record<TrashKind, { icon: IconName }> = {
+  places: { icon: 'pin' },
+  events: { icon: 'calendar' },
+  visits: { icon: 'check' },
+  photos: { icon: 'image' },
+  trips: { icon: 'luggage' },
+  itineraries: { icon: 'map' },
 }
 
 export function TrashSection({
@@ -33,7 +34,7 @@ export function TrashSection({
   return (
     <section className={styles.trash} aria-label="휴지통">
       <button type="button" className={styles.trashToggle} onClick={onToggle} aria-expanded={open}>
-        <span>🗑 휴지통{open && items.length > 0 ? ` (${items.length})` : ''}</span>
+        <span><Icon name="trash" /> 휴지통{open && items.length > 0 ? ` (${items.length})` : ''}</span>
         <span aria-hidden>{open ? '▲' : '▼'}</span>
       </button>
       {open ? (
@@ -50,7 +51,7 @@ export function TrashSection({
                 <li key={`${row.kind}:${row.id}`} className={styles.trashItem}>
                   {/* 심볼 + 라벨 이중화(§4) — 색 단독 의존 안 함(마시멜로 2색). aria-label로 색각 이상 대응 */}
                   <span className={styles.kindBadge} aria-label={kindLabel}>
-                    <span aria-hidden>{badge.symbol}</span> {kindLabel}
+                    <span aria-hidden><Icon name={badge.icon} /></span> {kindLabel}
                   </span>
                   <div className={styles.itemBody}>
                     <span className={styles.trashName}>{row.label}</span>

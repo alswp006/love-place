@@ -1,4 +1,5 @@
 import type { TrashPlaceRow } from '@/hooks/usePlaceTrash'
+import { Icon } from '@/components/ui/Icon'
 import styles from './TrashSection.module.css'
 
 // 휴지통(D3) — 삭제는 복구 가능(물리삭제 아님). "상대가 지운 우리 추억"도 둘 다 복구.
@@ -18,7 +19,7 @@ export function TrashSection({
   return (
     <section className={styles.trash} aria-label="휴지통">
       <button type="button" className={styles.trashToggle} onClick={onToggle} aria-expanded={open}>
-        <span>🗑 휴지통{open && items.length > 0 ? ` (${items.length})` : ''}</span>
+        <span><Icon name="trash" /> 휴지통{open && items.length > 0 ? ` (${items.length})` : ''}</span>
         <span aria-hidden>{open ? '▲' : '▼'}</span>
       </button>
       {open ? (

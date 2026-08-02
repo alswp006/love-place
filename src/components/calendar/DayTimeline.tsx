@@ -1,4 +1,5 @@
 import type { EventRow } from '@/hooks/useEvents'
+import { Icon } from '@/components/ui/Icon'
 import type { Occurrence } from '@/lib/calendar/rrule'
 import { minuteOfDay, formatTime } from '@/lib/calendar/eventDays'
 import { deriveTrack, TRACK_META } from '@/lib/calendar/track'
@@ -54,7 +55,7 @@ export function DayTimeline({
                   {meta.symbol}
                 </span>{' '}
                 <span className={styles.timelineTitle}>{ev.title}</span>
-                {ev.recurrence_rule ? <span aria-label="반복 일정">🔁</span> : null}
+                {ev.recurrence_rule ? <Icon name="repeat" label="반복 일정" /> : null}
               </button>
             )
           })
@@ -99,9 +100,9 @@ export function DayTimeline({
                 <span aria-hidden style={{ color: meta.cssVar }}>
                   {meta.symbol}
                 </span>
-                {ev.recurrence_rule ? <span aria-label="반복 일정">🔁</span> : null}
+                {ev.recurrence_rule ? <Icon name="repeat" label="반복 일정" /> : null}
                 {myId && ev.reminders?.some((r) => r.userId === myId) ? (
-                  <span aria-label="리마인더 설정됨">🔔</span>
+                  <Icon name="bell" label="리마인더 설정됨" />
                 ) : null}
               </button>
             )

@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { Icon } from '@/components/ui/Icon'
 import { buildEventTimes } from '@/lib/calendar/eventTimes'
 import { DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import type { NewEvent } from '@/hooks/useEventMutations'
@@ -96,7 +97,7 @@ export function QuickAddRow({
           disabled={disabled || busy}
           aria-label="추가"
         >
-          ↵
+          <Icon name="enter" />
         </button>
       ) : null}
     </form>

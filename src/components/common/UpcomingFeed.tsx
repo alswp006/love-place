@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from '@/components/ui/Icon'
 import { Link } from 'react-router-dom'
 import { useEvents } from '@/hooks/useEvents'
 import { useProfiles } from '@/hooks/useProfiles'
@@ -29,7 +30,11 @@ export function UpcomingFeed({ coupleId, myId }: { coupleId: string | null; myId
             {/* 신호를 봤으면 갈 수 있어야 한다 — 그 날짜 아젠다로. */}
             <Link className={styles.row} to={`/calendar?date=${i.dayKey}`}>
               <span className={styles.badge} aria-hidden>
-                {i.kind === 'imminent' ? (i.soft ? '⏱' : '🔔') : '📅'}
+                {i.kind === 'imminent' ? (
+                  <Icon name={i.soft ? 'clock' : 'bell'} />
+                ) : (
+                  <Icon name="calendar" />
+                )}
               </span>
               <span className={styles.label}>
                 {i.kind === 'imminent' && i.soft ? `곧 시작 · ${i.label}` : i.label}

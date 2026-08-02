@@ -461,7 +461,7 @@ export function PlaceSheet({
                         },
                         {
                           onSuccess: () => {
-                            toast.show('가봤어요로 기록했어요 ✅')
+                            toast.show('가봤어요로 기록했어요')
                             haptic() // 기록 성공 피드백 — 토스트 시각 피드백 병행(ux §1).
                           },
                         },

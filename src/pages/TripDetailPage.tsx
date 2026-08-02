@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Icon } from '@/components/ui/Icon'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
@@ -345,7 +346,7 @@ export default function TripDetailPage() {
                         disabled={removing}
                         aria-label={`${name} 빼기`}
                       >
-                        ✕
+                        <Icon name="close" />
                       </button>
                     )
                   ) : null}

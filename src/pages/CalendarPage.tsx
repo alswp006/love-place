@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Icon } from '@/components/ui/Icon'
 import { useSearchParams } from 'react-router-dom'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -695,9 +696,9 @@ function DayAgenda({
                         {category.name}
                       </span>
                     ) : null}
-                    {ev.recurrence_rule ? <span aria-label="반복 일정">🔁</span> : null}
+                    {ev.recurrence_rule ? <Icon name="repeat" label="반복 일정" /> : null}
                     {myId && ev.reminders?.some((r) => r.userId === myId) ? (
-                      <span aria-label="리마인더 설정됨">🔔</span>
+                      <Icon name="bell" label="리마인더 설정됨" />
                     ) : null}
                     <SourceAvatar userId={ev.owner_id} profiles={profiles} myId={myId} context=" 일정" />
                     <span className={styles.eventTrack} style={{ color: meta.cssVar }}>
@@ -723,14 +724,14 @@ function DayAgenda({
                       onClick={() => setConfirmId(ev.id)}
                       aria-label={`${ev.title} 휴지통으로 보내기`}
                     >
-                      <span aria-hidden="true">🗑</span>
+                      <Icon name="trash" />
                     </button>
                   )}
                 </div>
                 {place ? (
                   // 칩은 항목 버튼 밖(중첩 인터랙티브 회피) — 지도로 가는 별도 링크.
                   <a className={styles.placeChip} href={`/?place=${ev.place_id}`} aria-label={`지도에서 ${place.name} 보기`}>
-                    📍 {place.name}
+                    <Icon name="pin" /> {place.name}
                   </a>
                 ) : null}
               </li>

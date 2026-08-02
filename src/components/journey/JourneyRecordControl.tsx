@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Icon } from '@/components/ui/Icon'
 import { useConsent } from '@/hooks/useConsent'
 import { useJourneyRecording } from '@/hooks/useJourneyRecording'
 import { useLinkSessionToTrip } from '@/hooks/useOrphanSessions'
@@ -76,7 +77,7 @@ export function JourneyRecordControl({ coupleId, userId }: Props) {
           className={styles.consentLink}
           onClick={() => setConsentOpen(true)}
         >
-          📍 위치 동의하고 동선 기록하기 →
+          <Icon name="pin" /> 위치 동의하고 동선 기록하기 →
         </button>
         <ConsentSheet
           open={consentOpen}

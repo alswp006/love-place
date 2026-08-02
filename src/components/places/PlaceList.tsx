@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { Icon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Skeleton } from '@/components/common/Skeleton'
 import { Heart } from '@/components/nav/icons'
@@ -150,7 +151,7 @@ export function PlaceList({
                       disabled={unvisitPending}
                       aria-label={`${p.name} 가봤음 기록 취소`}
                     >
-                      <span aria-hidden="true">✅</span> 가봤음 (취소)
+                      <Icon name="check-circle" /> 가봤음 (취소)
                     </Button>
                   ) : (
                     <Button
@@ -159,7 +160,7 @@ export function PlaceList({
                       onClick={() =>
                         markVisited.mutate(
                           { placeId: p.id, alreadyVisited: visitedIds.has(p.id) },
-                          { onSuccess: () => onToast('가봤어요로 기록했어요 ✅') },
+                          { onSuccess: () => onToast('가봤어요로 기록했어요') },
                         )
                       }
                       disabled={markVisited.isPending}
@@ -195,7 +196,7 @@ export function PlaceList({
                     disabled={deletePending}
                     aria-label={`${p.name} 휴지통으로 보내기`}
                   >
-                    <span aria-hidden="true">🗑</span>
+                    <Icon name="trash" />
                   </Button>
                 </div>
               </Card>
@@ -214,7 +215,7 @@ function WishBadge({ wish }: { wish: WishStatus }) {
   const cls = wish.bothWished ? styles.wishBoth : wish.wishedByMe ? styles.wishMine : styles.wishPartner
   return (
     <span className={`${styles.wishBadge} ${cls}`}>
-      {wish.bothWished ? <span aria-hidden="true">💑 </span> : null}
+      {wish.bothWished ? <Icon name="heart" /> : null}
       {label}
     </span>
   )

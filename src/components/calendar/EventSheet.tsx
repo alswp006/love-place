@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type TouchEvent as ReactTouchEvent } from 'react'
+import { Icon } from '@/components/ui/Icon'
 import { createPortal } from 'react-dom'
 import type { EventRow } from '@/hooks/useEvents'
 import type { ProfileMap } from '@/hooks/useProfiles'
@@ -235,7 +236,7 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
             aria-controls="event-more-panel"
             aria-label="카테고리·반복 설정"
           >
-            ⋯
+            <Icon name="more" />
           </button>
         </div>
         <form onSubmit={onSubmit} className={styles.form} data-sheet-scroll>

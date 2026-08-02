@@ -1,0 +1,8 @@
+/* 크기는 부모 글자 크기를 따른다(1em) — 고정 px면 글자 확대(Dynamic Type §4)에서 아이콘만 안 커진다.
+   세로 정렬은 텍스트 베이스라인에 맞춰 살짝 내린다(이모지를 걷어낸 자리라 기존 정렬과 비슷하게). */
+.icon {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  vertical-align: -0.125em;
+}

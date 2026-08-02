@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { Icon } from '@/components/ui/Icon'
 import { markerVisual } from '@/lib/places/markerVisual'
 import type { WithWish } from '@/lib/places/wishStatus'
 import type { PlaceRow } from '@/hooks/usePlaces'
@@ -68,7 +69,7 @@ export function PlaceDetail({
             aria-pressed={true}
             aria-label={`${place.name} 가봤음 기록 취소`}
           >
-            <span aria-hidden>✅</span> 가봤음 (취소)
+            <Icon name="check-circle" /> 가봤음 (취소)
           </Button>
         ) : (
           <Button
@@ -79,7 +80,7 @@ export function PlaceDetail({
             aria-pressed={false}
             aria-label={`${place.name} 다녀왔어요`}
           >
-            <span aria-hidden>✅</span> 다녀왔어요
+            <Icon name="check-circle" /> 다녀왔어요
           </Button>
         )}
         <LikeButton

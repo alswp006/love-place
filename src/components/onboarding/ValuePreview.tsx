@@ -1,11 +1,12 @@
 import styles from './ValuePreview.module.css'
+import { Icon, type IconName } from '@/components/ui/Icon'
 
-type ValueItem = { icon: string; title: string; desc: string }
+type ValueItem = { icon: IconName; title: string; desc: string }
 // 브랜드뉴(미연결) 사용자에게 둘이 쓰는 가치를 미리 보여주는 정적 블록(spec R3 line 51 value-preview arm).
 const ITEMS: ValueItem[] = [
-  { icon: '📍', title: '함께 가고싶은 곳', desc: '둘이 고른 장소를 한 지도에 별표로 모아요.' },
-  { icon: '🗓️', title: '하나의 캘린더', desc: '내 일정·상대 일정·함께 일정이 한 화면에.' },
-  { icon: '📷', title: '같이 남기는 기록', desc: '다녀온 곳과 사진을 둘만의 앨범으로.' },
+  { icon: 'pin', title: '함께 가고싶은 곳', desc: '둘이 고른 장소를 한 지도에 별표로 모아요.' },
+  { icon: 'calendar', title: '하나의 캘린더', desc: '내 일정·상대 일정·함께 일정이 한 화면에.' },
+  { icon: 'image', title: '같이 남기는 기록', desc: '다녀온 곳과 사진을 둘만의 앨범으로.' },
 ]
 
 export function ValuePreview() {
@@ -15,7 +16,9 @@ export function ValuePreview() {
       <ul className={styles.list}>
         {ITEMS.map((it) => (
           <li key={it.title} className={styles.item}>
-            <span className={styles.icon} aria-hidden>{it.icon}</span>
+            <span className={styles.icon} aria-hidden>
+              <Icon name={it.icon} />
+            </span>
             <div className={styles.text}>
               <span className={styles.itemTitle}>{it.title}</span>
               <span className={styles.itemDesc}>{it.desc}</span>

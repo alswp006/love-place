@@ -78,8 +78,8 @@ describe('UpcomingFeed 카드(Task 15)', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('imminent(곧 시작) 항목: N분 뒤 라벨 + 🔔 아이콘 + aria-live="polite"', () => {
-    // 리마인더 점화 imminent(soft 아님) → 🔔. (리마인더 없는 60분 이내는 soft → ⏱ 별도 케이스)
+  it('imminent(곧 시작) 항목: N분 뒤 라벨 + 종 아이콘 + aria-live="polite"', () => {
+    // 리마인더 점화 imminent(soft 아님) → 종 아이콘. (리마인더 없는 60분 이내는 soft → ⏱ 별도 케이스)
     eventsState = { data: [makeEvent({ id: 'soon', title: '곧 만나요', start: '2026-06-20T12:10:00+09:00', end: '2026-06-20T13:10:00+09:00', reminders: [{ userId: 'u1', offsetMinutes: 10 }] })] }
     render(
       <MemoryRouter>
@@ -88,15 +88,15 @@ describe('UpcomingFeed 카드(Task 15)', () => {
     )
     expect(screen.getByText('곧 만나요')).toBeInTheDocument()
     expect(screen.getByText('10분 뒤')).toBeInTheDocument()
-    // 색 단독 금지 — 아이콘+텍스트 동반(🔔).
-    expect(screen.getByText('🔔')).toBeInTheDocument()
+    // 색 단독 금지 — 아이콘+텍스트 동반(종).
+    expect(document.querySelector('[data-icon="bell"]')).toBeInTheDocument()
     // imminent는 동적 갱신을 aria-live="polite"로 안내.
     const live = document.querySelector('[aria-live="polite"]')
     expect(live).not.toBeNull()
     expect(live?.textContent).toContain('곧 만나요')
   })
 
-  it('soft imminent(리마인더 없음, 60분 이내): "곧 시작" 텍스트 + ⏱ 아이콘(색 단독 금지)', () => {
+  it('soft imminent(리마인더 없음, 60분 이내): "곧 시작" 텍스트 + 시계 아이콘(색 단독 금지)', () => {
     // 리마인더 없음 → soft 점화(60분 이내). 30분 뒤.
     eventsState = { data: [makeEvent({ id: 'soft', title: '카페 데이트', start: '2026-06-20T12:30:00+09:00', end: '2026-06-20T13:30:00+09:00', reminders: [] })] }
     render(
@@ -105,26 +105,26 @@ describe('UpcomingFeed 카드(Task 15)', () => {
       </MemoryRouter>,
     )
     expect(screen.getByText('카페 데이트')).toBeInTheDocument()
-    // soft는 ⏱ 글리프(리마인더 점화 🔔와 구분).
-    expect(screen.getByText('⏱')).toBeInTheDocument()
+    // soft는 시계 아이콘(리마인더 점화(종)와 구분).
+    expect(document.querySelector('[data-icon="clock"]')).toBeInTheDocument()
     // soft 라벨 텍스트 이중화("곧 시작" 안내 — 색 단독 금지).
     expect(screen.getByText(/곧 시작/)).toBeInTheDocument()
-    // 리마인더 점화 아이콘(🔔)은 없다.
-    expect(screen.queryByText('🔔')).toBeNull()
+    // 리마인더 점화 아이콘(종)은 없다.
+    expect(document.querySelector('[data-icon="bell"]')).toBeNull()
   })
 
-  it('비-soft imminent(내 리마인더 점화): 🔔 아이콘(⏱ 아님)', () => {
+  it('비-soft imminent(내 리마인더 점화): 종 아이콘(시계 아님)', () => {
     eventsState = { data: [makeEvent({ id: 'fired', title: '리마인더 점화', start: '2026-06-20T12:10:00+09:00', end: '2026-06-20T13:10:00+09:00', reminders: [{ userId: 'u1', offsetMinutes: 10 }] })] }
     render(
       <MemoryRouter>
         <UpcomingFeed coupleId="c1" myId="u1" />
       </MemoryRouter>,
     )
-    expect(screen.getByText('🔔')).toBeInTheDocument()
-    expect(screen.queryByText('⏱')).toBeNull()
+    expect(document.querySelector('[data-icon="bell"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-icon="clock"]')).toBeNull()
   })
 
-  it('dday 항목: D-3 라벨 + 📅 아이콘(다가오는 일정)', () => {
+  it('dday 항목: D-3 라벨 + 달력 아이콘(다가오는 일정)', () => {
     eventsState = {
       data: [makeEvent({ id: 'far', title: '제주 여행', start: '2026-06-23T10:00:00+09:00', end: '2026-06-23T11:00:00+09:00' })],
     }
@@ -135,7 +135,7 @@ describe('UpcomingFeed 카드(Task 15)', () => {
     )
     expect(screen.getByText('제주 여행')).toBeInTheDocument()
     expect(screen.getByText('D-3')).toBeInTheDocument()
-    expect(screen.getByText('📅')).toBeInTheDocument()
+    expect(document.querySelector('[data-icon="calendar"]')).toBeInTheDocument()
     // dday는 imminent가 아니므로 aria-live가 붙지 않는다.
     const live = document.querySelector('[aria-live="polite"]')
     expect(live).toBeNull()

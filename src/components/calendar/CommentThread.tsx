@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Icon } from '@/components/ui/Icon'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { Skeleton } from '@/components/common/Skeleton'
 import { useComments, useAddComment, useDeleteComment, COMMENT_MAX_LEN } from '@/hooks/useComments'
@@ -94,7 +95,7 @@ export function CommentThread({ coupleId, myId, eventId, profiles, onConflict }:
                       onClick={() => setConfirmId(c.id)}
                       aria-label="내 댓글 삭제"
                     >
-                      <span aria-hidden>🗑</span>
+                      <Icon name="trash" />
                     </button>
                   )
                 ) : null}

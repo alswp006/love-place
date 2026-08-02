@@ -10,9 +10,20 @@
   color: var(--c-text-weak);
 }
 
+/* 이모지를 그냥 두면 OS마다 크기·여백이 달라 '임시로 넣은 것'처럼 보인다.
+   브랜드 원형 배지에 얹어 의도된 요소로 읽히게 한다(기능 아이콘은 SVG 세트로 통일 — ui/Icon). */
 .emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: var(--r-pill);
+  background: var(--pink-100);
+  box-shadow: var(--shadow-raised);
   font-size: var(--fs-h1);
-  margin-bottom: var(--sp-2);
+  line-height: 1;
+  margin-bottom: var(--sp-3);
 }
 
 .title {
