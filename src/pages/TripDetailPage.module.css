@@ -62,6 +62,8 @@
   /* 터치 타깃 ≥44px(HIG) */
   min-height: 44px;
   min-width: 64px;
+  /* 점프 앵커가 된 뒤에도 칩으로 읽혀야 한다 — 링크 기본 밑줄 제거. */
+  text-decoration: none;
 }
 
 .dayOn {
@@ -175,7 +177,8 @@
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
+  /* 시각과 장소 이름이 같은 줄에서 읽히게 위 정렬 — 가운데 정렬이면 시각이 이름 아래로 내려간다. */
+  align-items: flex-start;
   /* 글자가 커지면 순번·시각 옆에 이름이 못 들어간다 — 짜부라뜨리는 대신 줄을 바꾼다. */
   flex-wrap: wrap;
   gap: var(--sp-3);
@@ -189,6 +192,10 @@
   color: var(--c-text-weak);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+  /* 이름 줄(44px 터치 박스)과 같은 높이를 잡아 baseline을 맞춘다. */
+  display: flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 .stopBody {
@@ -357,4 +364,104 @@
 .stopMeta {
   font-size: var(--fs-caption);
   color: var(--c-text-weak);
+}
+
+/* ── Day를 세로로 이어 붙이는 구조(트리플) ─────────────────────────────── */
+
+/* Day 하나 = 제목 + (지도) + 레일 리스트 + 추가 버튼. 섹션 사이를 넉넉히 띄워 경계를 만든다. */
+.daySection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-5);
+  /* 앵커로 점프했을 때 제목이 상단에 딱 붙지 않게 */
+  scroll-margin-top: var(--sp-3);
+}
+
+.dayHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  color: var(--c-text);
+}
+
+.dayHeadNum {
+  font-weight: 700;
+}
+
+.dayHeadDate {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  font-weight: 400;
+}
+
+/* '오늘'은 색이 아니라 글자로도 말한다(§8). */
+.dayHeadToday {
+  font-size: var(--fs-micro);
+  color: var(--c-cta-fg);
+  background: var(--c-cta-bg);
+  border-radius: var(--r-pill);
+  padding: 2px var(--sp-2);
+}
+
+.dayEmpty {
+  margin: 0;
+  padding: var(--sp-3);
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  border: 1px dashed var(--c-border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+/* Day마다 추가 경로 — 하나뿐이면 아래 Day에 담을 때 매번 위로 올라와야 한다. */
+.dayActions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* 메모 = 장소 없는 일정. 번호 대신 점을 달아 스톱의 순서(1·2·3)를 흐리지 않는다. */
+.memoDot {
+  flex-shrink: 0;
+  align-self: start;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin: calc(var(--sp-2) + 0.5rem) 0 0 0.5rem;
+  border-radius: var(--r-pill);
+  background: var(--c-track-mine);
+  /* 레일 위에 올라타야 선이 점을 관통하지 않는다. */
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 3px var(--c-bg);
+}
+
+.memoText {
+  overflow-wrap: break-word;
+  /* 터치 타깃과 정렬을 스톱 이름과 맞춘다. */
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.memoForm {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.memoInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-body);
 }

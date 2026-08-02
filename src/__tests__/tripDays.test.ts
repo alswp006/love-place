@@ -10,7 +10,7 @@ import {
   slotIso,
   nextStopStartMin,
   DEFAULT_FIRST_STOP_MIN,
-  MAX_STOP_START_MIN,
+  MAX_STOP_START_MIN, memosOfDay,
 } from '@/lib/trips/tripDays'
 import { dayKey, formatTime } from '@/lib/calendar/eventDays'
 
@@ -188,5 +188,31 @@ describe('stopCountInTrip', () => {
       { start: kst('2026-07-27', '10:00'), place_id: 'p3' }, // 기간 후
     ]
     expect(stopCountInTrip(events, { start_date: '2026-07-25', end_date: '2026-07-26' })).toBe(2)
+  })
+})
+
+describe('memosOfDay — 장소 없는 일정 = 그날의 메모', () => {
+  const ev = (id: string, start: string, place: string | null) => ({ id, start, place_id: place })
+
+  it('place_id가 없는 그 날 일정만, 시간순으로 준다', () => {
+    const evs = [
+      ev('m2', '2026-07-25T14:00:00+09:00', null),
+      ev('s1', '2026-07-25T09:00:00+09:00', 'p1'),
+      ev('m1', '2026-07-25T08:00:00+09:00', null),
+      ev('m3', '2026-07-26T08:00:00+09:00', null), // 다른 날
+    ]
+    expect(memosOfDay(evs, '2026-07-25').map((e) => e.id)).toEqual(['m1', 'm2'])
+  })
+
+  it('스톱과 메모는 서로 겹치지 않는다 — 같은 날 일정을 둘로 정확히 가른다', () => {
+    const evs = [
+      ev('s1', '2026-07-25T09:00:00+09:00', 'p1'),
+      ev('m1', '2026-07-25T10:00:00+09:00', null),
+    ]
+    const stops = stopsOfDay(evs, '2026-07-25').map((e) => e.id)
+    const memos = memosOfDay(evs, '2026-07-25').map((e) => e.id)
+    expect(stops).toEqual(['s1'])
+    expect(memos).toEqual(['m1'])
+    expect(stops.filter((id) => memos.includes(id))).toEqual([])
   })
 })

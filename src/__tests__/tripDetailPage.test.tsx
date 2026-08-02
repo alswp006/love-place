@@ -111,19 +111,24 @@ function seedTwoStops() {
 describe('TripDetailPage — 여행 Day 계획', () => {
   it('여행 기간에서 Day 슬롯을 도출한다(1박2일 → Day 1·2)', () => {
     renderDetail()
-    const bar = screen.getByRole('group', { name: '여행 날짜 선택' })
-    expect(within(bar).getByText('Day 1')).toBeInTheDocument()
-    expect(within(bar).getByText('Day 2')).toBeInTheDocument()
-    expect(within(bar).queryByText('Day 3')).not.toBeInTheDocument()
+    // Day는 이제 '전환'이 아니라 '이어진 흐름'이다 — 상단 바는 점프 앵커로 바뀌었다(트리플 구조).
+    const nav = screen.getByRole('navigation', { name: '날짜로 이동' })
+    expect(within(nav).getByText('Day 1')).toBeInTheDocument()
+    expect(within(nav).getByText('Day 2')).toBeInTheDocument()
+    expect(within(nav).queryByText('Day 3')).not.toBeInTheDocument()
+    // 각 Day 섹션도 실제로 렌더된다(하나만 보여주던 것에서 바뀜).
+    expect(screen.getByRole('region', { name: /Day 1/ })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /Day 2/ })).toBeInTheDocument()
   })
 
-  it('오늘이 기간에 들면 오늘 Day가 선택된 채로 열린다', () => {
+  it('오늘에 해당하는 Day에 오늘 표시가 붙는다', () => {
+    // Day를 전부 이어 붙이므로 '선택된 Day'라는 개념이 없어졌다 — 대신 오늘을 표시로 알린다.
     renderDetail()
-    const day1 = screen.getByRole('button', { pressed: true })
-    expect(within(day1).getByText('Day 1')).toBeInTheDocument()
+    const today = screen.getByRole('region', { name: /Day 1/ })
+    expect(within(today).getByText('오늘')).toBeInTheDocument()
   })
 
-  it('그 날의 스톱을 시간순으로 보여준다 — 장소 없는 일정은 빼고', () => {
+  it('그 날의 스톱을 시간순으로, 장소 없는 일정은 메모로 보여준다', () => {
     state.places = [{ id: 'p1', name: '칠성조선소' }, { id: 'p2', name: '영금정' }]
     state.events = [
       { id: 'e2', title: '영금정', start: kst('2026-07-25', '14:00'), end: kst('2026-07-25', '15:00'), place_id: 'p2', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
@@ -131,38 +136,45 @@ describe('TripDetailPage — 여행 Day 계획', () => {
       { id: 'e0', title: '휴가 신청', start: kst('2026-07-25', '08:00'), end: kst('2026-07-25', '08:30'), place_id: null, memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
     ]
     renderDetail()
-    const items = screen.getAllByRole('listitem')
-    expect(items.map((li) => li.textContent)).toEqual([
-      expect.stringContaining('칠성조선소'),
-      expect.stringContaining('영금정'),
-    ])
-    expect(screen.queryByText('휴가 신청')).not.toBeInTheDocument()
+    const day1 = screen.getByRole('region', { name: /Day 1/ })
+    const items = within(day1).getAllByRole('listitem')
+    // 스톱이 먼저(시간순), 그 뒤에 메모.
+    expect(items[0]!.textContent).toContain('칠성조선소')
+    expect(items[1]!.textContent).toContain('영금정')
+    // 장소 없는 일정을 숨기던 것을 바꿨다: 그 날 챙길 것이라 여행에서도 보여야 한다.
+    // 이전엔 캘린더에만 적히고 여행을 열면 안 보여서, 정작 필요한 순간에 못 봤다.
+    expect(within(day1).getByText('휴가 신청')).toBeInTheDocument()
   })
 
-  it('Day를 바꾸면 그 날 스톱만 보인다', () => {
+  it('Day마다 그 날 스톱만 들어간다(전환이 아니라 각 섹션에 갈려 렌더)', () => {
     state.places = [{ id: 'p1', name: '칠성조선소' }, { id: 'p3', name: '속초해변' }]
     state.events = [
       { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
       { id: 'e3', title: '속초해변', start: kst('2026-07-26', '09:00'), end: kst('2026-07-26', '10:00'), place_id: 'p3', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
     ]
     renderDetail()
-    expect(screen.getByText('칠성조선소')).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Day 2'))
-    expect(screen.getByText('속초해변')).toBeInTheDocument()
-    expect(screen.queryByText('칠성조선소')).not.toBeInTheDocument()
+    const day1 = screen.getByRole('region', { name: /Day 1/ })
+    const day2 = screen.getByRole('region', { name: /Day 2/ })
+    expect(within(day1).getByText('칠성조선소')).toBeInTheDocument()
+    expect(within(day1).queryByText('속초해변')).toBeNull()
+    expect(within(day2).getByText('속초해변')).toBeInTheDocument()
+    expect(within(day2).queryByText('칠성조선소')).toBeNull()
   })
 
   it('빈 날은 죽은 화면 대신 담기 유도를 보여준다', () => {
     renderDetail()
-    expect(screen.getByText('이 날은 아직 비어 있어요')).toBeInTheDocument()
+    // Day마다 추가 경로가 붙었으므로 안내도 그 자리 기준으로 바뀌었다.
+    expect(screen.getAllByText(/아직 비어 있어요/).length).toBeGreaterThan(0)
   })
 
   it('위시에서 담으면 그 Day·그 장소로 이벤트를 만든다', () => {
     state.places = [{ id: 'p1', name: '칠성조선소', region_label: '속초' }]
     state.wishes = { byPlace: { p1: { userIds: ['u1'], totalPriority: 3, maxPriority: 3 } }, mine: {} }
     renderDetail()
-    fireEvent.click(screen.getByRole('button', { name: /가고싶은 곳에서 담기/ }))
-    fireEvent.click(screen.getByRole('button', { name: /칠성조선소/ }))
+    // 추가 경로가 Day마다 생겼다 — Day 1 섹션 안에서 연다(전역 버튼 하나였던 것에서 바뀜).
+    const day1 = screen.getByRole('region', { name: /Day 1/ })
+    fireEvent.click(within(day1).getByRole('button', { name: '장소 추가' }))
+    fireEvent.click(within(day1).getByRole('button', { name: /칠성조선소/ }))
 
     expect(state.create).toHaveBeenCalledOnce()
     const arg = state.create.mock.calls[0]![0] as { placeId: string; start: string; visibility: string }
@@ -179,7 +191,9 @@ describe('TripDetailPage — 여행 Day 계획', () => {
       { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
     ]
     renderDetail()
-    fireEvent.click(screen.getByRole('button', { name: /가고싶은 곳에서 담기/ }))
+    // 추가 경로가 Day마다 생겼다 — Day 1 섹션 안에서 연다(전역 버튼 하나였던 것에서 바뀜).
+    const day1 = screen.getByRole('region', { name: /Day 1/ })
+    fireEvent.click(within(day1).getByRole('button', { name: '장소 추가' }))
     expect(screen.getByText(/담을 수 있는 가고싶은 곳이 없어요/)).toBeInTheDocument()
   })
 
@@ -304,8 +318,10 @@ describe('TripDetailPage — 여행 Day 계획', () => {
       mine: {},
     }
     renderDetail()
-    fireEvent.click(screen.getByRole('button', { name: /가고싶은 곳에서 담기/ }))
-    fireEvent.click(screen.getByRole('button', { name: /칠성조선소/ }))
+    // 추가 경로가 Day마다 생겼다 — Day 1 섹션 안에서 연다(전역 버튼 하나였던 것에서 바뀜).
+    const day1 = screen.getByRole('region', { name: /Day 1/ })
+    fireEvent.click(within(day1).getByRole('button', { name: '장소 추가' }))
+    fireEvent.click(within(day1).getByRole('button', { name: /칠성조선소/ }))
 
     expect(state.toast).toHaveBeenCalledWith(expect.stringContaining('칠성조선소'))
     // 패널이 닫히지 않아 다음 후보를 바로 담을 수 있다(곳당 2탭 → 1탭).

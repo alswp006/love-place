@@ -81,16 +81,18 @@ test('상세 — Day 슬롯이 기간에서 도출되고 스톱이 시간순으�
   await page.getByRole('link', { name: '속초 1박2일 여행 상세 열기' }).click()
   await expect(page).toHaveURL(/\/trips\/t1$/)
 
-  const dayBar = page.getByRole('group', { name: '여행 날짜 선택' })
-  await expect(dayBar.getByText('Day 1')).toBeVisible()
-  await expect(dayBar.getByText('Day 2')).toBeVisible()
+  // Day는 이제 전환이 아니라 이어진 흐름 — 상단 바는 점프 앵커, 아래에 Day 섹션이 전부 있다.
+  const nav = page.getByRole('navigation', { name: '날짜로 이동' })
+  await expect(nav.getByText('Day 1')).toBeVisible()
+  await expect(nav.getByText('Day 2')).toBeVisible()
 
-  await expect(page.getByText('칠성조선소')).toBeVisible()
-  await expect(page.getByText('09:00')).toBeVisible()
+  const day1 = page.getByRole('region', { name: /Day 1/ })
+  await expect(day1.getByText('칠성조선소')).toBeVisible()
+  await expect(day1.getByText('09:00')).toBeVisible()
 
-  // Day 2로 넘기면 비어 있고, 죽은 화면 대신 담기 유도가 뜬다(§7).
-  await dayBar.getByText('Day 2').click()
-  await expect(page.getByText('이 날은 아직 비어 있어요')).toBeVisible()
+  // 비어 있는 Day도 죽은 화면이 아니다(§7) — 같은 화면에서 바로 보인다.
+  const day2 = page.getByRole('region', { name: /Day 2/ })
+  await expect(day2.getByText(/아직 비어 있어요/)).toBeVisible()
 
   const s = shot('trip-detail-empty-day')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
@@ -108,9 +110,11 @@ test('상세 — 담기 패널은 이미 담긴 곳을 후보에서 뺀다', asy
     ],
   })
   await page.goto('/trips/t1')
-  await page.getByRole('button', { name: /가고싶은 곳에서 담기/ }).click()
+  // 추가 경로가 Day마다 생겼다 — Day 1에서 연다.
+  const d1 = page.getByRole('region', { name: /Day 1/ })
+  await d1.getByRole('button', { name: '장소 추가' }).click()
   // Day 1에는 p1·p2가 이미 담겨 있으므로 후보가 비어야 한다.
-  await expect(page.getByText(/담을 수 있는 가고싶은 곳이 없어요/)).toBeVisible()
+  await expect(d1.getByText(/담을 수 있는 가고싶은 곳이 없어요/)).toBeVisible()
 })
 
 test('상세 — 거리 칩 + 그날 동선 미니 지도', async ({ page }) => {
@@ -193,6 +197,41 @@ test('상세 — 스톱이 세로 레일 위에 놓이고 구간 칩이 레일�
   expect(chipBox.x).toBeLessThan(cardBox.x)
   // 터치 타깃은 유지(ux §1).
   expect(chipBox.height).toBeGreaterThanOrEqual(44)
+})
+
+test('상세 — 장소 없는 일정은 그 날 메모로 뜨고, 누가 담았는지 보인다', async ({ page }) => {
+  const USER_B = '00000000-0000-4000-8000-000000000a02'
+  await seedAuthedMap(page, {
+    trips: TRIPS,
+    places: PLACES,
+    profiles: [
+      { id: USER_A, display_name: '나', color: '#3b6db5', avatar_url: null, version: 1 },
+      { id: USER_B, display_name: '지민', color: '#e0568a', avatar_url: null, version: 1 },
+    ],
+    events: [
+      ...EVENTS,
+      {
+        id: 'm1', title: '멀미약 챙기기',
+        start: `${FUTURE_START}T00:00:00+09:00`, end: `${FUTURE_START}T23:59:00+09:00`,
+        is_all_day: true, time_zone: 'Asia/Seoul', visibility: 'PERSONAL', participants: 'ME',
+        owner_id: USER_B, place_id: null, memo: null, recurrence_rule: null, reminders: [], version: 1,
+      },
+    ],
+  })
+  await page.goto('/trips/t1')
+  const day1 = page.getByRole('region', { name: /Day 1/ })
+
+  // 장소 없는 일정 = 그 날 챙길 것. 스톱 순서를 흐리지 않게 번호 대신 점으로 붙는다.
+  await expect(day1.getByText('멀미약 챙기기')).toBeVisible()
+  // 각자의 메모 — 누가 남겼는지 아바타 + 트랙이 색 아닌 라벨로 말한다(§8).
+  await expect(day1.getByLabel('지민 메모')).toBeVisible()
+  await expect(day1.getByText(/상대/)).toBeVisible()
+  // 스톱에도 출처가 붙는다(누가 담았는지).
+  await expect(day1.getByLabel('나 담음')).toHaveCount(2)
+
+  // 메모 추가 경로도 Day 안에 있다.
+  await day1.getByRole('button', { name: '메모 추가' }).click()
+  await expect(day1.getByLabel(/메모 입력/)).toBeVisible()
 })
 
 test('상세 — 다크 모드', async ({ page }) => {

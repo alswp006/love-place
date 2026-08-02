@@ -96,6 +96,26 @@ export function stopsOfDay<T extends StopLike>(
     .sort((a, b) => a.start.localeCompare(b.start))
 }
 
+/**
+ * 그 날의 메모 — 장소가 붙지 않은 일정(place_id === null).
+ *
+ * 왜 이게 메모인가: 여행 Day = 그 날짜다(CLAUDE.md §7 도출 원칙). 그 날에 있는 일정 중
+ * 장소가 붙은 것은 '스톱', 안 붙은 것은 '그날 챙길 것' — 즉 메모다. trip_id 같은 연결 컬럼을
+ * 만들지 않고도 둘을 가를 수 있다.
+ *
+ * 이전에는 장소 없는 일정을 여행 화면에서 그냥 숨겼다. 그러면 '숙소 예약 확인' 같은 걸
+ * 캘린더에 적어둬도 여행을 열면 안 보여서, 정작 필요한 순간에 못 봤다.
+ */
+export function memosOfDay<T extends StopLike>(
+  events: readonly T[],
+  day: string,
+  tz: string = DISPLAY_TZ,
+): T[] {
+  return events
+    .filter((e) => e.place_id === null && dayKey(e.start, tz) === day)
+    .sort((a, b) => a.start.localeCompare(b.start))
+}
+
 // ── 새 스톱을 담을 시각 ───────────────────────────────────────────────────────
 // 표시 tz 고정(+09:00) — coursePlan과 같은 규칙이라 AI 코스로 만든 이벤트와 손으로 담은 이벤트가 같은 축에 선다.
 
