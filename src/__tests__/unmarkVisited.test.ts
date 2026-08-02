@@ -63,6 +63,7 @@ const aVisit = (over: Partial<VisitRow> = {}): VisitRow => ({
   trip_id: null,
   visit_date: null,
   rating: null,
+  created_by: 'me',
   memo: null,
   version: 1,
   ...over,

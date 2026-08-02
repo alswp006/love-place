@@ -25,7 +25,7 @@ type LegacyTrashAlias = 'place' | 'event'
 
 export type OutboxKind =
   | 'wish.setPriority' | 'place.save'
-  | 'visit.add' | 'visit.remove' | 'reaction.toggle' | 'wish.toggle'
+  | 'visit.add' | 'visit.remove' | 'visit.review' | 'reaction.toggle' | 'wish.toggle'
   | 'event.create' | 'event.update'
   | `${TrashTable}.delete` | `${TrashTable}.restore` // = 6×2(place/event/visit/photo/trip/itinerary delete·restore)
   | `${LegacyTrashAlias}.delete` | `${LegacyTrashAlias}.restore` // 레거시 단수(place/event) — 매핑 후 재생
@@ -35,6 +35,10 @@ type VersionedTargetPayload = { id: string; expectedVersion: number; myId: strin
 type SavePayload = { coupleId: string; hit: KakaoPlaceHit; uid: string }
 type VisitAddPayload = { coupleId: string; placeId: string; visitDate: string; myId: string }
 type VisitRemovePayload = { placeId: string; myId: string; coupleId: string }
+type VisitReviewPayload = {
+  coupleId: string; placeId: string; tripId: string | null; visitDate: string
+  rating: number | null; memo: string | null; myId: string
+}
 type ReactionTogglePayload = { coupleId: string; placeId: string; myId: string }
 type WishTogglePayload = { coupleId: string; placeId: string; myId: string }
 type EventCreatePayload = { coupleId: string; myId: string; event: NewEvent }
@@ -84,6 +88,26 @@ export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
         if (res.status === 'conflict') conflicted = true
       }
       return conflicted ? 'conflict' : 'ok'
+    }
+    case 'visit.review': {
+      const p = entry.payload as VisitReviewPayload
+      // 재생 안전: flush 시점에 내 방문행을 다시 찾는다(있으면 update, 없으면 insert).
+      const { data: mine } = await supabase
+        .from('visits').select('id, version').eq('couple_id', p.coupleId).eq('place_id', p.placeId)
+        .eq('created_by', p.myId).is('deleted_at', null).limit(1)
+      const row = mine?.[0] as { id: string; version: number } | undefined
+      if (row) {
+        const r = await versionedUpdate('visits', row.id, row.version, {
+          rating: p.rating, memo: p.memo, trip_id: p.tripId, updated_by: p.myId,
+        })
+        return r.status
+      }
+      const { error } = await supabase.from('visits').insert({
+        couple_id: p.coupleId, place_id: p.placeId, trip_id: p.tripId, visit_date: p.visitDate,
+        rating: p.rating, memo: p.memo, created_by: p.myId, updated_by: p.myId,
+      })
+      if (error) throw new Error(error.message)
+      return 'ok'
     }
     case 'reaction.toggle': {
       const p = entry.payload as ReactionTogglePayload

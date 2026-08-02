@@ -9,6 +9,7 @@ import { useWishes } from '@/hooks/useWishes'
 import { useEventMutations } from '@/hooks/useEventMutations'
 import { useSoftDeleteWithUndo } from '@/hooks/useTrash'
 import { useProfiles } from '@/hooks/useProfiles'
+import { useVisits, useSaveVisitReview, type VisitRow } from '@/hooks/useVisits'
 import { useConflict } from '@/lib/sync/useConflict'
 import { useToast } from '@/components/common/ToastProvider'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
@@ -38,9 +39,12 @@ export default function TripDetailPage() {
   const { data: places } = usePlaces(coupleId)
   const { data: wishes } = useWishes(coupleId, myId)
   const { data: profiles } = useProfiles(coupleId)
+  const { data: visits } = useVisits(coupleId)
   const conflict = useConflict()
   const toast = useToast()
   const { create } = useEventMutations(coupleId, myId, conflict.flag)
+  // 리뷰 저장 — 내 visits 행의 rating/memo를 version 조건부로 고친다(없으면 이 여행으로 insert).
+  const saveReview = useSaveVisitReview(coupleId, myId, conflict.flag)
   // 스톱 빼기 = events soft-delete. 캘린더·방문·여행·장소가 전부 쓰는 공용 훅으로 통일해
   // "1탭 확인 → 2탭 삭제 + 되돌리기 토스트" 계약을 화면 간에 맞춘다(이전엔 여기만 1탭 즉시 삭제였다).
   const { deleteWithUndo, isPending: removing } = useSoftDeleteWithUndo(
@@ -62,6 +66,17 @@ export default function TripDetailPage() {
 
   // 찜한 장소 id 집합 — Day 섹션이 '이 날에 아직 없는 후보'를 고를 때 쓴다.
   // 위시는 여행 전체에서 한 번만 읽고, Day별 걸러내기는 각 섹션이 한다.
+  // 장소별 방문행 — 리뷰는 '각자의 것'이라 한 장소에 둘의 행이 함께 온다.
+  const visitsByPlace = useMemo(() => {
+    const m = new Map<string, VisitRow[]>()
+    for (const v of visits ?? []) {
+      const list = m.get(v.place_id)
+      if (list) list.push(v)
+      else m.set(v.place_id, [v])
+    }
+    return m
+  }, [visits])
+
   const wishedIds = useMemo(
     () => new Set(Object.keys(wishes?.byPlace ?? {})),
     [wishes],
@@ -132,6 +147,8 @@ export default function TripDetailPage() {
             dayKey={d.key}
             dayIndex={d.index}
             isToday={d.key === today}
+            isPast={d.key < today}
+            visitsByPlace={visitsByPlace}
             events={events ?? []}
             places={places ?? []}
             placeById={placeById}
@@ -139,7 +156,18 @@ export default function TripDetailPage() {
             myId={myId}
             coupleId={coupleId}
             profiles={profiles ?? {}}
-            busy={create.isPending || removing}
+            busy={create.isPending || removing || saveReview.isPending}
+            onSaveReview={(v) =>
+              saveReview.mutate(
+                { ...v, tripId: trip.id, visitDate: d.key },
+                {
+                  onSuccess: (r) => {
+                    if (r === 'ok') toast.show('리뷰를 남겼어요.')
+                  },
+                  onError: (err) => toast.show(err.message),
+                },
+              )
+            }
             onCreate={(e, done, fail) =>
               create.mutate(e, {
                 onSuccess: () => {

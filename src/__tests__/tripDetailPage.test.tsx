@@ -18,7 +18,9 @@ const state = vi.hoisted(() => ({
   wishes: { byPlace: {} as Record<string, unknown>, mine: {} },
   // directions 프록시 결과 — undefined = 미배포/실패(칩 없음이 기본 경로).
   legResults: undefined as { distanceMeters: number | null; polyline: null; degraded: boolean }[] | undefined,
+  visits: [] as unknown[],
   create: vi.fn(),
+  saveReview: vi.fn(),
   remove: vi.fn(),
   openDirections: vi.fn(),
   toast: vi.fn(),
@@ -41,6 +43,11 @@ vi.mock('@/hooks/useEventMutations', () => ({
 // 스톱 빼기는 공용 soft-delete+Undo 훅으로 통일됐다(캘린더·장소·여행과 같은 계약).
 vi.mock('@/hooks/useTrash', () => ({
   useSoftDeleteWithUndo: () => ({ deleteWithUndo: state.remove, isPending: false }),
+}))
+// 리뷰는 visits 행의 rating/memo다(스키마 변경 없음) — 훅을 목으로 갈아 저장 호출만 검증한다.
+vi.mock('@/hooks/useVisits', () => ({
+  useVisits: () => ({ data: state.visits }),
+  useSaveVisitReview: () => ({ mutate: state.saveReview, isPending: false }),
 }))
 vi.mock('@/hooks/useProfiles', () => ({
   useProfiles: () => ({
@@ -85,7 +92,9 @@ beforeEach(() => {
   state.places = []
   state.wishes = { byPlace: {}, mine: {} }
   state.legResults = undefined
+  state.visits = []
   state.create.mockReset()
+  state.saveReview.mockReset()
   state.remove.mockReset()
   state.openDirections.mockReset()
   state.toast.mockReset()
@@ -373,5 +382,73 @@ describe('TripDetailPage — 여행 Day 계획', () => {
       'href',
       '/trips/t1/recap',
     )
+  })
+
+  // ── 리뷰(다녀온 뒤) ──────────────────────────────────────────────
+  // 리뷰는 새 테이블이 아니라 내 visits 행의 rating/memo다(CLAUDE.md §7 — 스키마 안 늘림).
+
+  it('아직 안 간 날에는 리뷰를 묻지 않는다', () => {
+    seedTwoStops()
+    renderDetail()
+    // 오늘(2026-07-25)이 Day 1 — 지나지 않았으니 빈칸만 늘리는 리뷰 칸을 띄우지 않는다.
+    expect(screen.queryByRole('button', { name: /리뷰 남기기/ })).toBeNull()
+  })
+
+  it('지난 날의 스톱에는 별점 + 한 줄 리뷰를 남길 수 있다', () => {
+    state.trips = [{ ...TRIP, start_date: '2026-07-20', end_date: '2026-07-20' }]
+    state.places = [{ id: 'p1', name: '칠성조선소' }]
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-20', '09:00'), end: kst('2026-07-20', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
+    ]
+    renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: /리뷰 남기기/ }))
+    // 별점은 색·모양만으로 말하지 않는다(§8) — 점수 라벨이 붙는다.
+    fireEvent.click(screen.getByRole('radio', { name: '5점 중 4점' }))
+    fireEvent.change(screen.getByLabelText(/리뷰 한 줄/), { target: { value: '커피가 좋았다' } })
+    fireEvent.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(state.saveReview).toHaveBeenCalledTimes(1)
+    expect(state.saveReview.mock.calls[0]![0]).toMatchObject({
+      placeId: 'p1',
+      rating: 4,
+      memo: '커피가 좋았다',
+      tripId: 't1',
+      visitDate: '2026-07-20',
+    })
+  })
+
+  it('상대 리뷰는 읽기 전용 — 내 칸이 상대 글을 덮지 않는다', () => {
+    state.trips = [{ ...TRIP, start_date: '2026-07-20', end_date: '2026-07-20' }]
+    state.places = [{ id: 'p1', name: '칠성조선소' }]
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-20', '09:00'), end: kst('2026-07-20', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
+    ]
+    // visits에 유니크 제약이 없어 둘이 각각 자기 행을 갖는다(created_by로 갈림).
+    state.visits = [
+      { id: 'v2', place_id: 'p1', trip_id: 't1', visit_date: '2026-07-20', rating: 5, memo: '또 가고 싶다', version: 1, created_by: 'u2' },
+    ]
+    renderDetail()
+    expect(screen.getByText('또 가고 싶다')).toBeInTheDocument()
+    expect(screen.getByLabelText('지민 리뷰')).toBeInTheDocument()
+    // 상대 것이 있어도 내 리뷰 칸은 여전히 비어 있다(덮어쓰기 아님).
+    expect(screen.getByRole('button', { name: /리뷰 남기기/ })).toBeInTheDocument()
+  })
+
+  it('내 리뷰가 있으면 보여주고 고칠 수 있다', () => {
+    state.trips = [{ ...TRIP, start_date: '2026-07-20', end_date: '2026-07-20' }]
+    state.places = [{ id: 'p1', name: '칠성조선소' }]
+    state.events = [
+      { id: 'e1', title: '칠성조선소', start: kst('2026-07-20', '09:00'), end: kst('2026-07-20', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
+    ]
+    state.visits = [
+      { id: 'v1', place_id: 'p1', trip_id: 't1', visit_date: '2026-07-20', rating: 3, memo: '무난', version: 1, created_by: 'u1' },
+    ]
+    renderDetail()
+    expect(screen.getByText('무난')).toBeInTheDocument()
+    expect(screen.getByText('3/5')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '고치기' }))
+    // 기존 값이 폼에 들어와 있어야 한다 — 지우고 다시 쓰게 만들지 않는다.
+    expect(screen.getByLabelText(/리뷰 한 줄/)).toHaveValue('무난')
+    expect(screen.getByRole('radio', { name: '5점 중 3점' })).toHaveAttribute('aria-checked', 'true')
   })
 })

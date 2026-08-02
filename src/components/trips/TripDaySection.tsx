@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Icon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
+import { StopReview } from '@/components/trips/StopReview'
 import { NaverMap } from '@/components/map/NaverMap'
 import { isNaverMapConfigured } from '@/lib/naver/loadNaverMaps'
 import { useDirectionLegs } from '@/hooks/useDirectionLegs'
@@ -17,6 +18,7 @@ import type { EventRow } from '@/hooks/useEvents'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { ProfileMap } from '@/hooks/useProfiles'
 import type { NewEvent } from '@/hooks/useEventMutations'
+import type { VisitRow } from '@/hooks/useVisits'
 import styles from '@/pages/TripDetailPage.module.css'
 
 const STOP_LEN_MIN = 60
@@ -40,8 +42,13 @@ type Props = {
   coupleId: string | null
   profiles: ProfileMap
   busy: boolean
+  /** 지난 날인가 — 리뷰는 다녀온 뒤에만 묻는다(가기 전에 물으면 빈칸만 늘어난다). */
+  isPast: boolean
+  /** 장소별 살아있는 방문행(둘 것 모두) — 리뷰는 여기 rating/memo다(§7 스키마 안 늘림). */
+  visitsByPlace: ReadonlyMap<string, VisitRow[]>
   onCreate: (e: NewEvent, done: () => void, fail: (m: string) => void) => void
   onRemove: (id: string, version: number) => void
+  onSaveReview: (v: { placeId: string; rating: number | null; memo: string | null }) => void
 }
 
 export function TripDaySection({
@@ -57,8 +64,11 @@ export function TripDaySection({
   coupleId,
   profiles,
   busy,
+  isPast,
+  visitsByPlace,
   onCreate,
   onRemove,
+  onSaveReview,
 }: Props) {
   const [adding, setAdding] = useState(false)
   const [memoOpen, setMemoOpen] = useState(false)
@@ -255,6 +265,20 @@ export function TripDaySection({
                         <Icon name="close" />
                       </button>
                     )
+                  ) : null}
+
+                  {/* 다녀온 날에만 리뷰를 묻는다. 각자 자기 별점·한 줄을 남긴다.
+                      시각 열 옆이 아니라 카드 아래 전폭 — 좁은 칸에 두면 별 5개가 두 줄로 접힌다. */}
+                  {isPast && s.place_id ? (
+                    <StopReview
+                      placeId={s.place_id}
+                      placeName={name}
+                      visits={visitsByPlace.get(s.place_id) ?? []}
+                      myId={myId}
+                      profiles={profiles}
+                      busy={busy}
+                      onSave={onSaveReview}
+                    />
                   ) : null}
                 </div>
 

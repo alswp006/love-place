@@ -234,6 +234,62 @@ test('상세 — 장소 없는 일정은 그 날 메모로 뜨고, 누가 담았
   await expect(day1.getByLabel(/메모 입력/)).toBeVisible()
 })
 
+test('상세 — 지난 날의 스톱에 리뷰를 남긴다(각자 자기 별점·한 줄)', async ({ page }) => {
+  const USER_B = '00000000-0000-4000-8000-000000000a02'
+  const PAST = '2020-05-01'
+  const pastTrip = [{ id: 't3', title: '지난 속초', start_date: PAST, end_date: PAST, region_code: null, version: 1 }]
+  const pastEvents = [{
+    id: 'pe1', title: '칠성조선소',
+    start: `${PAST}T09:00:00+09:00`, end: `${PAST}T10:00:00+09:00`,
+    is_all_day: false, time_zone: 'Asia/Seoul', visibility: 'SHARED', participants: 'BOTH',
+    owner_id: USER_A, place_id: 'p1', memo: null, recurrence_rule: null, reminders: [], version: 1,
+  }]
+  await seedAuthedMap(page, {
+    trips: pastTrip,
+    places: PLACES,
+    events: pastEvents,
+    profiles: [
+      { id: USER_A, display_name: '나', color: '#3b6db5', avatar_url: null, version: 1 },
+      { id: USER_B, display_name: '지민', color: '#e0568a', avatar_url: null, version: 1 },
+    ],
+    // 상대가 이미 남긴 리뷰 — 내 칸과 별개 행이다(visits에 유니크 제약 없음).
+    visits: [{
+      id: 'v2', place_id: 'p1', trip_id: 't3', visit_date: PAST,
+      rating: 5, memo: '또 가고 싶다', version: 1, created_by: USER_B,
+    }],
+  })
+  // 저장 POST 본문을 가로채 실제로 나가는 값을 본다(페이지→컴포넌트 배선 회귀).
+  const posted: Record<string, unknown>[] = []
+  await page.route('**/e2e.supabase.co/rest/v1/visits**', async (route) => {
+    if (route.request().method() === 'POST') {
+      posted.push(JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>)
+      return route.fulfill({ status: 201, contentType: 'application/json', body: '[]' })
+    }
+    // 저장 전 '내 방문행 찾기' 조회 — 스텁이 필터를 무시하면 상대 행을 내 것으로 잘못 집어
+    // insert 대신 update로 새기 때문에, created_by 필터만은 실제로 지켜준다.
+    const url = route.request().url()
+    const rows = url.includes(`created_by=eq.${USER_A}`)
+      ? []
+      : [{ id: 'v2', place_id: 'p1', trip_id: 't3', visit_date: PAST, rating: 5, memo: '또 가고 싶다', version: 1, created_by: USER_B }]
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) })
+  })
+  await page.goto('/trips/t3')
+
+  // 상대 리뷰는 읽기 전용으로 먼저 보인다 — 별점은 숫자로도 말한다(§8).
+  await expect(page.getByText('또 가고 싶다')).toBeVisible()
+  await expect(page.getByText('5/5')).toBeVisible()
+
+  const cta = page.getByRole('button', { name: /리뷰 남기기/ })
+  expect((await cta.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  await cta.click()
+  await page.getByRole('radio', { name: '5점 중 4점' }).click()
+  await page.getByLabel(/리뷰 한 줄/).fill('커피가 좋았다')
+  await page.getByRole('button', { name: '저장' }).click()
+
+  await expect.poll(() => posted.length).toBe(1)
+  expect(posted[0]).toMatchObject({ place_id: 'p1', trip_id: 't3', rating: 4, memo: '커피가 좋았다', created_by: USER_A })
+})
+
 test('상세 — 다크 모드', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await seedAuthedMap(page, { trips: TRIPS, events: EVENTS, places: PLACES })

@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { dayKey } from '@/lib/calendar/eventDays'
-import { softDelete, restore } from '@/lib/sync/versionedUpdate'
+import { softDelete, restore, versionedUpdate } from '@/lib/sync/versionedUpdate'
 import { useOfflineQueue } from '@/state/OfflineQueueProvider'
 import { useToast } from '@/hooks/useToast'
 
@@ -16,6 +16,8 @@ export type VisitRow = {
   rating: number | null
   memo: string | null
   version: number
+  // 리뷰는 '각자의 것' — 같은 장소에 둘이 각각 행을 남긴다(visits에 유니크 제약 없음).
+  created_by: string
 }
 
 export function useVisits(coupleId: string | null) {
@@ -28,7 +30,7 @@ export function useVisits(coupleId: string | null) {
       if (!coupleId) return []
       const { data, error } = await supabase
         .from('visits')
-        .select('id, place_id, trip_id, visit_date, rating, memo, version')
+        .select('id, place_id, trip_id, visit_date, rating, memo, version, created_by')
         .eq('couple_id', coupleId)
         .is('deleted_at', null)
         .order('visit_date', { ascending: false })
@@ -172,6 +174,74 @@ export function useUnmarkVisited(
         },
         6000,
       )
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['visits', coupleId] })
+    },
+  })
+}
+
+// 장소 리뷰 저장 — "갔다오고 나서 남기는 별점 + 한 줄".
+// 스키마 변경 없음: 리뷰 = 내 visits 행의 rating/memo(§7 상태는 도출). 둘이 각각 자기 행을 갖는다.
+// 이미 내 방문행이 있으면 version 조건부 update(충돌 감지), 없으면 그 여행·그 장소로 insert.
+export function useSaveVisitReview(
+  coupleId: string | null,
+  myId: string | null,
+  onConflict: () => void,
+) {
+  const queryClient = useQueryClient()
+  const { enqueue } = useOfflineQueue()
+  return useMutation<
+    'ok' | 'conflict',
+    Error,
+    { placeId: string; tripId: string | null; visitDate: string; rating: number | null; memo: string | null }
+  >({
+    mutationFn: async ({ placeId, tripId, visitDate, rating, memo }) => {
+      if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
+      // 오프라인: 재연결 시점에 내 행을 다시 찾아 반영한다(스냅샷 의존 금지). 같은 장소는 마지막 입력 1건.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await enqueue(
+          'visit.review',
+          { coupleId, placeId, tripId, visitDate, rating, memo, myId },
+          `visit.review:${placeId}`,
+        )
+        return 'ok'
+      }
+      const { data: mine, error: selErr } = await supabase
+        .from('visits')
+        .select('id, version')
+        .eq('couple_id', coupleId)
+        .eq('place_id', placeId)
+        .eq('created_by', myId)
+        .is('deleted_at', null)
+        .limit(1)
+      if (selErr) throw new Error(selErr.message)
+      const existing = (mine ?? [])[0] as { id: string; version: number } | undefined
+      if (existing) {
+        const r = await versionedUpdate('visits', existing.id, existing.version, {
+          rating,
+          memo,
+          trip_id: tripId,
+          updated_by: myId,
+        })
+        if (r.status === 'conflict') {
+          onConflict()
+          return 'conflict'
+        }
+        return 'ok'
+      }
+      const { error } = await supabase.from('visits').insert({
+        couple_id: coupleId,
+        place_id: placeId,
+        trip_id: tripId,
+        visit_date: visitDate,
+        rating,
+        memo,
+        created_by: myId,
+        updated_by: myId,
+      })
+      if (error) throw new Error(error.message)
+      return 'ok'
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['visits', coupleId] })
