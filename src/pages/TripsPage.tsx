@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { Icon } from '@/components/ui/Icon'
 import { Link } from 'react-router-dom'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -96,16 +97,25 @@ export default function TripsPage() {
 
   return (
     <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
-      <div className={styles.actions}>
-        <Button
-          variant={formOpen ? 'ghost' : 'primary'}
-          onClick={() => setFormOpen((v) => !v)}
-          aria-expanded={formOpen}
-          aria-controls="trip-create-form"
-        >
-          {formOpen ? '취소' : '+ 새 여행'}
-        </Button>
-      </div>
+      {/* 만들기는 이 화면의 주 행동이라 우상단 작은 버튼이 아니라 카드로 올린다(트리플 구조).
+          여행이 없을 땐 특히 여기가 유일한 출발점이다. */}
+      <button
+        type="button"
+        className={styles.createCard}
+        onClick={() => setFormOpen((v) => !v)}
+        aria-expanded={formOpen}
+        aria-controls="trip-create-form"
+      >
+        <span className={styles.createIcon} aria-hidden>
+          <Icon name={formOpen ? 'close' : 'plus'} />
+        </span>
+        <span className={styles.createText}>
+          <span className={styles.createTitle}>{formOpen ? '취소' : '여행 일정 만들기'}</span>
+          <span className={styles.createHint}>
+            {formOpen ? '만들지 않고 닫아요' : '날짜를 정하면 그날그날 갈 곳을 담아둘 수 있어요.'}
+          </span>
+        </span>
+      </button>
 
       {formOpen ? (
         <form id="trip-create-form" className={styles.form} onSubmit={onCreate} aria-label="여행 만들기">
@@ -180,7 +190,25 @@ export default function TripsPage() {
           </div>
 
           {view === 'trip' ? (
-            <ul className={styles.list}>{list.map(renderTrip)}</ul>
+            // 다가오는 것과 끝난 것은 성격이 다르다 — 섞어 두면 '지금 뭘 준비해야 하는지'가 안 보인다.
+            // sortTripsForList가 이미 예정→지난 순으로 주므로 경계에서만 나눈다(정렬 규칙 재구현 금지).
+            (() => {
+              const upcoming = list.filter((t) => tripPhase(t, today) !== 'PAST')
+              const past = list.filter((t) => tripPhase(t, today) === 'PAST')
+              return (
+                <>
+                  {upcoming.length > 0 ? (
+                    <ul className={styles.list}>{upcoming.map(renderTrip)}</ul>
+                  ) : null}
+                  {past.length > 0 ? (
+                    <>
+                      <h2 className={styles.sectionTitle}>지난 여행</h2>
+                      <ul className={styles.list}>{past.map(renderTrip)}</ul>
+                    </>
+                  ) : null}
+                </>
+              )
+            })()
           ) : (
             groupTripsByRegion(list).map((g) => (
               <div key={g.regionKey} className={styles.regionGroup}>

@@ -271,7 +271,12 @@ export default function TripDetailPage() {
               ? placeById.get(stops.find((x) => x.id === leg.toId)?.place_id ?? '')
               : undefined
             return (
-              <li key={s.id}>
+              <li key={s.id} className={styles.item}>
+                {/* 순번은 카드 밖 세로 레일 위에 놓는다(트리플 구조) — 카드 안에 있으면
+                    '순서 있는 하루'의 축이 안 보인다. 지도 마커의 숫자와 같은 값이다. */}
+                <span className={styles.order} aria-hidden>
+                  {idx + 1}
+                </span>
                 <div
                   className={
                     s.place_id && s.place_id === focusedPlaceId
@@ -279,10 +284,6 @@ export default function TripDetailPage() {
                       : styles.stop
                   }
                 >
-                  {/* 순번 — 지도 마커의 숫자와 같은 값. "순서 있는 하루"가 리스트에서도 읽힌다. */}
-                  <span className={styles.order} aria-hidden>
-                    {idx + 1}
-                  </span>
                   <span className={styles.time}>{formatTime(s.start)}</span>
                   <span className={styles.stopBody}>
                     {/* 시각 편집은 캘린더가 정본(여기서 스톱을 따로 저장하지 않으므로).
@@ -358,6 +359,7 @@ export default function TripDetailPage() {
                   <button
                     type="button"
                     className={styles.legChip}
+                    data-leg
                     onClick={() =>
                       openDirections({
                         lat: leg.to.lat,
@@ -367,8 +369,7 @@ export default function TripDetailPage() {
                     }
                     aria-label={`${name}에서 ${nextPlace.name}까지 ${dist} — 길찾기 열기`}
                   >
-                    <span className={styles.legLine} aria-hidden />
-                    <span className={styles.legText}>↳ {dist} · 길찾기</span>
+                    <span className={styles.legText}>{dist} · 길찾기</span>
                   </button>
                 ) : null}
               </li>

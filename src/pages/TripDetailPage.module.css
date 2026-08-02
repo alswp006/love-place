@@ -95,6 +95,8 @@
   border: 1px solid var(--c-border);
 }
 
+/* 트리플식 세로 타임라인 — 왼쪽에 연속 레일을 깔고 순번 배지가 그 위에 얹힌다.
+   배지를 카드 안에 두면 '순서 있는 하루'의 축이 안 보인다(카드마다 따로 노는 숫자가 됨). */
 .stops {
   list-style: none;
   margin: 0;
@@ -102,31 +104,67 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
+  position: relative;
 }
 
-/* 구간 칩 — 스톱 사이. 색이 아니라 텍스트(거리 + '길찾기')로 뜻을 말한다(§8). */
+/* 레일 — 첫 배지 중심에서 마지막 카드 직전까지. 배지·칩이 불투명 배경이라 선이 그 뒤로 지나간다. */
+.stops::before {
+  content: '';
+  position: absolute;
+  left: calc(0.85rem - 1px);
+  top: 1.4rem;
+  bottom: 1.4rem;
+  width: 2px;
+  background: var(--c-border);
+  border-radius: 1px;
+}
+
+/* 한 스톱 = [레일 배지][카드] + 아래 구간 칩. 그리드로 두면 칩이 레일까지 걸쳐
+   '무엇과 무엇 사이인지'가 위치로 읽힌다(트리플). 칩이 카드 옆에 붙지 않게 행을 나눈다. */
+.item {
+  display: grid;
+  grid-template-columns: 1.7rem 1fr;
+  column-gap: var(--sp-3);
+  row-gap: var(--sp-2);
+  align-items: start;
+  position: relative;
+}
+
+.item > .order {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.item > .stop {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.item > .legChip {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: start;
+}
+
+/* 구간 칩 — 레일에 걸치는 알약(트리플). 전폭 투명 버튼이던 것을 좁혀,
+   '무엇과 무엇 사이인지'가 위치로 읽히게 한다. 색이 아니라 텍스트(거리 + '길찾기')로 뜻을 말한다(§8). */
 .legChip {
-  display: flex;
+  align-self: flex-start;
+  display: inline-flex;
   align-items: center;
-  gap: var(--sp-2);
-  width: 100%;
-  border: none;
-  background: transparent;
+  gap: var(--sp-1);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
   color: var(--c-text-weak);
+  border-radius: var(--r-pill);
   font-size: var(--fs-caption);
   cursor: pointer;
   padding: 0 var(--sp-3);
-  /* 터치 타깃 ≥44px(HIG) */
+  /* 터치 타깃 ≥44px(HIG) — e2e가 실제로 잰다. */
   min-height: 44px;
   text-align: left;
-}
-
-.legLine {
-  width: 2px;
-  align-self: stretch;
-  margin: 4px 0 4px 18px;
-  background: var(--c-border);
-  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .legText {
@@ -134,6 +172,8 @@
 }
 
 .stop {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   /* 글자가 커지면 순번·시각 옆에 이름이 못 들어간다 — 짜부라뜨리는 대신 줄을 바꾼다. */
@@ -292,14 +332,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
+  /* min-*로 둔다 — 고정 width/height는 글자 200%에서 숫자가 알약 밖으로 나간다(§4). */
+  min-width: 1.7rem;
+  min-height: 1.7rem;
+  padding: 0 0.3em;
+  margin-top: var(--sp-2);
+  border-radius: var(--r-pill);
   background: var(--c-brand);
   color: #fff;
   font-size: var(--fs-caption);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  /* 레일 위에 올라타야 선이 배지를 관통하지 않는다. */
+  position: relative;
+  z-index: 1;
 }
 
 /* 지도에서 고른 스톱 강조 — 테두리로(색만 쓰지 않게 배경도 함께 바뀐다). */

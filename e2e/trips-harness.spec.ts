@@ -153,6 +153,48 @@ test('상세 — 길찾기 프록시가 죽어도 목록은 그대로(칩만 사
   await expect(page.getByText(/길찾기/)).toHaveCount(0)
 })
 
+test('목록 — 만들기 CTA 카드 + 지난 여행 섹션(트리플 구조)', async ({ page }) => {
+  await seedAuthedMap(page, { trips: TRIPS, events: EVENTS })
+  await page.goto('/trips')
+
+  // 만들기는 이 화면의 주 행동 — 우상단 작은 버튼이 아니라 카드로 올라와 있다.
+  const cta = page.getByRole('button', { name: /여행 일정 만들기/ })
+  await expect(cta).toBeVisible()
+  expect((await cta.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+
+  // 예정과 지난 것을 섞지 않는다 — 경계에 섹션 제목이 선다.
+  await expect(page.getByRole('heading', { name: '지난 여행' })).toBeVisible()
+
+  // 카드 상태 칩은 계속 색이 아니라 텍스트로 말한다(§8).
+  await expect(page.getByText(/^D-\d+$/)).toBeVisible()
+  await expect(page.getByText(/일 전$/)).toBeVisible()
+})
+
+test('상세 — 스톱이 세로 레일 위에 놓이고 구간 칩이 레일에 걸친다', async ({ page }) => {
+  await seedAuthedMap(page, {
+    trips: TRIPS,
+    events: EVENTS,
+    places: PLACES,
+    directionLegs: [
+      { polyline: [{ lat: 38.2, lng: 128.59 }, { lat: 38.21, lng: 128.6 }], distanceMeters: 1240, degraded: false },
+    ],
+  })
+  await page.goto('/trips/t1')
+
+  // 번호 배지는 카드 '밖'(레일)에 있다 — 카드 안에 있으면 순서 축이 안 읽힌다.
+  const first = page.getByRole('listitem').first()
+  const badge = first.locator('css=:scope > span').first()
+  await expect(badge).toHaveText('1')
+
+  // 구간 칩은 전폭 버튼이 아니라 레일에 걸친 알약 — 카드보다 왼쪽에서 시작한다.
+  const chip = page.getByRole('button', { name: /칠성조선소에서 영금정까지/ })
+  const chipBox = (await chip.boundingBox())!
+  const cardBox = (await first.locator('css=:scope > div').first().boundingBox())!
+  expect(chipBox.x).toBeLessThan(cardBox.x)
+  // 터치 타깃은 유지(ux §1).
+  expect(chipBox.height).toBeGreaterThanOrEqual(44)
+})
+
 test('상세 — 다크 모드', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await seedAuthedMap(page, { trips: TRIPS, events: EVENTS, places: PLACES })

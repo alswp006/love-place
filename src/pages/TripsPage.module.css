@@ -142,3 +142,61 @@
 .del:disabled {
   opacity: 0.4;
 }
+
+/* 만들기 CTA — 이 화면의 주 행동이라 카드로 올린다(트리플). 아이콘 원 + 제목 + 한 줄 설명. */
+.createCard {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  cursor: pointer;
+  box-shadow: var(--shadow-raised);
+  /* 터치 타깃 ≥44px(HIG) */
+  min-height: 44px;
+}
+
+.createIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  /* 고정 px 대신 em — 글자가 커지면 원도 같이 커진다(§4). */
+  width: 2.6em;
+  height: 2.6em;
+  border-radius: var(--r-pill);
+  background: var(--c-cta-bg);
+  color: var(--c-cta-fg);
+  font-size: var(--fs-body);
+}
+
+.createText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.createTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.createHint {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  overflow-wrap: break-word;
+}
+
+/* 섹션 제목(지난 여행) — 예정과 끝난 것의 경계. */
+.sectionTitle {
+  margin: var(--sp-4) 0 var(--sp-1);
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  color: var(--c-text);
+}
