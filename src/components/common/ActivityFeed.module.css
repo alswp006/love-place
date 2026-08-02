@@ -1,0 +1,49 @@
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.head {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  /* 쌓여도 첫 화면을 다 먹지 않게 */
+  max-height: 32vh;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  /* 글자 확대에도 깨지지 않게 줄바꿈 허용(고정 높이 없음) */
+  flex-wrap: wrap;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-body);
+  overflow-wrap: anywhere;
+}
+
+.time {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}

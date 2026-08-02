@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildEventTimes } from '@/lib/calendar/eventTimes'
+import { buildEventTimes, followEndTime } from '@/lib/calendar/eventTimes'
 
 describe('buildEventTimes', () => {
   it('종일: KST 00:00 → 23:59 (다른 날 두 ISO 경계)', () => {
@@ -70,5 +70,35 @@ describe('buildEventTimes', () => {
     const seoul = buildEventTimes({ date: '2026-06-16', allDay: false, startTime: '10:00', endTime: '12:00', timeZone: 'Asia/Seoul' })
     const tokyo = buildEventTimes({ date: '2026-06-16', allDay: false, startTime: '10:00', endTime: '12:00', timeZone: 'Asia/Tokyo' })
     expect(tokyo).toEqual(seoul)
+  })
+})
+
+describe('followEndTime — 시작을 옮기면 종료가 따라온다(22시간 일정 방지)', () => {
+  it('길이를 보존한다', () => {
+    // 10:00~11:00(1시간) 짜리의 시작을 13:00으로 → 14:00
+    expect(followEndTime('10:00', '13:00', '11:00')).toBe('14:00')
+  })
+
+  it('회귀: 시작만 뒤로 밀어도 end<=start가 되지 않는다(예전엔 22시간짜리가 조용히 저장됐다)', () => {
+    const nextEnd = followEndTime('10:00', '13:00', '11:00')
+    const r = buildEventTimes({ date: '2026-07-25', allDay: false, startTime: '13:00', endTime: nextEnd })
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      const hours = (new Date(r.end).getTime() - new Date(r.start).getTime()) / 3600000
+      expect(hours).toBe(1) // 22가 아니라 1
+    }
+  })
+
+  it('자정 넘김 길이도 보존한다(23:00~01:00 = 2시간)', () => {
+    expect(followEndTime('23:00', '20:00', '01:00')).toBe('22:00')
+  })
+
+  it('따라온 종료가 자정을 넘으면 그대로 넘긴다(유효한 입력)', () => {
+    // 22:00~23:00(1시간)의 시작을 23:30으로 → 00:30(다음날) — buildEventTimes가 롤 처리.
+    expect(followEndTime('22:00', '23:30', '23:00')).toBe('00:30')
+  })
+
+  it('분 단위도 정확히 따라온다', () => {
+    expect(followEndTime('09:15', '10:45', '10:00')).toBe('11:30')
   })
 })

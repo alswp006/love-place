@@ -6,7 +6,7 @@ import type { NewEvent, EventPatch } from '@/hooks/useEventMutations'
 import { dayKey, formatTime, DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import { tzNote } from '@/lib/calendar/tzLabel'
 import { parseRule, buildRule, type Freq } from '@/lib/calendar/rrule'
-import { buildEventTimes } from '@/lib/calendar/eventTimes'
+import { buildEventTimes, followEndTime } from '@/lib/calendar/eventTimes'
 import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/calendar/CommentThread'
 import { useScrollLock } from '@/hooks/useScrollLock'
@@ -239,7 +239,19 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
             <div className={styles.timeRow}>
               <label className={styles.field}>
                 <span>시작</span>
-                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} aria-label="시작 시각" disabled={!canEdit} />
+                {/* 시작을 옮기면 종료가 길이를 유지한 채 따라온다 — 안 그러면 end<=start가 되어
+                    자정 넘김으로 해석되고 경고 없이 22시간짜리 일정이 저장된다(§4.3 무음 변경 금지). */}
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    if (next) setEndTime((prevEnd) => followEndTime(startTime, next, prevEnd))
+                    setStartTime(next)
+                  }}
+                  aria-label="시작 시각"
+                  disabled={!canEdit}
+                />
               </label>
               <label className={styles.field}>
                 <span>종료</span>

@@ -4,6 +4,8 @@ const upsert = vi.fn()
 const insert = vi.fn()
 const selectEvents = vi.fn()
 // useEventMutations imports `import { supabase } from '@/lib/supabase/client'` — mock THAT exact path.
+// 오프라인 큐는 이 테스트 범위 밖(온라인 경로만 검증) — enqueue를 스텁한다.
+vi.mock('@/state/OfflineQueueProvider', () => ({ useOfflineQueue: () => ({ enqueue: vi.fn() }) }))
 vi.mock('@/lib/supabase/client', () => ({
   supabase: {
     from: (table: string) => {

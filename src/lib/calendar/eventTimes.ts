@@ -46,6 +46,32 @@ function iso(date: string, time: string, tz: string): string {
   const ms = Date.UTC(y!, (mo ?? 1) - 1, d!, h ?? 0, mi ?? 0, 0) - off * 60000
   return new Date(ms).toISOString()
 }
+/**
+ * 시작 시각을 옮길 때 종료가 따라오게 한다 — 길이(분)를 보존.
+ *
+ * 왜 필요한가: end<=start면 자정 넘김으로 해석하는 규칙(위 주석) 때문에, 시작을 13:00으로
+ * 바꾸고 종료(11:00)를 그대로 두면 **경고 없이 22시간짜리 일정**이 저장됐다. 사용자는
+ * '시작만 옮겼다'고 생각하는데 결과가 조용히 달라지는 게 문제다.
+ * 자정 넘김 자체는 유효한 입력이므로(예: 23:00~01:00) 규칙을 없애지 않고,
+ * 시작을 움직일 때 종료를 같은 간격만큼 끌고 가서 '의도치 않은' 넘김만 막는다.
+ *
+ * 종료를 사용자가 직접 만지는 경우엔 이 함수를 쓰지 않는다(그건 명시적 의도).
+ */
+export function followEndTime(prevStart: string, nextStart: string, end: string): string {
+  const toMin = (t: string) => {
+    const [h, m] = t.split(':').map(Number)
+    return (h ?? 0) * 60 + (m ?? 0)
+  }
+  const p = (n: number) => (n < 10 ? `0${n}` : `${n}`)
+  const prevS = toMin(prevStart)
+  const nextS = toMin(nextStart)
+  const e = toMin(end)
+  // 원래 길이(자정 넘김이었으면 그 길이를 그대로 유지).
+  const durationMin = e >= prevS ? e - prevS : 24 * 60 - prevS + e
+  const nextEnd = (nextS + durationMin) % (24 * 60)
+  return `${p(Math.floor(nextEnd / 60))}:${p(nextEnd % 60)}`
+}
+
 function addDayKey(key: string): string {
   const [y, m, d] = key.split('-').map(Number)
   const t = new Date(Date.UTC(y!, (m ?? 1) - 1, d! + 1))

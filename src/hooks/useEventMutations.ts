@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
+import { useOfflineQueue } from '@/state/OfflineQueueProvider'
 import { versionedUpdate, softDelete, ConflictError, PermissionError, refetchEventRow } from '@/lib/sync/versionedUpdate'
 import { DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import { courseKey } from '@/lib/route/courseKey'
@@ -7,7 +8,8 @@ import type { CourseStop } from '@/lib/route/coursePlan'
 
 // 이벤트 생성/수정/삭제. 수정·삭제는 낙관적 락(version 조건부, §4.3) — 충돌이면 onConflict.
 // 삭제는 soft-delete(휴지통, 물리삭제 아님). owner_id=본인(events_insert RLS WITH CHECK).
-// 참고: 오프라인 큐 연동(D2)은 후속 — 현재 이벤트 쓰기는 온라인 경로.
+// 오프라인(D2): create/update는 navigator.onLine 가드로 아웃박스에 적재 → 재연결 시 재생(유실 0).
+//   remove는 이미 useSoftDeleteWithUndo 경로가 큐를 태운다(호출부가 그 훅을 쓴다).
 
 export type Reminder = { userId: string; offsetMinutes: number }
 
@@ -47,11 +49,19 @@ export function useEventMutations(
   onPermissionDenied?: () => void,
 ) {
   const queryClient = useQueryClient()
+  const { enqueue } = useOfflineQueue()
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ['events', coupleId] })
 
   const create = useMutation<void, Error, NewEvent>({
     mutationFn: async (e) => {
       if (!coupleId || !myId) throw new Error('먼저 상대와 연결해 주세요.')
+      // 오프라인: 큐에 적재 → 재연결 시 그대로 insert(§4.3 이동 중 약전파).
+      // 이게 없으면 이동 중 적은 일정이 조용히 사라진다(create엔 onError도 없었다).
+      // dedupeKey는 (시작시각+제목) — 같은 일정을 두 번 눌러도 한 건만 남는다.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await enqueue('event.create', { coupleId, myId, event: e }, `event.create:${e.start}:${e.title}`)
+        return
+      }
       const { error } = await supabase.from('events').insert({
         couple_id: coupleId,
         title: e.title,
@@ -77,6 +87,12 @@ export function useEventMutations(
   const update = useMutation<void, Error, { id: string; expectedVersion: number; patch: EventPatch }>({
     mutationFn: async ({ id, expectedVersion, patch }) => {
       if (!myId) throw new Error('로그인이 필요해요.')
+      // 오프라인 수정도 큐에. version은 큐에 담을 때 값으로 재생되므로, 그 사이 상대가 고쳤으면
+      // 재연결 시 충돌로 잡힌다 — 조용히 덮어쓰지 않는다(LWW 금지, §4.3).
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await enqueue('event.update', { id, expectedVersion, patch, myId }, `event.update:${id}`)
+        return
+      }
       const res = await versionedUpdate('events', id, expectedVersion, { ...patch, updated_by: myId })
       if (res.status === 'conflict') {
         const fresh = await refetchEventRow(id)

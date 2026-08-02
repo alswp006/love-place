@@ -181,7 +181,12 @@ export default function CalendarPage() {
     setSheet({ open: false, editing: null, occStartIso: null, occDayKey: null })
     setConflictRefresh(null)
   }
-  const onCreate = (e: NewEvent) => create.mutate(e, { onSuccess: closeSheet })
+  // create에는 오래 onError가 없어 실패가 무음이었다 — 저장한 줄 알았는데 없어지는 종류라 안내를 붙인다.
+  const onCreate = (e: NewEvent) =>
+    create.mutate(e, {
+      onSuccess: closeSheet,
+      onError: (err) => toast.show(err instanceof Error ? err.message : '일정을 만들지 못했어요.'),
+    })
   // 한 줄 추가 — 시트를 열지 않으므로 닫을 것도 없다. done()으로 입력만 비우고 포커스를 유지해
   // 연속 입력이 끊기지 않게 한다(실패 시 done을 부르지 않아 입력값이 보존된다 — §7 입력값 보존).
   const onQuickAdd = (e: NewEvent, done: () => void) =>

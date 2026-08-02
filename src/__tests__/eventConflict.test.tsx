@@ -11,6 +11,8 @@ const h = vi.hoisted(() => {
   return { versionedUpdate, refetchEventRow }
 })
 
+// 오프라인 큐는 이 테스트 범위 밖(온라인 충돌 분기만 검증) — enqueue를 스텁한다.
+vi.mock('@/state/OfflineQueueProvider', () => ({ useOfflineQueue: () => ({ enqueue: vi.fn() }) }))
 vi.mock('@/lib/sync/versionedUpdate', async (orig) => {
   const real = await orig<typeof import('@/lib/sync/versionedUpdate')>()
   return { ...real, versionedUpdate: h.versionedUpdate, refetchEventRow: h.refetchEventRow }

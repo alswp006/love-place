@@ -14,6 +14,7 @@ import { useVisits } from '@/hooks/useVisits'
 import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { UpcomingFeed } from '@/components/common/UpcomingFeed'
+import { ActivityFeed } from '@/components/common/ActivityFeed'
 import { JourneyRecordControl } from '@/components/journey/JourneyRecordControl'
 import { useReactions } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
@@ -156,6 +157,8 @@ export default function MapPage() {
           {/* 다가오는 일정 인앱 피드(Task 15) — 배너와 지도 사이 상단 오버레이. 항목 0이면 self-hide. */}
           <div className={styles.feedOverlay}>
             <UpcomingFeed coupleId={coupleId} myId={myId} />
+            {/* 상대의 최근 활동(ux §6 — 웹푸시가 안 되는 자리를 메우는 1차 알림 수단). 0건이면 self-hide. */}
+            <ActivityFeed coupleId={coupleId} myId={myId} />
             {/* R6 동선 기록(A안) — 만나서 바로 시작. 동의 없으면 /us로 유도. */}
             {coupleActive ? <JourneyRecordControl coupleId={coupleId} userId={myId} /> : null}
           </div>

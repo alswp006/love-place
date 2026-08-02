@@ -2,6 +2,7 @@ import { versionedUpdate, softDelete, restore } from '@/lib/sync/versionedUpdate
 import { savePlace } from '@/lib/places/savePlace'
 import { supabase } from '@/lib/supabase/client'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
+import type { NewEvent, EventPatch } from '@/hooks/useEventMutations'
 import type { OutboxEntry } from './outboxStore'
 import type { FlushOutcome } from './offlineQueue'
 
@@ -25,6 +26,7 @@ type LegacyTrashAlias = 'place' | 'event'
 export type OutboxKind =
   | 'wish.setPriority' | 'place.save'
   | 'visit.add' | 'visit.remove' | 'reaction.toggle' | 'wish.toggle'
+  | 'event.create' | 'event.update'
   | `${TrashTable}.delete` | `${TrashTable}.restore` // = 6×2(place/event/visit/photo/trip/itinerary delete·restore)
   | `${LegacyTrashAlias}.delete` | `${LegacyTrashAlias}.restore` // 레거시 단수(place/event) — 매핑 후 재생
 
@@ -35,6 +37,8 @@ type VisitAddPayload = { coupleId: string; placeId: string; visitDate: string; m
 type VisitRemovePayload = { placeId: string; myId: string; coupleId: string }
 type ReactionTogglePayload = { coupleId: string; placeId: string; myId: string }
 type WishTogglePayload = { coupleId: string; placeId: string; myId: string }
+type EventCreatePayload = { coupleId: string; myId: string; event: NewEvent }
+type EventUpdatePayload = { id: string; expectedVersion: number; patch: EventPatch; myId: string }
 
 export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
   switch (entry.kind) {
@@ -110,6 +114,29 @@ export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
       })
       if (error) throw new Error(error.message)
       return 'ok'
+    }
+    case 'event.create': {
+      const p = entry.payload as EventCreatePayload
+      const e = p.event
+      // 재생 안전: 같은 시작시각·제목의 살아있는 일정이 이미 있으면 no-op(중복 생성 방지).
+      const { data: dup } = await supabase
+        .from('events').select('id').eq('couple_id', p.coupleId)
+        .eq('start', e.start).eq('title', e.title).is('deleted_at', null).limit(1)
+      if (dup && dup.length > 0) return 'ok'
+      const { error } = await supabase.from('events').insert({
+        couple_id: p.coupleId, title: e.title, start: e.start, end: e.end,
+        is_all_day: e.isAllDay, time_zone: e.timeZone, visibility: e.visibility,
+        participants: 'BOTH', owner_id: p.myId, place_id: e.placeId ?? null,
+        memo: e.memo ?? null, recurrence_rule: e.recurrenceRule ?? null,
+        reminders: e.reminders ?? [], created_by: p.myId, updated_by: p.myId,
+      })
+      if (error) throw new Error(error.message)
+      return 'ok'
+    }
+    case 'event.update': {
+      // 큐에 담을 때의 version으로 재생 — 그 사이 상대가 고쳤으면 conflict로 보고된다(LWW 금지).
+      const p = entry.payload as EventUpdatePayload
+      return (await versionedUpdate('events', p.id, p.expectedVersion, { ...p.patch, updated_by: p.myId })).status
     }
     default: {
       const m = /^([a-z_]+)\.(delete|restore)$/.exec(entry.kind)
