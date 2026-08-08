@@ -23,9 +23,9 @@
   stroke-linecap: round;
 }
 
-.linkClose {
+.linkDone {
   stroke: var(--sky-link-strong, rgba(205, 214, 255, 0.7));
-  stroke-width: 0.8;
+  stroke-width: 0.9;
 }
 
 /* 아직 안 찍힌 자리 — 희미한 십자. 색이 아니라 모양으로 '없음'을 말한다(§8). */

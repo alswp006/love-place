@@ -1,9 +1,10 @@
-import { STARS_PER_WEEK, constellationOf, hashKey, type StarOwner } from '@/lib/streak/garden'
+import { constellationOfWeek, type ConstellationDef } from '@/lib/streak/constellations'
+import type { StarEntry, StarOwner } from '@/lib/streak/garden'
 import styles from './Constellation.module.css'
 
-// 이번 주의 별자리 — 완료 1건이 별 하나, 7개면 선이 다 이어져 완성된다.
+// 이번 주의 별자리 — 완료 1건이 별 하나, 그 별자리의 별을 다 채우면 완성된다.
 //
-// 모양은 주 키에서 도출한다(저장 없음): 같은 주는 언제 열어도 같은 별자리·같은 이름이다.
+// 모양·이름은 지어내지 않는다: 그 달에 실제로 보이는 별자리에서 온다(constellations.ts).
 // 별은 색만으로 구분하지 않는다(§8) — 주인마다 색이 다르되, 아직 안 찍힌 자리는
 // '희미한 십자 표식'이라는 모양으로 구분되고 개수는 글자로도 나온다.
 
@@ -20,9 +21,16 @@ const OWNER_VAR: Record<StarOwner, string> = {
 const SPARKLE =
   'M0,-10 C1.1,-3.6 3.6,-1.1 10,0 C3.6,1.1 1.1,3.6 0,10 C-1.1,3.6 -3.6,1.1 -10,0 C-3.6,-1.1 -1.1,-3.6 0,-10 Z'
 
+/** 문자열 → 안정 해시(별 크기·반짝임 타이밍을 어긋나게 하는 데만 쓴다). */
+function hash(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return h
+}
+
 /** 배경의 성긴 별먼지 — 주 키에서 도출해 매주 다른 하늘이 되지만 새로고침엔 안 흔들린다. */
 function dust(seedKey: string): { x: number; y: number; r: number; o: number }[] {
-  let h = hashKey(seedKey) || 1
+  let h = hash(seedKey) || 1
   const next = () => {
     // xorshift — Math.random 없이 결정론적으로.
     h ^= h << 13
@@ -41,20 +49,24 @@ function dust(seedKey: string): { x: number; y: number; r: number; o: number }[]
 export function Constellation({
   mondayKey,
   stars,
+  labelOf,
   compact = false,
   targetId,
 }: {
   mondayKey: string
-  stars: readonly StarOwner[]
+  stars: readonly StarEntry[]
+  /** 별 하나가 무슨 일정이었는지 — 눌러(또는 스크린리더로) 되짚을 수 있게. */
+  labelOf?: (star: StarEntry) => string
   /** 접힌 줄용 — 빈 자리와 별먼지를 빼고 찍힌 별만 조용히 보여준다. */
   compact?: boolean
   /** 완료 시 별이 날아와 박힐 지점(펼침 버전에만 준다). */
   targetId?: string
 }) {
-  const shape = constellationOf(mondayKey)
-  const filled = Math.min(stars.length, STARS_PER_WEEK)
-  const complete = filled >= STARS_PER_WEEK
-  const nextIdx = Math.min(filled, STARS_PER_WEEK - 1)
+  const shape: ConstellationDef = constellationOfWeek(mondayKey)
+  const need = shape.points.length
+  const filled = Math.min(stars.length, need)
+  const complete = filled >= need
+  const nextIdx = Math.min(filled, need - 1)
   const next = shape.points[nextIdx]!
 
   return (
@@ -64,8 +76,8 @@ export function Constellation({
       role="img"
       aria-label={
         complete
-          ? `이번 주 별자리 '${shape.name}' 완성 — 별 ${stars.length}개`
-          : `이번 주 별 ${filled}개, ${STARS_PER_WEEK - filled}개 더 모으면 '${shape.name}' 완성`
+          ? `이번 주 ${shape.name} 완성 — 별 ${stars.length}개`
+          : `이번 주 별 ${filled}개, ${need - filled}개 더 모으면 ${shape.name} 완성`
       }
     >
       {/* 별먼지 — 별자리가 '하늘 위에' 있다고 읽히게 하는 배경. 접힌 줄에선 생략. */}
@@ -77,27 +89,27 @@ export function Constellation({
         </g>
       ) : null}
 
-      {/* 이어진 선 — 찍힌 별들 사이만. 완성되면 마지막 별에서 처음으로 닫힌다. */}
-      {shape.points.map((pt, i) => {
-        const prev = shape.points[i - 1]
-        if (!prev || i >= filled) return null
+      {/* 이어진 선 — 별자리마다 잇는 방식이 다르므로 정의된 edge만 그린다.
+          (폴리라인으로 뭉뚱그리면 북두칠성 바가지가 안 닫히고 손잡이가 닫힌다.) */}
+      {shape.edges.map(([a, b], i) => {
+        if (a >= filled || b >= filled) return null
+        const p = shape.points[a]!
+        const q = shape.points[b]!
         return (
-          <line key={`l${i}`} className={styles.link} x1={prev[0]} y1={prev[1]} x2={pt[0]} y2={pt[1]} />
+          <line
+            key={`l${i}`}
+            className={complete ? `${styles.link} ${styles.linkDone}` : styles.link}
+            x1={p[0]}
+            y1={p[1]}
+            x2={q[0]}
+            y2={q[1]}
+          />
         )
       })}
-      {complete ? (
-        <line
-          className={`${styles.link} ${styles.linkClose}`}
-          x1={shape.points[STARS_PER_WEEK - 1]![0]}
-          y1={shape.points[STARS_PER_WEEK - 1]![1]}
-          x2={shape.points[0]![0]}
-          y2={shape.points[0]![1]}
-        />
-      ) : null}
 
       {shape.points.map((pt, i) => {
-        const owner = stars[i]
-        if (!owner) {
+        const star = stars[i]
+        if (!star) {
           // 아직 안 찍힌 자리 — 색이 아니라 '희미한 십자 표식'이라는 모양으로 구분된다(§8).
           return compact ? null : (
             <g key={`e${i}`} className={styles.empty} aria-hidden>
@@ -106,18 +118,20 @@ export function Constellation({
             </g>
           )
         }
-        // 크기를 조금씩 다르게 — 다 같은 크기면 도표처럼 보인다. 자리 index에서 도출(안 흔들림).
-        const scale = 0.34 + ((hashKey(`${mondayKey}:${i}`) % 5) / 5) * 0.16
+        // 크기를 조금씩 다르게 — 다 같으면 도표처럼 보인다. 자리에서 도출(안 흔들림).
+        const scale = 0.34 + ((hash(`${mondayKey}:${i}`) % 5) / 5) * 0.16
+        const label = labelOf?.(star)
         return (
           <g
             key={`s${i}`}
             className={styles.star}
             style={{
-              color: OWNER_VAR[owner],
+              color: OWNER_VAR[star.owner],
               // 반짝임을 별마다 어긋나게 — 동시에 깜빡이면 기계처럼 보인다.
-              animationDelay: `${(hashKey(`${mondayKey}:d${i}`) % 20) * 0.17}s`,
+              animationDelay: `${(hash(`${mondayKey}:d${i}`) % 20) * 0.17}s`,
             }}
           >
+            {label ? <title>{label}</title> : null}
             <circle className={styles.halo} cx={pt[0]} cy={pt[1]} r={4.5} />
             <path
               className={styles.spark}
@@ -138,18 +152,20 @@ export function Constellation({
 export function WeekGlyph({
   mondayKey,
   filled,
+  needed,
   complete,
 }: {
   mondayKey: string
   filled: number
+  needed: number
   complete: boolean
 }) {
-  const shape = constellationOf(mondayKey)
-  const pct = Math.min(filled / STARS_PER_WEEK, 1)
+  const shape = constellationOfWeek(mondayKey)
+  const pct = Math.min(filled / Math.max(needed, 1), 1)
   return (
     <span
       className={styles.glyph}
-      title={`${mondayKey} 주 · 별 ${filled}/${STARS_PER_WEEK}${complete ? ` · ${shape.name}` : ''}`}
+      title={`${mondayKey} 주 · ${shape.name} ${filled}/${needed}${complete ? ' 완성' : ''}`}
     >
       <svg viewBox="0 0 24 24" aria-hidden className={styles.glyphSvg}>
         <circle className={styles.glyphTrack} cx="12" cy="12" r="9" />

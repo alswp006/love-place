@@ -3,14 +3,8 @@ import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useEvents } from '@/hooks/useEvents'
 import { useEventCompletions } from '@/hooks/useEventCompletions'
-import {
-  dailyDoneCounts,
-  recentWeeks,
-  mondayOf,
-  constellationOf,
-  STARS_PER_WEEK,
-  type EventMeta,
-} from '@/lib/streak/garden'
+import { dailyDoneCounts, recentWeeks, mondayOf, type EventMeta } from '@/lib/streak/garden'
+import { constellationOfWeek } from '@/lib/streak/constellations'
 import { localDayKey } from '@/lib/journey/autoLink'
 import { Constellation, WeekGlyph } from './Constellation'
 import { STAR_TARGET_ID } from './flyStar'
@@ -39,6 +33,12 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
 
   const today = localDayKey()
 
+  // 별을 눌러(스크린리더로도) 되짚을 수 있게 — 이 별이 무슨 일정이었는지.
+  const titleOf = useMemo(() => {
+    const m = new Map((events ?? []).map((e) => [e.id, e.title]))
+    return (id: string) => m.get(id)
+  }, [events])
+
   const metaOf = useMemo(() => {
     const m = new Map<string, EventMeta>()
     for (const e of events ?? []) {
@@ -62,8 +62,8 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
   const thisWeek = weeks[weeks.length - 1]!
   const past = weeks.slice(0, -1)
   const thisMonday = mondayOf(today)
-  const shape = constellationOf(thisMonday)
-  const left = Math.max(0, STARS_PER_WEEK - thisWeek.stars.length)
+  const shape = constellationOfWeek(thisMonday)
+  const left = Math.max(0, thisWeek.needed - thisWeek.stars.length)
   const doneWeeks = past.filter((w) => w.complete).length
 
   if (!open) {
@@ -90,17 +90,22 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
     <section className={styles.open} aria-label="우리가 만든 별자리">
       <p className={styles.lead}>
         {thisWeek.complete
-          ? `이번 주 ‘${shape.name}’ 완성`
+          ? `이번 주 ${shape.name} 완성`
           : thisWeek.stars.length === 0
-            ? '일정을 체크하면 별이 하나씩 떠요'
-            : `${left}별 더 모으면 ‘${shape.name}’ 완성`}
+            ? `일정을 체크하면 ${shape.name}에 별이 하나씩 떠요`
+            : `${left}별 더 모으면 ${shape.name} 완성`}
       </p>
 
       <Constellation
         mondayKey={thisMonday}
         stars={thisWeek.stars}
         targetId={STAR_TARGET_ID}
+        labelOf={(s) => `${s.dayKey.slice(5).replace('-', '.')} · ${titleOf(s.eventId) ?? '완료'}`}
       />
+      {/* 왜 하필 이 별자리인지 — 지어낸 게 아니라 지금 하늘에 있는 것이다. */}
+      <p className={styles.hint}>
+        {shape.name} · {shape.hint}
+      </p>
 
       {/* 누구 별인지 — 색만으로 말하지 않는다(§8). */}
       <ul className={styles.legend}>
@@ -124,6 +129,7 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
             key={w.mondayKey}
             mondayKey={w.mondayKey}
             filled={w.stars.length}
+            needed={w.needed}
             complete={w.complete}
           />
         ))}

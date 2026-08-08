@@ -1,5 +1,6 @@
 import { DISPLAY_TZ, dayKey } from '@/lib/calendar/eventDays'
 import { addDays } from '@/lib/trips/tripDays'
+import { constellationOfWeek } from './constellations'
 
 // 잔디 · 여정 도출 — 순수 함수(테스트로 못박음).
 //
@@ -13,6 +14,8 @@ import { addDays } from '@/lib/trips/tripDays'
 /** 완료 기록 — event_completions 행에서 필요한 것만. */
 export type CompletionLike = { event_id: string; done_at: string }
 
+export type StarOwner = 'mine' | 'partner' | 'shared'
+
 /** 완료가 가리키는 일정의 메타 — 색·카테고리를 정한다. */
 export type EventMeta = {
   owner_id: string
@@ -20,13 +23,22 @@ export type EventMeta = {
   category_id: string | null
 }
 
+/** 별 하나 = 완료 기록 하나. 무엇을 한 건지까지 들고 있어야 별을 눌러 되짚을 수 있다. */
+export type StarEntry = {
+  eventId: string
+  owner: StarOwner
+  dayKey: string
+  doneAt: string
+}
+
 export type DayCell = {
   key: string
-  /** 그 날 완료 총합 — 칸의 농도를 정한다. */
+  /** 그 날 완료 총합. */
   total: number
   mine: number
   partner: number
   shared: number
+  entries: StarEntry[]
 }
 
 /**
@@ -49,28 +61,27 @@ export function dailyDoneCounts(
     // categoryId가 주어지면 그 카테고리만(전체 보기는 undefined를 넘긴다).
     if (opts.categoryId !== undefined && e.category_id !== opts.categoryId) continue
     const key = dayKey(c.done_at, tz)
-    const cell = map.get(key) ?? { key, total: 0, mine: 0, partner: 0, shared: 0 }
+    const cell = map.get(key) ?? { key, total: 0, mine: 0, partner: 0, shared: 0, entries: [] }
+    const owner: StarOwner =
+      e.visibility === 'SHARED' ? 'shared' : myId && e.owner_id === myId ? 'mine' : 'partner'
     cell.total += 1
-    if (e.visibility === 'SHARED') cell.shared += 1
-    else if (myId && e.owner_id === myId) cell.mine += 1
+    if (owner === 'shared') cell.shared += 1
+    else if (owner === 'mine') cell.mine += 1
     else cell.partner += 1
+    cell.entries.push({ eventId: c.event_id, owner, dayKey: key, doneAt: c.done_at })
     map.set(key, cell)
   }
   return map
 }
 
 // ── 별자리 ──────────────────────────────────────────────────────────────────
-// 완료 1건 = 별 하나. 한 주에 STARS_PER_WEEK개를 모으면 그 주의 별자리가 완성된다.
+// 완료 1건 = 별 하나. 그 주에 배정된 **실제 별자리**의 별을 다 채우면 완성이다.
 //
-// 왜 주 단위인가: 캘린더가 이미 주로 끊겨 있다. 그 리듬을 그대로 쓰면 "이번 주"라는 단위가
-// 화면 어디서나 같은 뜻이 된다. 달 단위는 너무 멀고, 일 단위는 서사가 안 생긴다.
+// 별자리는 그 달에 실제로 보이는 것 중에서 고른다(constellations.ts) — 지어낸 모양·이름이
+// 아니라서 "지금 하늘에 있는 걸 채운다"는 말이 참이 된다. 별 개수도 별자리마다 다르다
+// (카시오페이아 5, 북두칠성 7, 전갈자리 8) — 주마다 목표가 달라지는 게 오히려 리듬이 된다.
 //
-// 정거장 은유(카페→해변)를 버린 이유: 우리 데이터와 아무 상관 없는 가짜 서사였다.
-// 별자리는 "우리가 채운 만큼 하늘에 남는다"는 것 말고 다른 주장을 하지 않는다.
-
-export const STARS_PER_WEEK = 7
-
-export type StarOwner = 'mine' | 'partner' | 'shared'
+// 주 단위로 간 이유: 캘린더가 이미 주로 끊겨 있어 "이번 주"가 화면 어디서나 같은 뜻이 된다.
 
 /** 그 주 월요일 키. */
 export function mondayOf(dayKeyStr: string): string {
@@ -80,28 +91,26 @@ export function mondayOf(dayKeyStr: string): string {
 }
 
 /**
- * 한 주의 별들 — 날짜순으로 편 완료 기록.
- * 같은 날 안에서는 함께 → 나 → 상대 순으로 낸다(정렬 규칙이 있어야 별 위치가 안 흔들린다).
+ * 한 주의 별들 — 실제로 체크한 순서(done_at)대로.
+ * 앞서는 같은 날 안에서 함께→나→상대로 임의 정렬했는데, 체크한 순서가 진짜 순서다.
  */
 export function weekStars(
   counts: ReadonlyMap<string, DayCell>,
   mondayKey: string,
-): StarOwner[] {
-  const out: StarOwner[] = []
+): StarEntry[] {
+  const out: StarEntry[] = []
   for (let i = 0; i < 7; i++) {
     const cell = counts.get(addDays(mondayKey, i))
-    if (!cell) continue
-    for (let n = 0; n < cell.shared; n++) out.push('shared')
-    for (let n = 0; n < cell.mine; n++) out.push('mine')
-    for (let n = 0; n < cell.partner; n++) out.push('partner')
+    if (cell) out.push(...cell.entries)
   }
-  return out
+  return out.sort((a, b) => a.doneAt.localeCompare(b.doneAt))
 }
 
 export type WeekSummary = {
   mondayKey: string
-  stars: StarOwner[]
-  /** 별자리가 완성됐나(STARS_PER_WEEK 이상). */
+  stars: StarEntry[]
+  /** 그 주 별자리가 요구하는 별 수. */
+  needed: number
   complete: boolean
 }
 
@@ -116,31 +125,8 @@ export function recentWeeks(
   for (let w = weeks - 1; w >= 0; w--) {
     const mondayKey = addDays(thisMonday, -w * 7)
     const stars = weekStars(counts, mondayKey)
-    out.push({ mondayKey, stars, complete: stars.length >= STARS_PER_WEEK })
+    const needed = constellationOfWeek(mondayKey).points.length
+    out.push({ mondayKey, stars, needed, complete: stars.length >= needed })
   }
   return out
-}
-
-/**
- * 주마다 다른 별자리 모양 — 주 키에서 결정론적으로 고른다.
- * 저장하지 않고 도출한다: 같은 주는 언제 열어도 같은 모양·같은 이름이다.
- */
-export const CONSTELLATIONS = [
-  { name: '돛단배', points: [[14, 46], [30, 30], [46, 14], [54, 34], [72, 30], [84, 46], [50, 52]] },
-  { name: '리본', points: [[16, 24], [34, 40], [16, 54], [50, 40], [84, 24], [66, 40], [84, 54]] },
-  { name: '작은곰', points: [[14, 50], [28, 40], [44, 44], [58, 34], [70, 22], [82, 32], [78, 48]] },
-  { name: '나비', points: [[24, 22], [40, 38], [24, 54], [50, 38], [76, 22], [60, 38], [76, 54]] },
-  { name: '왕관', points: [[14, 50], [26, 26], [38, 44], [50, 20], [62, 44], [74, 26], [86, 50]] },
-  { name: '물결', points: [[12, 42], [26, 30], [40, 44], [54, 30], [68, 44], [82, 30], [92, 42]] },
-] as const
-
-/** 문자열 → 안정 해시(주 키에서 모양을 고르는 데만 쓴다). */
-export function hashKey(s: string): number {
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
-  return h
-}
-
-export function constellationOf(mondayKey: string): (typeof CONSTELLATIONS)[number] {
-  return CONSTELLATIONS[hashKey(mondayKey) % CONSTELLATIONS.length]!
 }

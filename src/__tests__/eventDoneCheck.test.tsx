@@ -165,6 +165,7 @@ describe('별자리 스트립', () => {
   it('완료가 0이면 무엇을 하면 되는지 알려준다(죽은 화면 금지)', () => {
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: /별자리 펼치기/ }))
-    expect(screen.getByText('일정을 체크하면 별이 하나씩 떠요')).toBeInTheDocument()
+    // 별자리 이름은 그 주 계절에서 오므로 문구가 계절마다 달라진다 — 뼈대만 확인한다.
+    expect(screen.getByText(/일정을 체크하면 .*별이 하나씩 떠요/)).toBeInTheDocument()
   })
 })

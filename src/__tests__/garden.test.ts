@@ -4,9 +4,8 @@ import {
   weekStars,
   recentWeeks,
   mondayOf,
-  constellationOf,
-  STARS_PER_WEEK,
 } from '@/lib/streak/garden'
+import { constellationOfWeek, CONSTELLATIONS } from '@/lib/streak/constellations'
 
 // 잔디·여정은 집계 테이블 없이 event_completions에서 도출한다(§7) — 그 도출 규칙을 못박는다.
 
@@ -81,26 +80,41 @@ describe('dailyDoneCounts', () => {
 })
 
 describe('별자리 — 완료 1건이 별 하나, 한 주에 7개면 완성', () => {
-  it('그 주 완료를 날짜순으로 편다 — 같은 날은 함께→나→상대 순(위치가 흔들리면 안 된다)', () => {
+  it('그 주 완료를 실제로 체크한 순서(done_at)대로 편다', () => {
+    // 앞서는 같은 날 안에서 함께→나→상대로 임의 정렬했는데, 체크한 순서가 진짜 순서다.
     const counts = dailyDoneCounts(
       [
-        done('a', kst('2026-08-04'), { owner_id: 'you' }), // 화 · 상대
-        done('b', kst('2026-08-03'), { owner_id: 'me' }), // 월 · 나
-        done('c', kst('2026-08-03'), { owner_id: 'you', visibility: 'SHARED' }), // 월 · 함께
+        done('a', kst('2026-08-04', '09:00'), { owner_id: 'you' }), // 화 · 상대
+        done('b', kst('2026-08-03', '20:00'), { owner_id: 'me' }), // 월 저녁 · 나
+        done('c', kst('2026-08-03', '08:00'), { owner_id: 'you', visibility: 'SHARED' }), // 월 아침 · 함께
       ],
       metaOf,
       'me',
     )
-    expect(weekStars(counts, '2026-08-03')).toEqual(['shared', 'mine', 'partner'])
+    expect(weekStars(counts, '2026-08-03').map((s) => s.owner)).toEqual([
+      'shared',
+      'mine',
+      'partner',
+    ])
+    // 어떤 일정이었는지도 들고 있어야 별을 눌러 되짚을 수 있다.
+    expect(weekStars(counts, '2026-08-03')[0]).toMatchObject({ eventId: 'c', dayKey: '2026-08-03' })
   })
 
-  it('7개를 채우면 그 주 별자리가 완성된다', () => {
-    const many = Array.from({ length: 7 }, (_, i) => done(`s${i}`, kst('2026-08-05')))
+  it('그 주 별자리가 요구하는 만큼 채우면 완성된다(별 수는 별자리마다 다르다)', () => {
+    const need = constellationOfWeek('2026-08-03').points.length
+    const many = Array.from({ length: need }, (_, i) =>
+      done(`s${i}`, kst('2026-08-05', `0${i % 9}:00`)),
+    )
     const counts = dailyDoneCounts(many, metaOf, 'me')
     const weeks = recentWeeks(counts, '2026-08-05', 2)
     expect(weeks).toHaveLength(2)
+    expect(weeks[1]!.needed).toBe(need)
     expect(weeks[1]!.complete).toBe(true)
     expect(weeks[0]!.complete).toBe(false) // 지난주는 비어 있다
+
+    // 하나 모자라면 완성이 아니다.
+    const short = dailyDoneCounts(many.slice(0, need - 1), metaOf, 'me')
+    expect(recentWeeks(short, '2026-08-05', 1)[0]!.complete).toBe(false)
   })
 
   it('오늘이 속한 주가 마지막이고, 월요일 키로 정렬된다', () => {
@@ -114,15 +128,32 @@ describe('별자리 — 완료 1건이 별 하나, 한 주에 7개면 완성', (
     expect(mondayOf('2026-08-09')).toBe('2026-08-03') // 일
   })
 
-  it('별자리 모양은 주 키에서 결정론적으로 나온다 — 새로고침해도 같은 별자리', () => {
-    const a = constellationOf('2026-08-03')
-    const b = constellationOf('2026-08-03')
-    expect(a.name).toBe(b.name)
-    expect(a.points).toHaveLength(STARS_PER_WEEK)
-    // 주가 다르면 대체로 다른 모양이 나온다(전부 같은 모양이면 재미가 없다).
-    const names = new Set(
-      Array.from({ length: 12 }, (_, i) => constellationOf(`2026-0${(i % 9) + 1}-0${(i % 7) + 1}`).name),
-    )
-    expect(names.size).toBeGreaterThan(1)
+  it('별자리는 주 키에서 결정론적으로 나온다 — 새로고침해도 같은 별자리', () => {
+    expect(constellationOfWeek('2026-08-03').key).toBe(constellationOfWeek('2026-08-03').key)
+  })
+
+  it('그 계절에 실제로 보이는 별자리가 배정된다', () => {
+    // 지어낸 모양이 아니라 하늘에 있는 것 — 여름엔 여름 별자리, 겨울엔 겨울 별자리.
+    const summer = ['cygnus', 'lyra', 'scorpius']
+    const winter = ['orion', 'gemini']
+    expect(summer).toContain(constellationOfWeek('2026-07-06').key)
+    expect(winter).toContain(constellationOfWeek('2026-01-05').key)
+    expect(['cassiopeia', 'pegasus']).toContain(constellationOfWeek('2026-10-05').key)
+  })
+
+  it('같은 달 안에서도 주가 바뀌면 별자리가 돌아간다', () => {
+    const keys = ['2026-07-06', '2026-07-13', '2026-07-20'].map((k) => constellationOfWeek(k).key)
+    expect(new Set(keys).size).toBeGreaterThan(1)
+  })
+
+  it('모든 별자리의 edge는 실재하는 별을 가리킨다(선이 허공으로 가지 않게)', () => {
+    for (const c of CONSTELLATIONS) {
+      for (const [a, b] of c.edges) {
+        expect(a).toBeLessThan(c.points.length)
+        expect(b).toBeLessThan(c.points.length)
+        expect(a).not.toBe(b)
+      }
+      expect(c.points.length).toBeGreaterThanOrEqual(4)
+    }
   })
 })

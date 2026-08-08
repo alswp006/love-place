@@ -293,7 +293,7 @@ test('별자리 스트립 — 기본은 한 줄, 펼치면 이번 주 별자리�
   await pill.click()
   await expect(page.getByRole('region', { name: '우리가 만든 별자리' })).toBeVisible()
   // 그림만으로 말하지 않는다(§8) — 안내문과 범례가 글자로 함께 있다.
-  await expect(page.getByText('일정을 체크하면 별이 하나씩 떠요')).toBeVisible()
+  await expect(page.getByText(/일정을 체크하면 .*별이 하나씩 떠요/)).toBeVisible()
   await expect(page.getByRole('img', { name: /이번 주 별/ })).toBeVisible()
   await expect(page.getByText('지난 주들')).toBeVisible()
 })
