@@ -9,7 +9,11 @@ vi.mock('@/lib/supabase/client', () => ({
   isSupabaseConfigured: true,
   supabase: { auth: { signInWithOAuth } },
 }))
-vi.mock('@capacitor/browser', () => ({ Browser: { open: browserOpen } }))
+// browserFinished 리스너가 추가됐다 — 사용자가 시트를 그냥 닫았을 때 로딩을 되돌리기 위해서다.
+// (그 동작 자체는 oauthBrowser.test.ts가 검증한다. 여기선 '시스템 브라우저로 연다'만 본다.)
+vi.mock('@capacitor/browser', () => ({
+  Browser: { open: browserOpen, addListener: vi.fn(async () => ({ remove: async () => {} })) },
+}))
 
 import { useSignInWithGoogle } from '@/hooks/useSignInWithGoogle'
 

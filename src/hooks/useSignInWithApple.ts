@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { isNativePlatform } from '@/lib/platform'
-import { Browser } from '@capacitor/browser'
+import { openOAuthBrowser } from '@/lib/native/oauthBrowser'
 
 // Apple 로그인 — App Store 4.8 대응(제3자 소셜 로그인 제공 시 'Apple로 로그인' 동등 옵션 요구).
 // 콜백은 /auth/callback. Supabase Auth의 apple provider 설정(Service ID·키) 필요(서버 구성).
@@ -31,7 +31,8 @@ export function useSignInWithApple() {
         setError(err.message)
         return
       }
-      if (data?.url) await Browser.open({ url: data.url })
+      // 사용자가 브라우저를 그냥 닫으면 아무 신호도 오지 않는다 — 그때만 버튼을 되돌린다.
+      if (data?.url) await openOAuthBrowser(data.url, () => setLoading(false))
       return
     }
 

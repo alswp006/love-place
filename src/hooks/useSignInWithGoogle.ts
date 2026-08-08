@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { isNativePlatform } from '@/lib/platform'
-import { Browser } from '@capacitor/browser'
+import { openOAuthBrowser } from '@/lib/native/oauthBrowser'
 
 // 구글 OAuth 로그인 — 메일 발송 없음(매직링크 한도 문제 회피). 클릭 → 구글 동의 → 자동 로그인.
 // 콜백은 /auth/callback 으로 돌아온다(Supabase Redirect URLs에 등록 필요).
@@ -34,8 +34,9 @@ export function useSignInWithGoogle() {
         setError(err.message)
         return
       }
-      if (data?.url) await Browser.open({ url: data.url }) // 시스템 브라우저(WebView 차단 회피)
-      // 복귀는 딥링크(appUrlOpen)가 세션을 교환 — loading은 복귀/세션 갱신까지 유지.
+      // 복귀는 딥링크(appUrlOpen)가 세션을 교환 — loading은 복귀/세션 갱신까지 유지한다.
+      // 다만 사용자가 브라우저를 그냥 닫으면 아무 신호도 오지 않으므로, 그 경우만 되돌린다.
+      if (data?.url) await openOAuthBrowser(data.url, () => setLoading(false))
       return
     }
 
