@@ -4,7 +4,7 @@
   height: auto;
   overflow: visible;
   /* 하늘이되 화면을 다 먹지는 않게 */
-  max-height: 190px;
+  max-height: 150px;
 }
 
 .compact {

@@ -102,6 +102,17 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
 
   return (
     <section className={styles.open} aria-label="우리가 만든 별자리">
+      {/* 접기는 우상단 — 하단에 두면 카드가 그만큼 길어지고, 펼친 뒤 가장 먼저 찾는 게 이 버튼이다. */}
+      <button
+        type="button"
+        className={styles.collapse}
+        onClick={() => setOpen(false)}
+        aria-expanded
+        aria-label="별자리 접기"
+      >
+        ▴
+      </button>
+
       <p className={styles.lead}>
         {thisMonth.complete
           ? `이번 달 ${shape.name} 완성`
@@ -114,25 +125,25 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
         targetId={STAR_TARGET_ID}
         labelOf={(s) => `${s.dayKey.slice(5).replace('-', '.')} · ${titleOf(s.eventId) ?? '완료'}`}
       />
-      {/* 왜 하필 이 별자리인지 — 지어낸 게 아니라 지금 하늘에 있는 것이다. */}
-      <p className={styles.hint}>
-        {shape.hint}
-      </p>
+      {/* 설명(왜 이 별자리인지)과 범례(누구 별인지)를 한 줄에 — 각자 한 줄씩 쓰면 하늘이 밀린다.
+          색만으로 말하지 않는다(§8). '함께'는 없다: 별은 체크한 사람 것이다. */}
+      <div className={styles.meta}>
+        <span className={styles.hint}>{shape.hint}</span>
+        <ul className={styles.legend}>
+          <li>
+            <span className={`${styles.dot} ${styles.mine}`} aria-hidden /> 나
+          </li>
+          <li>
+            <span className={`${styles.dot} ${styles.partner}`} aria-hidden /> 상대
+          </li>
+        </ul>
+      </div>
 
-      {/* 누구 별인지 — 색만으로 말하지 않는다(§8). '함께'는 없다: 별은 체크한 사람 것이다. */}
-      <ul className={styles.legend}>
-        <li>
-          <span className={`${styles.dot} ${styles.mine}`} aria-hidden /> 나
-        </li>
-        <li>
-          <span className={`${styles.dot} ${styles.partner}`} aria-hidden /> 상대
-        </li>
-      </ul>
-
-      <h3 className={styles.gridTitle}>
-        지난 달들 <span className={styles.count}>{doneMonths}개 완성</span>
-      </h3>
-      <div className={styles.weeks}>
+      <div className={styles.pastRow}>
+        <h3 className={styles.gridTitle}>
+          지난 달 <span className={styles.count}>{doneMonths}개 완성</span>
+        </h3>
+        <div className={styles.weeks}>
         {past.map((m) => (
           <MonthGlyph
             key={m.monthKey}
@@ -141,12 +152,9 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
             needed={m.needed}
             complete={m.complete}
           />
-        ))}
+          ))}
+        </div>
       </div>
-
-      <button type="button" className={styles.collapse} onClick={() => setOpen(false)} aria-expanded>
-        접기 ▴
-      </button>
     </section>
   )
 }

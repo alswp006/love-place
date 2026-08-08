@@ -54,7 +54,9 @@
   gap: var(--sp-2);
   border: 1px solid #2b2f52;
   border-radius: var(--radius);
-  padding: var(--sp-4) var(--sp-3) var(--sp-3);
+  padding: var(--sp-3);
+  /* 접기 버튼이 우상단에 절대 배치된다. */
+  position: relative;
   background:
     radial-gradient(120% 90% at 22% 8%, #2f3566 0%, rgba(47, 53, 102, 0) 58%),
     radial-gradient(100% 80% at 88% 96%, #4a2f5e 0%, rgba(74, 47, 94, 0) 55%),
@@ -77,7 +79,8 @@
 }
 
 .gridTitle {
-  margin: var(--sp-2) 0 0;
+  margin: 0;
+  flex-shrink: 0;
   font-size: var(--fs-caption);
   color: #cfd5ff;
   font-weight: 600;
@@ -133,23 +136,66 @@
 }
 
 .collapse {
-  align-self: center;
-  border: 1px solid rgba(223, 228, 255, 0.25);
-  background: rgba(223, 228, 255, 0.08);
+  /* 우상단 고정 — 하단 전폭 버튼이던 것을 옮겨 카드 한 줄을 줄였다.
+     보이는 원은 30px이지만 터치 타깃은 44px를 지킨다(HIG). */
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: none;
   color: #cfd5ff;
-  border-radius: var(--r-pill);
-  padding: 0 var(--sp-4);
   font-size: var(--fs-caption);
+  line-height: 1;
   cursor: pointer;
-  min-height: 44px;
+  z-index: 1;
 }
 
-/* 별자리 이름 + 한 줄 설명 — 왜 이 별자리인지 말해준다. */
+.collapse::before {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(223, 228, 255, 0.25);
+  background: rgba(223, 228, 255, 0.08);
+}
+
+.collapse > * ,
+.collapse {
+  position: absolute;
+}
+
+.collapse:focus-visible::before {
+  box-shadow: var(--focus-ring);
+}
+
+/* 설명 + 범례 한 줄 — 각자 한 줄씩 쓰면 하늘이 밀린다. */
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
 .hint {
-  margin: 0;
   font-size: var(--fs-micro);
   color: #9aa2d8;
-  text-align: center;
+  min-width: 8rem;
+  flex: 1;
+}
+
+/* 지난 달 — 제목과 글리프를 한 줄에. */
+.pastRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
 }
 
 /* 오늘 각자 채웠는지 — 색·모양(⬤/○) + 글자로 이중화(§8). */
