@@ -127,24 +127,6 @@ export type MonthSummary = {
   complete: boolean
 }
 
-/** 최근 n개월(이번 달이 마지막). */
-export function recentMonths(
-  counts: ReadonlyMap<string, DayCell>,
-  todayKey: string,
-  months = 6,
-): MonthSummary[] {
-  const [y, m] = todayKey.split('-').map(Number)
-  const out: MonthSummary[] = []
-  for (let k = months - 1; k >= 0; k--) {
-    const d = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1 - k, 1))
-    const monthKey = `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}`
-    const stars = monthStars(counts, monthKey)
-    const needed = starsNeededForMonth(monthKey)
-    out.push({ monthKey, stars, needed, complete: stars.length >= needed })
-  }
-  return out
-}
-
 /**
  * 올해 1~12월 전부 — 지나온 달만 보여주면 "앞으로 몇 개 남았나"가 안 보인다.
  * 아직 오지 않은 달도 자리를 지킨다(비어 있는 게 당연하므로 화면에서 더 조용히 그린다).

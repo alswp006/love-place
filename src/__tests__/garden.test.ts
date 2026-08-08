@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dailyDoneCounts, monthStars, recentMonths, monthOf, filledToday } from '@/lib/streak/garden'
+import { dailyDoneCounts, monthStars, monthsOfYear, monthOf, filledToday } from '@/lib/streak/garden'
 import {
   constellationOfMonth,
   starSlots,
@@ -119,17 +119,19 @@ describe('monthStars — 하루에 한 사람이 별 하나', () => {
   })
 })
 
-describe('recentMonths · filledToday', () => {
+describe('monthsOfYear · filledToday', () => {
   it('한 달을 다 채우려면 날 수 × 2개가 필요하다', () => {
     expect(starsNeededForMonth('2026-08')).toBe(62) // 31일 × 2
     expect(starsNeededForMonth('2026-02')).toBe(56) // 28일 × 2
     expect(starsNeededForMonth('2024-02')).toBe(58) // 윤년 29일 × 2
   })
 
-  it('이번 달이 마지막이고 최근 n개월이 순서대로 온다', () => {
-    const ms = recentMonths(new Map(), '2026-08-05', 3)
-    expect(ms.map((m) => m.monthKey)).toEqual(['2026-06', '2026-07', '2026-08'])
-    expect(ms[2]!.needed).toBe(62)
+  it('올해 1~12월이 전부 온다 — 아직 안 온 달도 자리를 지킨다', () => {
+    const ms = monthsOfYear(new Map(), '2026-08-05')
+    expect(ms).toHaveLength(12)
+    expect(ms[0]!.monthKey).toBe('2026-01')
+    expect(ms[11]!.monthKey).toBe('2026-12')
+    expect(ms[7]!.needed).toBe(62) // 8월
   })
 
   it('다 채우면 완성', () => {
@@ -138,9 +140,9 @@ describe('recentMonths · filledToday', () => {
       return [done(`m${i}`, kst(d, '09:00'), 'me'), done(`y${i}`, kst(d, '10:00'), 'you')]
     }).flat()
     const counts = dailyDoneCounts(entries, metaOf, 'me')
-    const ms = recentMonths(counts, '2026-08-31', 1)
-    expect(ms[0]!.stars).toHaveLength(62)
-    expect(ms[0]!.complete).toBe(true)
+    const aug = monthsOfYear(counts, '2026-08-31')[7]!
+    expect(aug.stars).toHaveLength(62)
+    expect(aug.complete).toBe(true)
   })
 
   it('오늘 각자 채웠는지 따로 말한다', () => {
@@ -154,20 +156,24 @@ describe('recentMonths · filledToday', () => {
   })
 })
 
-describe('별자리 — 그 계절에 실제로 뜨는 것', () => {
-  it('달이 정해지면 별자리도 정해진다 — 새로고침해도 같다', () => {
-    expect(constellationOfMonth('2026-08').key).toBe(constellationOfMonth('2026-08').key)
+describe('별자리 — 황도 12궁, 달마다 하나씩', () => {
+  it('그 달을 상징하는 궁이 배정된다', () => {
+    expect(constellationOfMonth('2026-08').name).toBe('사자자리')
+    expect(constellationOfMonth('2026-01').name).toBe('염소자리')
+    expect(constellationOfMonth('2026-12').name).toBe('사수자리')
   })
 
-  it('그 계절에 실제로 보이는 별자리가 배정된다', () => {
-    expect(['cygnus', 'lyra', 'scorpius']).toContain(constellationOfMonth('2026-07').key)
-    expect(['orion', 'gemini']).toContain(constellationOfMonth('2026-01').key)
-    expect(['cassiopeia', 'pegasus']).toContain(constellationOfMonth('2026-10').key)
+  it('해가 바뀌어도 같은 달은 같은 별자리다 — 8월은 늘 사자자리', () => {
+    const keys = ['2026-08', '2027-08', '2030-08'].map((k) => constellationOfMonth(k).key)
+    expect(new Set(keys).size).toBe(1)
   })
 
-  it('해가 바뀌면 같은 달이라도 다른 별자리가 나온다', () => {
-    const keys = ['2026-07', '2027-07', '2028-07'].map((k) => constellationOfMonth(k).key)
-    expect(new Set(keys).size).toBeGreaterThan(1)
+  it('열두 달이 모두 다른 별자리 — 한 해를 채우면 황도 한 바퀴', () => {
+    const keys = Array.from({ length: 12 }, (_, i) =>
+      constellationOfMonth(`2026-${String(i + 1).padStart(2, '0')}`).key,
+    )
+    expect(new Set(keys).size).toBe(12)
+    expect(CONSTELLATIONS).toHaveLength(12)
   })
 
   it('모든 별자리의 edge는 실재하는 별을 가리킨다(선이 허공으로 가지 않게)', () => {
