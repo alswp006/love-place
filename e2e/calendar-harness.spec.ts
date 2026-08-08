@@ -221,29 +221,6 @@ test('다크 모드 — 월 뷰', async ({ page }) => {
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
 })
 
-test('다가오는 일정 피드 카드 — 지도 화면에 승격', async ({ page }) => {
-  // UpcomingFeed(Task 15) — 지도(/) 상단 다가오는 일정 카드. 윈도우는 now+30일(self-hide)이므로
-  // 고정 미래(2030)가 아니라 실행시각 기준 +2일의 이벤트를 시드해 피드에 확실히 들어오게 한다.
-  const soon = new Date(Date.now() + 2 * 86400000)
-  const soonIso = soon.toISOString().slice(0, 19) // 'YYYY-MM-DDTHH:mm:ss'
-  const feedEvent = {
-    id: 'ef', title: '다가오는 데이트', start: `${soonIso}+09:00`, end: `${soonIso}+09:00`,
-    is_all_day: false, time_zone: 'Asia/Seoul', visibility: 'SHARED', participants: 'BOTH',
-    owner_id: USER_A, place_id: null, memo: null, recurrence_rule: null, reminders: [], version: 1,
-  }
-  await seedAuthedMap(page, { events: [feedEvent] })
-  await page.goto('/')
-  // 알림은 이제 한 줄로 접혀 있다 — 지도 탭의 주인공은 지도라서 첫 화면을 카드로 덮지 않는다.
-  // 접힌 줄에서도 '무슨 일이 다가오는지'는 읽혀야 한다(신호를 없앤 게 아니라 자리만 돌려준 것).
-  const pill = page.getByRole('button', { name: /알림 .*펼치기/ })
-  await expect(pill).toBeVisible()
-  await expect(pill).toContainText('다가오는 데이트')
-  // 탭하면 원래 카드가 그대로 펼쳐진다.
-  await pill.click()
-  await expect(page.getByRole('region', { name: '다가오는 일정' })).toBeVisible()
-  await expect(page.getByText('다가오는 데이트')).toBeVisible()
-})
-
 test('완료 체크 — 회차 단위로 기록되고 여정이 한 걸음 나아간다', async ({ page }) => {
   const D = '2030-03-15'
   const ev = {

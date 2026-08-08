@@ -65,3 +65,24 @@
   color: var(--pink-ink);
   white-space: nowrap;
 }
+
+/* 지난 여행 리캡 — CtaLink가 inline-flex라 나열만 하면 서로 붙어 겹쳐 보인다. */
+.recapList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.recapList > li {
+  display: flex;
+}
+
+.recapList a {
+  flex: 1;
+  /* 여행 이름이 길면 줄바꿈 — 고정 높이 박스 금지(Dynamic Type, ux §4). */
+  text-align: center;
+  overflow-wrap: anywhere;
+}

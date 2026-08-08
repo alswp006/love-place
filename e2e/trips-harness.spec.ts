@@ -157,14 +157,18 @@ test('상세 — 길찾기 프록시가 죽어도 목록은 그대로(칩만 사
   await expect(page.getByText(/길찾기/)).toHaveCount(0)
 })
 
-test('목록 — 만들기 CTA 카드 + 지난 여행 섹션(트리플 구조)', async ({ page }) => {
+test('목록 — 만들기 FAB + 지난 여행 섹션', async ({ page }) => {
   await seedAuthedMap(page, { trips: TRIPS, events: EVENTS })
   await page.goto('/trips')
 
-  // 만들기는 이 화면의 주 행동 — 우상단 작은 버튼이 아니라 카드로 올라와 있다.
-  const cta = page.getByRole('button', { name: /여행 일정 만들기/ })
+  // 만들기는 설명 카드가 아니라 우하단 + 하나. 여행 탭에 들어온 사람은 이미 뭘 하러 왔는지 안다.
+  await expect(page.getByRole('button', { name: /여행 일정 만들기/ })).toHaveCount(0)
+  const cta = page.getByRole('button', { name: '여행 만들기' })
   await expect(cta).toBeVisible()
-  expect((await cta.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  const box = (await cta.boundingBox())!
+  expect(box.height).toBeGreaterThanOrEqual(44)
+  // 우하단 — 엄지 도달 영역(ux §1).
+  expect(box.x).toBeGreaterThan(page.viewportSize()!.width * 0.6)
 
   // 예정과 지난 것을 섞지 않는다 — 경계에 섹션 제목이 선다.
   await expect(page.getByRole('heading', { name: '지난 여행' })).toBeVisible()

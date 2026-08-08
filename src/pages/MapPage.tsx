@@ -13,7 +13,6 @@ import { useWishes } from '@/hooks/useWishes'
 import { useVisits } from '@/hooks/useVisits'
 import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
-import { MapNotices } from '@/components/common/MapNotices'
 import { JourneyRecordControl } from '@/components/journey/JourneyRecordControl'
 import { useReactions } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
@@ -60,8 +59,6 @@ export default function MapPage() {
   const [previewHit, setPreviewHit] = useState<KakaoPlaceHit | null>(null)
   // 시트 snap을 MapPage로 끌어올려 NaverMap(플로팅 버튼/토스트 숨김)과 PlaceSheet가 같은 값을 읽게 한다.
   const [snap, setSnap] = useState<SnapStop>('peek')
-  // 검색 중인가 — 결과 목록과 알림 줄이 같은 자리를 쓰므로 알림을 치운다.
-  const [searching, setSearching] = useState(false)
   const savePlace = useSavePlace(coupleId)
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -157,14 +154,6 @@ export default function MapPage() {
           ) : null}
           {/* 알림(다가오는 일정 + 상대 활동)은 한 줄로 접어 둔다 — 지도 탭의 주인공은 지도다.
               탭하면 원래 카드가 그대로 펼쳐지고, 0건이면 통째로 사라진다(ux §6). */}
-          {/* 검색 중이거나 장소를 고른 뒤에는 치운다 — 검색 결과와 같은 자리에 겹쳐서
-              "장소를 올리는 동안 최근 활동이 계속 떠 있는" 문제가 났다. 알림은 쉬고 있을 때의 것이다.
-              시트가 full일 때도 치운다(검색창과 같은 규칙) — half까지는 지도가 보이므로 남긴다. */}
-          {searching || selectedId || previewHit || snap === 'full' ? null : (
-            <div className={styles.feedOverlay}>
-              <MapNotices coupleId={coupleId} myId={myId} />
-            </div>
-          )}
           {/* R6 동선 기록(A안) — 화면 한가운데 위를 막던 것을 '내 위치' 버튼 위 우하단 레일로 옮겼다.
               엄지 도달 영역이고, 지도를 가리지 않으며, 기록 중 배지도 같은 자리에서 커진다. */}
           {coupleActive ? (
@@ -180,7 +169,6 @@ export default function MapPage() {
               onPick={onPick}
               snap={snap}
               initialQuery={qParam}
-              onActiveChange={setSearching}
             />
           ) : null}
           <NaverMap

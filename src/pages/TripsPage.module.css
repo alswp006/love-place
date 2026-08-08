@@ -208,3 +208,31 @@
   color: var(--c-text-weak);
   font-variant-numeric: tabular-nums;
 }
+
+/* 만들기 FAB — 우하단, 탭바 위. 설명 카드를 대신한다(엄지 도달 영역, ux §1). */
+.fab {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + var(--sp-3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--c-cta-bg);
+  color: var(--c-cta-fg);
+  font-size: 1.5rem;
+  box-shadow: var(--shadow-floating);
+  cursor: pointer;
+  z-index: 40;
+}
+
+.fab:active {
+  transform: scale(0.96);
+}
+
+.fab:focus-visible {
+  box-shadow: var(--focus-ring);
+}

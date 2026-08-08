@@ -112,26 +112,6 @@ export default function TripsPage() {
 
   return (
     <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
-      {/* 만들기는 이 화면의 주 행동이라 우상단 작은 버튼이 아니라 카드로 올린다(트리플 구조).
-          여행이 없을 땐 특히 여기가 유일한 출발점이다. */}
-      <button
-        type="button"
-        className={styles.createCard}
-        onClick={() => setFormOpen((v) => !v)}
-        aria-expanded={formOpen}
-        aria-controls="trip-create-form"
-      >
-        <span className={styles.createIcon} aria-hidden>
-          <Icon name={formOpen ? 'close' : 'plus'} />
-        </span>
-        <span className={styles.createText}>
-          <span className={styles.createTitle}>{formOpen ? '취소' : '여행 일정 만들기'}</span>
-          <span className={styles.createHint}>
-            {formOpen ? '만들지 않고 닫아요' : '날짜를 정하면 그날그날 갈 곳을 담아둘 수 있어요.'}
-          </span>
-        </span>
-      </button>
-
       {formOpen ? (
         <form id="trip-create-form" className={styles.form} onSubmit={onCreate} aria-label="여행 만들기">
           <input
@@ -238,6 +218,19 @@ export default function TripsPage() {
           )}
         </>
       )}
+
+      {/* 만들기는 우하단 + 하나로. 설명 카드가 목록 위를 차지하던 것을 걷어냈다 —
+          여행 탭에 들어온 사람은 이미 무엇을 하러 왔는지 안다. */}
+      <button
+        type="button"
+        className={styles.fab}
+        onClick={() => setFormOpen((v) => !v)}
+        aria-expanded={formOpen}
+        aria-controls="trip-create-form"
+        aria-label={formOpen ? '여행 만들기 닫기' : '여행 만들기'}
+      >
+        <Icon name={formOpen ? 'close' : 'plus'} />
+      </button>
     </ScreenScaffold>
   )
 }

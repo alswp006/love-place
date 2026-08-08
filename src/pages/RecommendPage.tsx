@@ -156,11 +156,17 @@ export default function RecommendPage() {
         {(trips ?? []).length > 0 ? (
           <section aria-label="지난 여행">
             <h2 className={styles.sectionTitle}>지난 여행 리캡</h2>
-            {(trips ?? []).map((t) => (
-              <CtaLink key={t.id} to={`/trips/${t.id}/recap`}>
-                🧭 {t.title} · {t.start_date}~{t.end_date}
-              </CtaLink>
-            ))}
+            {/* CtaLink는 inline-flex라 그냥 나열하면 줄바꿈 없이 붙어 서로 겹쳐 보였다.
+                세로 스택으로 감싸 간격을 준다. */}
+            <ul className={styles.recapList}>
+              {(trips ?? []).map((t) => (
+                <li key={t.id}>
+                  <CtaLink to={`/trips/${t.id}/recap`}>
+                    🧭 {t.title} · {t.start_date}~{t.end_date}
+                  </CtaLink>
+                </li>
+              ))}
+            </ul>
           </section>
         ) : null}
 
