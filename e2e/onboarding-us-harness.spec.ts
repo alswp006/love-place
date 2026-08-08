@@ -123,3 +123,40 @@ test('로그인 — 발송 후 다크 모드', async ({ page }) => {
   await page.getByRole('button', { name: '로그인 링크 받기' }).click()
   await expect(page.getByText('📬 메일을 확인하세요')).toBeVisible()
 })
+
+// 다크에서 주 버튼 글자가 배경에 묻지 않는다 — 실제로 **번들된 CSS**로 확인한다.
+// 소스 게이트(src/__tests__/cssContrast.test.ts)가 토큰 짝을 보증하지만, 그건 소스 이야기다.
+// 여기선 브라우저가 계산한 값을 본다(빌드 파이프라인이 토큰을 날려먹는 경우까지 잡으려고).
+// 픽셀 스냅샷으로는 못 잡는다 — 버튼 글자는 화면의 2% 미만이라 허용 오차에 묻힌다.
+test('로그인 — 다크에서 주 버튼 글자가 배경에 묻지 않는다', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.goto('/auth')
+  const cta = page.getByRole('button', { name: '로그인 링크 받기' })
+  await expect(cta).toBeVisible()
+  // getComputedStyle은 oklch()를 **그대로** 돌려준다(레거시 rgb로 안 내려온다).
+  // 문자열을 파싱하려 들면 L·C·H를 r·g·b로 착각한다 — 캔버스에 1px 찍어 실제 sRGB를 읽는다.
+  const { fg, bg, raw } = await cta.evaluate((el) => {
+    const cs = getComputedStyle(el)
+    const cv = document.createElement('canvas')
+    cv.width = cv.height = 1
+    const ctx = cv.getContext('2d')!
+    const px = (c: string): [number, number, number] => {
+      ctx.clearRect(0, 0, 1, 1)
+      ctx.fillStyle = c
+      ctx.fillRect(0, 0, 1, 1)
+      const d = ctx.getImageData(0, 0, 1, 1).data
+      return [d[0]!, d[1]!, d[2]!]
+    }
+    return { fg: px(cs.color), bg: px(cs.backgroundColor), raw: `${cs.color} / ${cs.backgroundColor}` }
+  })
+  const lum = ([r, g, b]: number[]): number => {
+    const ch = (v = 0) => {
+      const s = v / 255
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+    }
+    return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b)
+  }
+  const [hi = 0, lo = 0] = [lum(fg), lum(bg)].sort((a, b) => b - a)
+  const ratio = (hi + 0.05) / (lo + 0.05)
+  expect(ratio, `다크 CTA 대비 ${ratio.toFixed(2)}:1 (${raw})`).toBeGreaterThanOrEqual(4.5)
+})
