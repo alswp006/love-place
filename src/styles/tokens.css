@@ -197,10 +197,59 @@
   }
 }
 
+/* ── 라우트 전환(View Transitions API) ──
+   라이브러리 0KB. NavLink의 viewTransition이 document.startViewTransition을 걸어 주고,
+   '무엇이 어떻게 움직이는가'는 여기 CSS가 정한다. 지금까지 이 CSS가 없어 브라우저 기본
+   크로스페이드가 **탭바까지 함께** 흐려 화면이 통째로 깜빡였다.
+
+   미지원 브라우저는 그냥 즉시 전환된다(폴백 코드 불필요).
+   Safari 18+/Chrome 111+/Firefox 133+ — 이 앱 하한선(iOS 16.4+)보다 위. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--motion-base);
+  animation-timing-function: var(--ease);
+}
+
+::view-transition-old(root) {
+  animation-name: vt-leave;
+}
+
+::view-transition-new(root) {
+  animation-name: vt-enter;
+}
+
+@keyframes vt-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes vt-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* 탭바는 '남아 있는 크롬'이다 — 본문과 같이 밀려 올라가면 화면 전체가 움직인 것처럼 보인다.
+   따로 캡처해 제자리에서 짧게만 바뀌게 한다(활성 탭 색만 넘어가는 느낌). */
+::view-transition-old(tabbar),
+::view-transition-new(tabbar) {
+  animation-duration: var(--motion-fast);
+  animation-timing-function: var(--ease);
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-fast: 0ms;
     --motion-base: 0ms;
+  }
+  /* 라우트 전환도 장식이다 — 즉시 바뀐다(ux §5). */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
   *,
   *::before,

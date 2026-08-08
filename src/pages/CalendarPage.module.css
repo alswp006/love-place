@@ -562,3 +562,16 @@
 .eventItemDone {
   opacity: 0.7;
 }
+
+/* 목록에 새로 들어온 항목 — 살짝 떠오른다. 라이브러리 없이 CSS 키프레임(0KB).
+   Reduce Motion에서는 tokens.css의 전역 규칙이 애니메이션을 사실상 0으로 만든다(ux §5). */
+.eventEnter {
+  animation: event-enter var(--motion-base) var(--ease) backwards;
+}
+
+@keyframes event-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}

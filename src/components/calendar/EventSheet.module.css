@@ -232,3 +232,25 @@
 .comments {
   padding: 0 var(--sp-3) calc(var(--sp-3) + var(--safe-bottom));
 }
+
+/* 등장 — 백드롭은 페이드, 시트는 아래에서 떠오른다. 라이브러리 없이 CSS(0KB).
+   Reduce Motion에서는 tokens.css 전역 규칙이 사실상 0ms로 만든다(ux §5). */
+.backdrop {
+  animation: sheet-backdrop var(--motion-fast) var(--ease) backwards;
+}
+
+.sheet {
+  animation: sheet-rise var(--motion-base) var(--ease) backwards;
+}
+
+@keyframes sheet-backdrop {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-rise {
+  from {
+    transform: translateY(24px);
+  }
+}

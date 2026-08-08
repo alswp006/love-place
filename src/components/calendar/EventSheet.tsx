@@ -59,6 +59,7 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
   const [categoryId, setCategoryId] = useState<string | null>(initial?.category_id ?? null)
   // 카테고리·반복은 본문에서 빼고 우상단 '⋯ 더보기' 패널로 접었다(자주 안 쓰는 설정).
   const [moreOpen, setMoreOpen] = useState(false)
+
   const morePanelRef = useRef<HTMLDivElement>(null)
   // 낙관적 락 기준 버전 — 기본은 원본 version, 버전충돌 후엔 재조회 버전으로 재시드(다음 저장이 같은 충돌 반복 방지).
   const [expectedVersion, setExpectedVersion] = useState(initial?.version ?? 0)
@@ -204,6 +205,8 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
   // body로 포탈 — 페이지 트리 안에 렌더하면 조상 스태킹 컨텍스트에 갇혀 탭바(z:46)가
   // 시트 하단 버튼을 가린다(Dialog와 동일 패턴).
   return createPortal(
+    // 등장은 CSS 키프레임(0KB) — 시트가 툭 나타나면 '떠오른 것'으로 안 읽힌다.
+    // 퇴장은 두지 않는다: React 언마운트라 JS 엔진이 필요한데 그 값이 얻는 것보다 컸다.
     <div className={styles.backdrop} onClick={onClose}>
       <div
         ref={sheetRef}

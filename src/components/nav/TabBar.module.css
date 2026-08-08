@@ -1,4 +1,6 @@
 .tabbar {
+  /* 라우트 전환에서 본문과 따로 캡처된다 — 같이 밀려 올라가면 화면 전체가 움직인 듯 보인다. */
+  view-transition-name: tabbar;
   position: relative;
   z-index: 46;
   /* 셸(비스크롤) 하단에 고정된 flex 자식 — 절대 줄어들거나 스크롤로 밀리지 않는다. */

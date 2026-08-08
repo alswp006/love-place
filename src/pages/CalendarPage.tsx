@@ -730,8 +730,11 @@ function DayAgenda({
             const isDone = doneKeys.has(doneKey)
             // 상대의 개인 일정은 체크하지 않는다 — 남의 할 일을 대신 지우는 셈이다.
             const canCheck = !readOnly && (ev.visibility === 'SHARED' || ev.owner_id === myId)
+            // 새로 들어온 항목만 살짝 떠오른다(CSS 키프레임 — 0KB).
+            // 퇴장 애니메이션은 없다: React가 즉시 언마운트하므로 JS 엔진이 필요한데,
+            // 그 값(캘린더 라우트 53KB→179KB)이 얻는 것보다 컸다.
             return (
-              <li key={ev.id}>
+              <li key={ev.id} className={styles.eventEnter}>
                 <div className={styles.eventRow}>
                   {canCheck ? (
                     <button
