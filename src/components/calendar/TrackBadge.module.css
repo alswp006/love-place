@@ -1,0 +1,48 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.faces {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* '함께'는 두 아바타를 겹쳐 하나의 표식으로 만든다 — 두 개가 나란히 있으면 두 항목처럼 읽힌다. */
+.face + .face {
+  margin-left: -0.42em;
+}
+
+.face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35em;
+  height: 1.35em;
+  border-radius: 50%;
+  /* 표면색 링 — 겹쳤을 때 앞뒤가 갈리고, 어떤 배경 위에서도 아바타 경계가 산다. */
+  box-shadow: 0 0 0 1.5px var(--c-surface);
+  color: var(--c-cta-fg);
+  font-size: 0.62em;
+  font-weight: 700;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.label {
+  /* 글자가 커져도 한 글자씩 쪼개지지 않게(한글 min-content = 한 글자). */
+  white-space: nowrap;
+}
+
+/* 좁은 자리(월 셀 칩 등) — 아바타만. 이름은 aria-label로 남는다. */
+.compact .faces {
+  font-size: 0.85em;
+}

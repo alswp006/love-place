@@ -16,7 +16,7 @@ export function RouteError() {
   return (
     <div role="alert" aria-live="assertive">
       <EmptyState
-        emoji="🌧️"
+        icon="warning"
         title="잠시 문제가 생겼어요"
         hint={`${message} — 네트워크가 불안정하면 잠시 후 다시 시도해 주세요.`}
         action={

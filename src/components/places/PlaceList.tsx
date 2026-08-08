@@ -71,7 +71,7 @@ export function PlaceList({
         <Skeleton count={4} label="가고싶은 장소 불러오는 중" />
       ) : visible.length === 0 ? (
         <EmptyState
-          emoji="📍"
+          icon="pin"
           title={
             placeFilter === 'collection'
               ? '이 목록엔 아직 장소가 없어요'

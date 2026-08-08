@@ -154,7 +154,7 @@ describe('UpcomingFeed 카드(Task 15)', () => {
     expect(screen.getByText('10분 뒤')).toBeInTheDocument()
   })
 
-  it('누구 일정인지 색이 아니라 심볼+라벨로 말한다 — 상대 PERSONAL이 출처 없이 섞이던 것 차단(§8)', () => {
+  it('누구 일정인지 색이 아니라 아바타+라벨로 말한다 — 상대 PERSONAL이 출처 없이 섞이던 것 차단(§8)', () => {
     eventsState = {
       data: [
         makeEvent({ id: 'mine', title: '내 일정', visibility: 'PERSONAL', owner_id: 'me', start: '2026-06-23T10:00:00+09:00', end: '2026-06-23T11:00:00+09:00' }),
@@ -166,8 +166,8 @@ describe('UpcomingFeed 카드(Task 15)', () => {
         <UpcomingFeed coupleId="c1" myId="me" />
       </MemoryRouter>,
     )
-    expect(screen.getByText('▲ 나')).toBeInTheDocument()
-    expect(screen.getByText('■ 상대')).toBeInTheDocument()
+    expect(screen.getAllByText('나').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('상대').length).toBeGreaterThan(0)
   })
 
   it('항목을 탭하면 그 날짜 캘린더로 간다(신호를 봤으면 갈 수 있어야)', () => {

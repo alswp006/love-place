@@ -6,8 +6,11 @@
   display: flex;
   justify-content: space-around;
   align-items: stretch;
-  background: var(--c-surface);
-  border-top: 1px solid var(--c-border);
+  /* 유리 — 지도·목록이 탭바 아래로 지나가는 게 비쳐 '떠 있는 크롬'으로 읽힌다(iOS 26 결). */
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--glass-border);
   padding-bottom: var(--safe-bottom);
 }
 
@@ -47,4 +50,12 @@
 .label {
   font-size: var(--fs-caption);
   line-height: 1;
+}
+
+/* backdrop-filter 미지원 — 반투명 판이 되면 글자가 섞이므로 불투명으로 되돌린다. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .tabbar {
+    background: var(--c-surface);
+    border-top-color: var(--c-border);
+  }
 }

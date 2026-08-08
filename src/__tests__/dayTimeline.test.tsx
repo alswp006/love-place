@@ -40,11 +40,16 @@ function topPx(el: HTMLElement): number {
   return m ? Number(m[1]) : NaN
 }
 
+const PROFILES = {
+  me: { id: 'me', displayName: '나', color: '#2f7d62', avatarUrl: null },
+  you: { id: 'you', displayName: '지민', color: '#e2638a', avatarUrl: null },
+}
+
 describe('DayTimeline(Task 12 — 시간축 배치 + 종일 밴드)', () => {
   it('시간 이벤트는 minuteOfDay에 비례한 top, 10:00 < 14:30', () => {
     const morning = occ('e1', '아침 미팅', '10:00', '11:00')
     const after = occ('e2', '오후 산책', '14:30', '15:00')
-    render(<DayTimeline dateKey={day} occurrences={[morning, after]} myId="u1" onEdit={() => {}} onAdd={() => {}} />)
+    render(<DayTimeline dateKey={day} occurrences={[morning, after]} myId="u1" profiles={PROFILES} onEdit={() => {}} onAdd={() => {}} />)
 
     const mEl = screen.getByText('아침 미팅').closest('[data-occ]') as HTMLElement
     const aEl = screen.getByText('오후 산책').closest('[data-occ]') as HTMLElement
@@ -58,7 +63,7 @@ describe('DayTimeline(Task 12 — 시간축 배치 + 종일 밴드)', () => {
   it('종일 이벤트는 상단 종일 밴드(all-day lane)에 들어간다', () => {
     const allDay = occ('e3', '기념일', '00:00', '23:59', true)
     const timed = occ('e1', '아침 미팅', '10:00', '11:00')
-    render(<DayTimeline dateKey={day} occurrences={[allDay, timed]} myId="u1" onEdit={() => {}} onAdd={() => {}} />)
+    render(<DayTimeline dateKey={day} occurrences={[allDay, timed]} myId="u1" profiles={PROFILES} onEdit={() => {}} onAdd={() => {}} />)
 
     const lane = screen.getByLabelText('종일 일정')
     expect(lane).toBeInTheDocument()
@@ -68,7 +73,7 @@ describe('DayTimeline(Task 12 — 시간축 배치 + 종일 밴드)', () => {
   })
 
   it('빈 날 → CTA 안내', () => {
-    render(<DayTimeline dateKey={day} occurrences={[]} myId="u1" onEdit={() => {}} onAdd={() => {}} />)
+    render(<DayTimeline dateKey={day} occurrences={[]} myId="u1" profiles={PROFILES} onEdit={() => {}} onAdd={() => {}} />)
     expect(screen.getByText(/이 날 일정이 없어요/)).toBeInTheDocument()
   })
 
@@ -76,14 +81,14 @@ describe('DayTimeline(Task 12 — 시간축 배치 + 종일 밴드)', () => {
     // 같은 시리즈 id가 다른 날짜/시각 occurrence로 두 번 들어와도 둘 다 렌더(composite key).
     const o1 = occ('rep', '운동', '07:00', '08:00')
     const o2: Occurrence<EventRow> = { ...occ('rep', '운동', '19:00', '20:00') }
-    render(<DayTimeline dateKey={day} occurrences={[o1, o2]} myId="u1" onEdit={() => {}} onAdd={() => {}} />)
+    render(<DayTimeline dateKey={day} occurrences={[o1, o2]} myId="u1" profiles={PROFILES} onEdit={() => {}} onAdd={() => {}} />)
     expect(screen.getAllByText('운동')).toHaveLength(2)
   })
 
   it('occurrence 클릭 → onEdit에 occurrence 전달(범위 시트 연계)', async () => {
     const onEdit = vi.fn()
     const morning = occ('e1', '아침 미팅', '10:00', '11:00')
-    render(<DayTimeline dateKey={day} occurrences={[morning]} myId="u1" onEdit={onEdit} onAdd={() => {}} />)
+    render(<DayTimeline dateKey={day} occurrences={[morning]} myId="u1" profiles={PROFILES} onEdit={onEdit} onAdd={() => {}} />)
     const { default: userEvent } = await import('@testing-library/user-event')
     const user = userEvent.setup()
     await user.click(screen.getByText('아침 미팅'))
@@ -96,7 +101,7 @@ describe('DayTimeline(Task 12 — 시간축 배치 + 종일 밴드)', () => {
     const shared = occ('e1', '함께 저녁', '18:00', '19:00')
     const mine: Occurrence<EventRow> = { ...occ('e2', '내 회의', '10:00', '11:00'), visibility: 'PERSONAL', owner_id: 'u1' }
     const partner: Occurrence<EventRow> = { ...occ('e3', '상대 약속', '14:00', '15:00'), visibility: 'PERSONAL', owner_id: 'u2' }
-    render(<DayTimeline dateKey={day} occurrences={[shared, mine, partner]} myId="u1" onEdit={() => {}} onAdd={() => {}} />)
+    render(<DayTimeline dateKey={day} occurrences={[shared, mine, partner]} myId="u1" profiles={PROFILES} onEdit={() => {}} onAdd={() => {}} />)
 
     const sharedBtn = screen.getByText('함께 저녁').closest('[data-occ]') as HTMLElement
     const mineBtn = screen.getByText('내 회의').closest('[data-occ]') as HTMLElement
@@ -115,7 +120,7 @@ describe('DayTimeline(Task 12 — 시간축 배치 + 종일 밴드)', () => {
 
   it('Task 16(R4.4): 종일 이벤트 버튼도 트랙명 포함 aria-label(시각 미포함)', () => {
     const allDay = occ('e3', '기념일', '00:00', '23:59', true)
-    render(<DayTimeline dateKey={day} occurrences={[allDay]} myId="u1" onEdit={() => {}} onAdd={() => {}} />)
+    render(<DayTimeline dateKey={day} occurrences={[allDay]} myId="u1" profiles={PROFILES} onEdit={() => {}} onAdd={() => {}} />)
     const btn = screen.getByText('기념일').closest('[data-occ]') as HTMLElement
     // SHARED 종일 → '함께 일정 · 기념일'. 종일은 시각 없이 제목만.
     expect(btn.getAttribute('aria-label')).toBe('함께 일정 · 기념일')

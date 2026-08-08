@@ -11,6 +11,7 @@ import { isNaverMapConfigured } from '@/lib/naver/loadNaverMaps'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Chip } from '@/components/ui/Chip'
+import { Icon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Skeleton } from '@/components/common/Skeleton'
 import { RecapShareButton } from '@/components/recap/RecapShareButton'
@@ -76,7 +77,7 @@ export default function RecapPage() {
       ) : !trip ? (
         <div className={styles.body}>
           <EmptyState
-            emoji="🧭"
+            icon="compass"
             title="여행을 찾을 수 없어요"
             hint="추천 탭의 '지난 여행'에서 다시 골라주세요."
             action={
@@ -89,7 +90,7 @@ export default function RecapPage() {
       ) : vertices.length === 0 && !hasRecorded ? (
         <div className={styles.body}>
           <EmptyState
-            emoji="🗺️"
+            icon="map"
             title="이 여행엔 아직 동선이 없어요"
             hint="여행 중 '여행 시작'으로 동선을 기록하거나, 가본 장소를 이 여행에 연결하면 동선이 그려져요."
           />
@@ -109,10 +110,24 @@ export default function RecapPage() {
 
           {/* 스탯 — 색만 의존 금지(아이콘+텍스트). 값 없는 스탯(장소 0곳 등)은 숨겨 빈 인상 회피. */}
           <div className={styles.stats} role="group" aria-label="여행 요약">
-            {stats.stopCount > 0 ? <Chip tone="pink">📍 장소 {stats.stopCount}곳</Chip> : null}
-            <Chip tone="neutral">📏 {distKm}km({distLabel})</Chip>
-            {hasRecorded && durationMin > 0 ? <Chip tone="neutral">⏱️ {durationLabel}</Chip> : null}
-            {stats.days > 0 ? <Chip tone="neutral">🗓️ {stats.days}일</Chip> : null}
+            {stats.stopCount > 0 ? (
+              <Chip tone="pink">
+                <Icon name="pin" /> 장소 {stats.stopCount}곳
+              </Chip>
+            ) : null}
+            <Chip tone="neutral">
+              <Icon name="route" /> {distKm}km({distLabel})
+            </Chip>
+            {hasRecorded && durationMin > 0 ? (
+              <Chip tone="neutral">
+                <Icon name="clock" /> {durationLabel}
+              </Chip>
+            ) : null}
+            {stats.days > 0 ? (
+              <Chip tone="neutral">
+                <Icon name="calendar" /> {stats.days}일
+              </Chip>
+            ) : null}
           </div>
 
           {/* 순서 정거장 목록 — 번호+이름+날짜+지역 */}

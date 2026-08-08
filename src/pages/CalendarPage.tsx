@@ -8,7 +8,6 @@ import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { JourneyStrip } from '@/components/streak/JourneyStrip'
 import { useEventCompletions, useToggleEventDone, occurrenceKey } from '@/hooks/useEventCompletions'
 import { flyStar } from '@/components/streak/flyStar'
-import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { EventSheet } from '@/components/calendar/EventSheet'
 import { ScopeSheet, type Scope } from '@/components/calendar/ScopeSheet'
 import { DayTimeline } from '@/components/calendar/DayTimeline'
@@ -26,6 +25,7 @@ import { useToast } from '@/hooks/useToast'
 import { useConflict } from '@/lib/sync/useConflict'
 import { refetchEventRow, ConflictError } from '@/lib/sync/versionedUpdate'
 import { deriveTrack, TRACK_META, ALL_TRACKS, type Track } from '@/lib/calendar/track'
+import { TrackBadge } from '@/components/calendar/TrackBadge'
 import { useEventCategories } from '@/hooks/useEventCategories'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
 import { expandEvents, buildRule, parseRule, type Occurrence } from '@/lib/calendar/rrule'
@@ -176,7 +176,7 @@ export default function CalendarPage() {
     return (
       <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
         <EmptyState
-          emoji="💑"
+          icon="users"
           title="먼저 상대와 연결해요"
           hint="'우리' 탭에서 초대 코드로 연결하면, 둘이 함께 일정을 겹쳐 봐요."
         />
@@ -419,13 +419,14 @@ export default function CalendarPage() {
         </div>
 
         {/* 트랙 = 어느 캘린더를 볼지(단일 선택). 범례는 지웠다 — 선택지 자체가 색·심볼·이름을 다 보여준다. */}
-        <TrackSwitch track={track} onChange={setTrack} />
+        <TrackSwitch track={track} onChange={setTrack} profiles={profiles ?? {}} myId={myId} />
 
         {mode === 'day' ? (
           <DayTimeline
             dateKey={selected}
             occurrences={dayEvents}
             myId={myId}
+            profiles={profiles ?? {}}
             onEdit={openEdit}
             onAdd={openCreate}
           />
@@ -439,6 +440,7 @@ export default function CalendarPage() {
                 selected={selected}
                 todayKey={todayKey}
                 myId={myId}
+                profiles={profiles ?? {}}
                 onSelect={setSelected}
               />
             ) : (
@@ -533,7 +535,17 @@ function ViewSegment({
 
 // 트랙 전환 — 셋 중 하나만 본다(투두메이트의 사람 전환과 같은 모델).
 // 색 + 심볼 + 라벨 이중화는 유지(§8): 선택은 색뿐 아니라 aria-pressed·굵기·테두리로도 드러난다.
-function TrackSwitch({ track, onChange }: { track: Track; onChange: (t: Track) => void }) {
+function TrackSwitch({
+  track,
+  onChange,
+  profiles,
+  myId,
+}: {
+  track: Track
+  onChange: (t: Track) => void
+  profiles: ProfileMap
+  myId: string | null
+}) {
   return (
     <div className={styles.chips} role="group" aria-label="어느 캘린더를 볼지">
       {ALL_TRACKS.map((t) => {
@@ -548,7 +560,7 @@ function TrackSwitch({ track, onChange }: { track: Track; onChange: (t: Track) =
             aria-pressed={on}
             onClick={() => onChange(t)}
           >
-            <span aria-hidden>{meta.symbol}</span> {meta.label}
+            <TrackBadge track={t} profiles={profiles} myId={myId} />
           </button>
         )
       })}
@@ -562,6 +574,7 @@ function MonthGrid({
   selected,
   todayKey,
   myId,
+  profiles,
   onSelect,
 }: {
   cells: DayCell[]
@@ -569,6 +582,7 @@ function MonthGrid({
   selected: string
   todayKey: string
   myId: string | null
+  profiles: ProfileMap
   onSelect: (key: string) => void
 }) {
   return (
@@ -599,14 +613,14 @@ function MonthGrid({
             aria-label={`${c.key}${evs.length ? ` · ${tracks.map((t) => TRACK_META[t].label).join('·')} 일정 ${evs.length}개` : ''}`}
           >
             <span className={styles.cellDay}>{c.day}</span>
-            {/* 제목 칩 앞 2개 + `+N` overflow(조사 01 §4). 색 단독 금지(§8) → 트랙 심볼(●▲■) 텍스트 동반.
+            {/* 제목 칩 앞 2개 + `+N` overflow(조사 01 §4). 색 단독 금지(§8) → 아바타 동반(도형 심볼 대체).
                 칩은 비인터랙티브 span(중첩 버튼 회피 — 셀 button 하나만 탭 대상). */}
             <span className={styles.cellChips}>
               {evs.slice(0, 2).map((e) => {
                 const t = deriveTrack(e, myId)
                 return (
                   <span key={e.id} className={styles.cellChip} style={{ color: TRACK_META[t].cssVar }} aria-hidden>
-                    {TRACK_META[t].symbol} {e.title}
+                    <TrackBadge track={t} profiles={profiles} myId={myId} compact /> {e.title}
                   </span>
                 )
               })}
@@ -756,10 +770,13 @@ function DayAgenda({
                     {myId && ev.reminders?.some((r) => r.userId === myId) ? (
                       <Icon name="bell" label="리마인더 설정됨" />
                     ) : null}
-                    <SourceAvatar userId={ev.owner_id} profiles={profiles} myId={myId} context=" 일정" />
-                    <span className={styles.eventTrack} style={{ color: meta.cssVar }}>
-                      {meta.symbol} {meta.label}
-                    </span>
+                    {/* 출처 아바타와 '● 함께' 심볼이 나란히 있어 같은 말을 두 번 했다 — 배지 하나로 합친다. */}
+                    <TrackBadge
+                      track={t}
+                      profiles={profiles}
+                      myId={myId}
+                      className={styles.eventTrack}
+                    />
                   </button>
                   {/* 상세 진입 없이 바로 삭제 — 1탭=인라인 확인, 2탭=삭제(비반복: Undo 토스트 / 반복: 범위 시트). */}
                   {confirmId === ev.id ? (

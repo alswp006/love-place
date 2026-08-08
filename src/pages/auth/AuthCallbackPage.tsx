@@ -27,7 +27,7 @@ export default function AuthCallbackPage() {
   if (timedOut && !session) {
     return (
       <EmptyState
-        emoji="⏳"
+        icon="waiting"
         title="로그인 링크가 만료됐거나 잘못됐어요"
         hint="이 링크를 처음 요청한 브라우저에서 열어주세요. 또는 로그인 화면에서 6자리 코드로 로그인하세요."
         action={

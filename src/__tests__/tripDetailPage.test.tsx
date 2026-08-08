@@ -251,15 +251,16 @@ describe('TripDetailPage — 여행 Day 계획', () => {
     expect(screen.getByLabelText(/빼기/)).toBeInTheDocument()
   })
 
-  it('스톱에 소유자 트랙을 색이 아니라 심볼+라벨로 표시한다(§8)', () => {
+  it('스톱에 소유자 트랙을 색이 아니라 아바타+라벨로 표시한다(§8)', () => {
     state.places = [{ id: 'p1', name: '칠성조선소' }, { id: 'p2', name: '지민 일정' }]
     state.events = [
       { id: 'e1', title: '칠성조선소', start: kst('2026-07-25', '09:00'), end: kst('2026-07-25', '10:00'), place_id: 'p1', memo: null, version: 1, visibility: 'SHARED', owner_id: 'u1' },
       { id: 'e2', title: '지민 일정', start: kst('2026-07-25', '11:00'), end: kst('2026-07-25', '12:00'), place_id: 'p2', memo: null, version: 1, visibility: 'PERSONAL', owner_id: 'u2' },
     ]
     renderDetail()
-    expect(screen.getByText('● 함께')).toBeInTheDocument()
-    expect(screen.getByText('■ 상대')).toBeInTheDocument()
+    // 도형 심볼(●▲■)을 아바타로 바꿨다 — 규칙(색 단독 금지)은 옆의 라벨이 이미 충족한다.
+    expect(screen.getByText('함께')).toBeInTheDocument()
+    expect(screen.getByText('상대')).toBeInTheDocument()
   })
 
   it('거리 칩 — 스톱 사이에 거리 + 길찾기를 텍스트로 보여준다', () => {

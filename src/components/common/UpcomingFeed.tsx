@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom'
 import { useEvents } from '@/hooks/useEvents'
 import { useProfiles } from '@/hooks/useProfiles'
 import { buildUpcomingFeed } from '@/lib/calendar/upcomingFeed'
-import { TRACK_META } from '@/lib/calendar/track'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
+import { TrackBadge } from '@/components/calendar/TrackBadge'
 import styles from './UpcomingFeed.module.css'
 
 // 다가오는 일정 인앱 피드 카드(Task 15) — TodayCard 승격. 첫 화면(지도) 상단의 경량 활동 신호.
@@ -43,9 +43,12 @@ export function UpcomingFeed({ coupleId, myId }: { coupleId: string | null; myId
               {/* 누구 일정인지 — 색만 쓰지 않고 아바타 + 심볼(●▲■)+라벨로 이중화(§8).
                   상대의 PERSONAL 일정이 출처 없이 섞여 뜨던 것을 막는다. */}
               <SourceAvatar userId={i.ownerId} profiles={profiles ?? {}} myId={myId} context=" 일정" />
-              <span className={styles.track} style={{ color: TRACK_META[i.track].cssVar }}>
-                {TRACK_META[i.track].symbol} {TRACK_META[i.track].label}
-              </span>
+              <TrackBadge
+                track={i.track}
+                profiles={profiles ?? {}}
+                myId={myId}
+                className={styles.track}
+              />
             </Link>
           </li>
         ))}

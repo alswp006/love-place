@@ -90,7 +90,7 @@ export default function TripsPage() {
           disabled={del.isPending}
           aria-label={`${t.title} 삭제`}
         >
-          🗑
+          <Icon name="trash" />
         </button>
       </li>
     )
@@ -154,7 +154,7 @@ export default function TripsPage() {
         <Skeleton count={3} label="여행 불러오는 중" />
       ) : list.length === 0 ? (
         <EmptyState
-          emoji={tab.empty.emoji}
+          icon={tab.empty.icon}
           title={tab.empty.title}
           hint={tab.empty.hint}
           action={

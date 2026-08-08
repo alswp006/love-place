@@ -8,7 +8,10 @@
   max-width: 480px;
   margin: 0 auto;
   z-index: 50;
-  background: var(--c-surface);
+  /* 유리 — 지도 위에 떠 있는 크롬. */
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border-radius: var(--radius);
   box-shadow: var(--shadow-floating);
   padding: var(--sp-2);
@@ -19,4 +22,10 @@
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .overlay {
+    background: var(--c-surface);
+  }
 }

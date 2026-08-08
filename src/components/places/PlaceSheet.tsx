@@ -413,7 +413,7 @@ export function PlaceSheet({
           onPointerUp={onBodyPointerUp}
         >
           <EmptyState
-            emoji="💑"
+            icon="users"
             title="먼저 상대와 연결해요"
             hint="'우리' 탭에서 초대 코드로 연결하면, 둘이 함께 장소를 모을 수 있어요."
             action={

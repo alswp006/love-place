@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Icon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
+import { TrackBadge } from '@/components/calendar/TrackBadge'
 import { StopReview } from '@/components/trips/StopReview'
 import { NaverMap } from '@/components/map/NaverMap'
 import { isNaverMapConfigured } from '@/lib/naver/loadNaverMaps'
@@ -13,7 +14,7 @@ import { openDirections } from '@/lib/places/directionsUrl'
 import { formatTime, DISPLAY_TZ } from '@/lib/calendar/eventDays'
 import { buildEventTimes } from '@/lib/calendar/eventTimes'
 import { stopsOfDay, memosOfDay, slotIso, nextStopStartMin } from '@/lib/trips/tripDays'
-import { deriveTrack, TRACK_META } from '@/lib/calendar/track'
+import { deriveTrack } from '@/lib/calendar/track'
 import type { EventRow } from '@/hooks/useEvents'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { ProfileMap } from '@/hooks/useProfiles'
@@ -233,12 +234,12 @@ export function TripDaySection({
                         myId={myId}
                         context=" 담음"
                       />
-                      <span
+                      <TrackBadge
+                        track={track}
+                        profiles={profiles}
+                        myId={myId}
                         className={styles.stopTrack}
-                        style={{ color: TRACK_META[track].cssVar }}
-                      >
-                        {TRACK_META[track].symbol} {TRACK_META[track].label}
-                      </span>
+                      />
                     </span>
                   </span>
                   {canRemove ? (
@@ -315,12 +316,12 @@ export function TripDaySection({
                         myId={myId}
                         context=" 메모"
                       />
-                      <span
+                      <TrackBadge
+                        track={track}
+                        profiles={profiles}
+                        myId={myId}
                         className={styles.stopTrack}
-                        style={{ color: TRACK_META[track].cssVar }}
-                      >
-                        {TRACK_META[track].symbol} {TRACK_META[track].label}
-                      </span>
+                      />
                     </span>
                   </span>
                   {canRemove ? (

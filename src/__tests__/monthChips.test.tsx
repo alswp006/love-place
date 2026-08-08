@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import type { EventRow } from '@/hooks/useEvents'
 
 // Task 11(R2.3): 월 셀이 트랙 점만 보여주던 것 → 제목 칩 1-2개 + `+N`(overflow).
-// 칩은 색 단독 금지(§8) — 트랙 심볼(●/▲/■)을 텍스트로 동반. 셀 버튼 탭은 유지(칩은 비버튼 span).
+// 칩은 색 단독 금지(§8) — 트랙 아바타를 동반(도형 심볼 ●▲■을 대체). 셀 버튼 탭은 유지(칩은 비버튼 span).
 // 데이터 훅 mock 스타일은 calendarDeepLink.test.tsx와 동일.
 // 완료 체크(0021)는 오프라인 큐 프로바이더를 요구한다 — 페이지 테스트에서는 훅째로 목.
 vi.mock('@/hooks/useEventCompletions', () => ({
@@ -93,11 +93,11 @@ describe('월 셀 제목 칩(Task 11 — +N more, 색+심볼 이중화)', () => 
     expect(within(cell).getByText('+1')).toBeInTheDocument()
   })
 
-  it('칩에 트랙 심볼(●)이 텍스트로 동반(색 단독 금지 §8)', () => {
+  it('칩에 아바타가 동반된다(색 단독 금지 §8 — 도형 심볼을 아바타로 교체)', () => {
     renderCalendar()
     const cell = screen.getByRole('button', { name: new RegExp(`^${day}`) })
-    // SHARED 트랙 심볼 ● 가 칩 텍스트에 동반(칩 2개 모두 ● 포함).
-    expect(within(cell).getAllByText(/●/).length).toBeGreaterThanOrEqual(1)
+    // 색 외 단서: 트랙 아바타(이니셜)가 칩 안에 함께 있다.
+    expect(within(cell).getAllByText('나').length).toBeGreaterThan(0)
   })
 
   it('셀 aria-label에 기존 트랙·count 요약이 유지된다', () => {

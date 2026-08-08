@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
+import { Icon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/common/EmptyState'
 import { CtaLink } from '@/components/common/CtaLink'
 import { Skeleton } from '@/components/common/Skeleton'
@@ -95,7 +96,7 @@ export default function RecommendPage() {
     return (
       <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
         <EmptyState
-          emoji="💑"
+          icon="users"
           title="먼저 상대와 연결해요"
           hint="'우리' 탭에서 연결하면, 둘이 모은 장소로 코스를 추천해요."
         />
@@ -162,7 +163,7 @@ export default function RecommendPage() {
               {(trips ?? []).map((t) => (
                 <li key={t.id}>
                   <CtaLink to={`/trips/${t.id}/recap`}>
-                    🧭 {t.title} · {t.start_date}~{t.end_date}
+                    <Icon name="compass" /> {t.title} · {t.start_date}~{t.end_date}
                   </CtaLink>
                 </li>
               ))}
@@ -173,7 +174,7 @@ export default function RecommendPage() {
         {!hasAnyPlace ? (
           <section aria-label="추천 시작">
             <EmptyState
-              emoji="✨"
+              icon="sparkles"
               title="같은 지역 가고싶은 곳이 모이면 추천이 시작돼요"
               hint={`한 지역에 ${RECO_THRESHOLD}곳이 쌓이면 코스를 제안해요.`}
             />
@@ -230,7 +231,7 @@ function ReadyCard({
         onClick={() => onAddCourse(cluster)}
         disabled={busy}
       >
-        🗓️ 함께 일정 만들기
+        <Icon name="calendar" /> 함께 일정 만들기
       </Button>
       <p className={styles.soon}>거리순 자동 동선으로 내일 일정에 추가돼요 (AI 코스는 배포 후)</p>
     </Card>

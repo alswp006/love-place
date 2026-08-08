@@ -124,7 +124,9 @@ describe('일정 완료 체크', () => {
     renderPage()
     // 상대 트랙으로 옮겨 실제로 화면에 띄운 뒤 확인한다(안 보여서 통과하면 의미가 없다).
     switchTrack('상대')
-    expect(screen.getByText('상대 운동')).toBeInTheDocument()
+    // 월 셀 칩에도 같은 제목이 뜨므로 아젠다 영역으로 좁힌다.
+    const agenda = screen.getByRole('region', { name: new RegExp(`^${DAY} 일정$`) })
+    expect(within(agenda).getByText('상대 운동')).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: /상대 운동/ })).toBeNull()
   })
 

@@ -3,6 +3,8 @@ import { Icon } from '@/components/ui/Icon'
 import type { Occurrence } from '@/lib/calendar/rrule'
 import { minuteOfDay, formatTime } from '@/lib/calendar/eventDays'
 import { deriveTrack, TRACK_META } from '@/lib/calendar/track'
+import type { ProfileMap } from '@/hooks/useProfiles'
+import { TrackBadge } from './TrackBadge'
 import styles from '@/pages/CalendarPage.module.css'
 
 // Task 12(R2.3): Day 타임라인 — flat agenda 대신 시간축 절대배치(조사 04 §4).
@@ -19,12 +21,14 @@ export function DayTimeline({
   dateKey,
   occurrences,
   myId,
+  profiles,
   onEdit,
   onAdd,
 }: {
   dateKey: string
   occurrences: Occurrence<EventRow>[]
   myId: string | null
+  profiles: ProfileMap
   onEdit: (ev: Occurrence<EventRow>) => void
   onAdd: () => void
 }) {
@@ -52,7 +56,7 @@ export function DayTimeline({
                 aria-label={`${meta.label} 일정 · ${ev.title}`}
               >
                 <span aria-hidden style={{ color: meta.cssVar }}>
-                  {meta.symbol}
+                  <TrackBadge track={deriveTrack(ev, myId)} profiles={profiles} myId={myId} compact />
                 </span>{' '}
                 <span className={styles.timelineTitle}>{ev.title}</span>
                 {ev.recurrence_rule ? <Icon name="repeat" label="반복 일정" /> : null}
@@ -98,7 +102,7 @@ export function DayTimeline({
                 <span className={styles.timelineTime}>{time}</span>{' '}
                 <span className={styles.timelineTitle}>{ev.title}</span>{' '}
                 <span aria-hidden style={{ color: meta.cssVar }}>
-                  {meta.symbol}
+                  <TrackBadge track={deriveTrack(ev, myId)} profiles={profiles} myId={myId} compact />
                 </span>
                 {ev.recurrence_rule ? <Icon name="repeat" label="반복 일정" /> : null}
                 {myId && ev.reminders?.some((r) => r.userId === myId) ? (
