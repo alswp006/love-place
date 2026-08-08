@@ -111,7 +111,7 @@ img.avatar {
   border: none;
   border-radius: var(--radius-sm);
   background: var(--c-danger);
-  color: #fff;
+  color: var(--c-on-danger);
   cursor: pointer;
 }
 

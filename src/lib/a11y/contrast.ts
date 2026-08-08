@@ -29,14 +29,22 @@ function oklchToLinear(l: number, c: number, hDeg: number): [number, number, num
 }
 
 const OKLCH = /^oklch\(\s*([\d.]+)%\s+([\d.]+)\s+([\d.]+)/i
-const HEX = /^#([0-9a-fA-F]{6})$/
+// 3자리 축약(#fff)도 받는다 — CSS 소스를 그대로 훑는 게이트가 이 표기를 가장 많이 만난다.
+const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
 /** 색 문자열 → sRGB 0~1. 못 읽으면 던진다(조용히 통과하는 게이트를 만들지 않는다). */
 export function parseColor(input: string): Rgb {
   const s = input.trim()
   const hex = HEX.exec(s)
   if (hex) {
-    const h = hex[1]!
+    const raw = hex[1]!
+    const h =
+      raw.length === 3
+        ? raw
+            .split('')
+            .map((c) => c + c)
+            .join('')
+        : raw
     return {
       r: parseInt(h.slice(0, 2), 16) / 255,
       g: parseInt(h.slice(2, 4), 16) / 255,

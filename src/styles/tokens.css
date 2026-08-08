@@ -94,7 +94,15 @@
   --c-brand: var(--pink-600);
   --c-brand-weak: var(--pink-200);
   --c-cta-bg: var(--pink-600);
-  --c-cta-fg: oklch(100% 0 0);
+  /* 채운 표면 위의 글자색. 표면 토큰(brand/danger/success)은 다크에서 **밝아지므로**
+     그 위 글자도 같이 뒤집혀야 한다. 이 토큰이 없어서 여기저기 #fff가 박혔고,
+     다크에서 CTA가 2.12:1, 삭제 확인 버튼이 2.84:1이 됐다(로그인 주 버튼 포함).
+     success만 양쪽 다 어두운 글자다 — 민트는 라이트에서도 흰 글자가 3.71:1로 모자란다. */
+  --c-on-brand: oklch(100% 0 0);
+  --c-on-brand-weak: oklch(33% 0.09 350); /* 연한 핑크(pink-400) 위 자두 — 양쪽 테마 공용 */
+  --c-on-danger: oklch(100% 0 0);
+  --c-on-success: oklch(18% 0.014 340);
+  --c-cta-fg: var(--c-on-brand); /* 옛 이름 유지 — 값은 --c-on-brand가 정한다 */
   --c-track-mine: var(--mint-ink);
   --c-track-partner: var(--pink-600);
   --c-track-shared: var(--lavender-ink);
@@ -188,7 +196,9 @@
     --shadow-raised: 0 1px 2px oklch(0% 0 0 / 0.3), 0 4px 12px oklch(0% 0 0 / 0.35);
     --shadow-floating: 0 2px 6px oklch(0% 0 0 / 0.4), 0 10px 28px oklch(0% 0 0 / 0.5);
 
-    --c-cta-fg: oklch(18% 0.014 340); /* 밝은 핑크 위 어두운 글자 */
+    /* 밝아진 표면 위에는 어두운 글자 — --c-cta-fg는 --c-on-brand를 따라온다. */
+    --c-on-brand: oklch(18% 0.014 340);
+    --c-on-danger: oklch(18% 0.014 340);
 
     /* 다크 유리 — 밝은 유리를 그대로 쓰면 어두운 배경 위에서 뿌연 판이 된다. */
     --glass-bg: oklch(24% 0.014 340 / 0.72);

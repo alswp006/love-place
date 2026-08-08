@@ -346,7 +346,7 @@
   margin-top: var(--sp-2);
   border-radius: var(--r-pill);
   background: var(--c-brand);
-  color: #fff;
+  color: var(--c-on-brand);
   font-size: var(--fs-caption);
   font-weight: 700;
   font-variant-numeric: tabular-nums;

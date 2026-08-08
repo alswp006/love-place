@@ -234,9 +234,9 @@
 
 /* 인라인 확인 상태 — 색+텍스트 이중화(§8). 두 번째 탭이 실제 삭제. */
 .eventDeleteConfirm {
-  color: #fff;
-  background: var(--c-danger, #c0392b);
-  border-color: var(--c-danger, #c0392b);
+  color: var(--c-on-danger);
+  background: var(--c-danger);
+  border-color: var(--c-danger);
   font-size: var(--fs-caption);
   padding: 0 var(--sp-2);
   white-space: nowrap;
@@ -431,7 +431,7 @@
 
 .viewSegBtnOn {
   background: var(--c-brand);
-  color: #fff;
+  color: var(--c-on-brand);
   font-weight: 600;
 }
 
@@ -499,7 +499,7 @@
   border-radius: 999px;
   border: none;
   background: var(--c-brand);
-  color: #fff;
+  color: var(--c-on-brand);
   font-size: 1.8rem;
   line-height: 1;
   cursor: pointer;
@@ -572,4 +572,13 @@
     opacity: 0;
     transform: translateY(-6px);
   }
+}
+
+/* 상대가 이미 끝낸 회차 — 내 체크칸은 비어 있는 게 맞다(각자 자기 별). 아무 표시가 없으면
+   "왜 체크가 안 돼 있지"로 읽히므로 상대 아바타만 조용히 붙인다. */
+.partnerDone {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.75;
 }

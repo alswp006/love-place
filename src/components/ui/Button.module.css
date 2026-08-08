@@ -51,13 +51,13 @@
 /* primary — 핑크 표면 + 자두 글자(검정 금지), pill. */
 .primary {
   background: var(--pink-400);
-  color: #5a2438; /* 자두 — pink-400 위 대비 확보 */
+  color: var(--c-on-brand-weak);
 }
 
 /* cta — 큰 버튼 전용(진한 핑크 + 흰 글자). 큰 면적 전제이므로 높이/사이즈 상향. */
 .cta {
-  background: var(--pink-600);
-  color: #fff;
+  background: var(--c-cta-bg);
+  color: var(--c-cta-fg);
   min-height: 48px;
   font-size: 1rem;
   padding: var(--sp-3) var(--sp-6);

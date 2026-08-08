@@ -1,7 +1,8 @@
 import { useEffect, useId, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
-import { resizePhoto } from '@/lib/photos/resize'
+import { resizePhoto, extOf } from '@/lib/photos/resize'
+import { readExifFromFile } from '@/lib/photos/exif'
 
 // 사진(§5.4) — 비공개 Storage + 서명 URL. 공개 버킷을 쓰지 않는 이유는 0022 주석 참조.
 //
@@ -132,10 +133,14 @@ export function useUploadPhoto(coupleId: string | null, myId: string | null) {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         throw new Error('사진은 연결됐을 때 올릴 수 있어요.')
       }
+      // EXIF는 **리사이즈 전에** 읽는다. 캔버스 재인코딩이 EXIF를 통째로 지우므로 뒤에 읽으면
+      // 이미 없고, 원본을 보관하지 않으니 나중에 복구할 소스도 없다.
+      const exif = await readExifFromFile(file)
       const { display, thumb } = await resizePhoto(file)
       const id = crypto.randomUUID()
-      const path = `${coupleId}/${id}.webp`
-      const thumbPath = `${coupleId}/${id}_t.webp`
+      // 확장자는 실제로 만들어진 MIME에서 — .webp 이름표를 단 PNG가 올라가지 않게.
+      const path = `${coupleId}/${id}.${extOf(display)}`
+      const thumbPath = `${coupleId}/${id}_t.${extOf(thumb)}`
 
       const up = await supabase.storage
         .from('photos')
@@ -158,7 +163,12 @@ export function useUploadPhoto(coupleId: string | null, myId: string | null) {
         thumbnail_url: thumbPath,
         place_id: placeId ?? null,
         trip_id: tripId ?? null,
-        // EXIF 촬영 시각·좌표는 다음 조각(자동 분류)에서. 지금은 수동 연결만.
+        // 촬영 시각·좌표는 원본에서 읽어 둔다. 자동 분류(§5.4)는 다음 조각이지만, 그때 쓸 재료를
+        // 지금 안 남기면 영영 못 쓴다. EXIF가 없으면 파일 수정 시각으로 폴백(없는 값을 짓지 않되
+        // '언제쯤인지'는 남긴다).
+        taken_at: exif.takenAt ?? new Date(file.lastModified).toISOString(),
+        exif_lat: exif.lat,
+        exif_lng: exif.lng,
         classified_by: placeId || tripId ? 'MANUAL' : 'UNCLASSIFIED',
         uploaded_by: myId,
         created_by: myId,

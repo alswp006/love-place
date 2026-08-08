@@ -20,9 +20,26 @@ export type CompletionRow = {
   created_by: string
 }
 
-/** 회차 하나를 가리키는 키 — 목록 렌더가 "이거 완료됐나"를 O(1)로 묻게. */
-export function occurrenceKey(eventId: string, occurrenceStart: string): string {
-  return `${eventId}@${occurrenceStart}`
+/**
+ * 회차 하나를 가리키는 키 — 목록 렌더가 "이거 완료됐나"를 O(1)로 묻게.
+ *
+ * ⚠️ 반드시 정규화한다. 같은 순간이 두 포맷으로 들어오기 때문이다:
+ *   - 반복 회차는 rrule이 만든 JS ISO `2026-08-05T01:00:00.000Z`
+ *   - 서버(PostgREST timestamptz)는 `2026-08-05T01:00:00+00:00`
+ * 문자열로 그냥 이으면 이 둘이 안 맞아, 체크가 저절로 풀리고 재탭은 no-op가 되어
+ * 그 회차가 영영 안 켜졌다. 비반복 일정은 DB 원문이 그대로 왕복해 우연히 통과했다.
+ *
+ * userId를 함께 넣는 이유: 완료는 **사람마다** 따로다(하루 한 사람 한 별).
+ * 이 키가 사람을 안 보면 상대가 체크한 것을 내 체크로 착각해 상대 행을 지운다.
+ */
+export function occurrenceKey(eventId: string, occurrenceStart: string, userId: string): string {
+  return `${eventId}@${normalizeOccurrence(occurrenceStart)}|${userId}`
+}
+
+/** 타임스탬프 문자열을 한 포맷(JS ISO)으로. 못 읽으면 원문 그대로(키가 깨지느니 그대로 비교). */
+export function normalizeOccurrence(iso: string): string {
+  const t = Date.parse(iso)
+  return Number.isNaN(t) ? iso : new Date(t).toISOString()
 }
 
 export function useEventCompletions(coupleId: string | null) {
@@ -92,17 +109,19 @@ export function useToggleEventDone(coupleId: string | null, myId: string | null)
         await enqueue(
           'event.done',
           { coupleId, eventId, occurrenceStart, myId },
-          `event.done:${eventId}:${occurrenceStart}`,
+          `event.done:${eventId}:${occurrenceStart}:${myId}`,
         )
         return
       }
-      // stale-cache race 회피 — 살아있는 행을 직접 재조회한다.
+      // stale-cache race 회피 — 살아있는 **내** 행을 직접 재조회한다.
+      // created_by 필터가 없으면 상대가 체크한 행을 내 것으로 착각해 지운다(0023이 고친 버그).
       const { data: live, error: selErr } = await supabase
         .from('event_completions')
         .select('id, version')
         .eq('couple_id', coupleId)
         .eq('event_id', eventId)
         .eq('occurrence_start', occurrenceStart)
+        .eq('created_by', myId)
         .is('deleted_at', null)
         .limit(1)
       if (selErr) throw new Error(selErr.message)
@@ -129,15 +148,18 @@ export function useToggleEventDone(coupleId: string | null, myId: string | null)
       const prev = queryClient.getQueryData<CompletionRow[]>(key)
       queryClient.setQueryData<CompletionRow[]>(key, (old) => {
         const list = old ?? []
-        const without = list.filter(
-          (c) => !(c.event_id === eventId && c.occurrence_start === occurrenceStart),
-        )
+        // 내 행만 뺀다 — 상대 완료는 그대로 둔다(사람마다 따로다).
+        const same = (c: CompletionRow) =>
+          c.event_id === eventId &&
+          normalizeOccurrence(c.occurrence_start) === normalizeOccurrence(occurrenceStart) &&
+          c.created_by === myId
+        const without = list.filter((c) => !same(c))
         if (!done) return without
         return [
           ...without,
           {
             // 낙관적 행 — 서버 응답이 오면 invalidate가 진짜 id로 갈아끼운다.
-            id: `optimistic:${eventId}:${occurrenceStart}`,
+            id: `optimistic:${eventId}:${occurrenceStart}:${myId ?? ''}`,
             event_id: eventId,
             occurrence_start: occurrenceStart,
             done_at: new Date().toISOString(),

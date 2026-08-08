@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/useToast'
 import { useConflict } from '@/lib/sync/useConflict'
 import { refetchEventRow, ConflictError } from '@/lib/sync/versionedUpdate'
 import { deriveTrack, TRACK_META, ALL_TRACKS, type Track } from '@/lib/calendar/track'
+import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { TrackBadge } from '@/components/calendar/TrackBadge'
 import { useEventCategories } from '@/hooks/useEventCategories'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
@@ -58,8 +59,15 @@ export default function CalendarPage() {
   // 완료 체크(0021) — 회차 단위 기록. 잔디·여정이 여기서 도출된다.
   const { data: completions } = useEventCompletions(coupleId)
   const toggleDone = useToggleEventDone(coupleId, myId)
+  const partnerId = useMemo(
+    () => Object.keys(profiles ?? {}).find((id) => id !== myId) ?? null,
+    [profiles, myId],
+  )
   const doneKeys = useMemo(
-    () => new Set((completions ?? []).map((c) => occurrenceKey(c.event_id, c.occurrence_start))),
+    () =>
+      new Set(
+        (completions ?? []).map((c) => occurrenceKey(c.event_id, c.occurrence_start, c.created_by)),
+      ),
     [completions],
   )
   // 체크 → 별이 별자리로 날아가 박힌다. 해제엔 모션 없음(되돌리는 건 축하할 일이 아니다).
@@ -464,6 +472,7 @@ export default function CalendarPage() {
               category={category}
               onCategoryChange={setCategory}
               doneKeys={doneKeys}
+              partnerId={partnerId}
               onToggleDone={onToggleDone}
               // 지금 보고 있는 캘린더에 그대로 들어간다 — 함께 탭에서 적으면 함께 일정.
               quickAddVisibility={track === 'shared' ? 'SHARED' : 'PERSONAL'}
@@ -650,6 +659,7 @@ function DayAgenda({
   category,
   onCategoryChange,
   doneKeys,
+  partnerId,
   onToggleDone,
   onEdit,
   onDelete,
@@ -671,6 +681,8 @@ function DayAgenda({
   onCategoryChange: (v: string | null) => void
   /** 완료된 회차 키 집합(occurrenceKey). */
   doneKeys: ReadonlySet<string>
+  /** 상대 id — 상대가 이미 체크했는지 보여주기 위한 것(내 체크 상태와는 무관). */
+  partnerId: string | null
   onToggleDone: (
     eventId: string,
     occurrenceStart: string,
@@ -726,8 +738,10 @@ function DayAgenda({
             // 삭제된 카테고리를 가리키는 일정은 조용히 '분류 없음'으로 — 없는 이름을 지어내지 않는다.
             const category = ev.category_id ? categoryById[ev.category_id] : undefined
             // 완료 체크는 회차 단위다 — 반복 일정의 오늘 회차만 끝난다(occurrence_start = ev.start).
-            const doneKey = occurrenceKey(ev.id, ev.start)
-            const isDone = doneKeys.has(doneKey)
+            // 내 완료만 내 체크다 — 상대가 체크해도 내 칸은 비어 있다(각자 자기 별을 얻는다).
+            const isDone = myId ? doneKeys.has(occurrenceKey(ev.id, ev.start, myId)) : false
+            const partnerDone =
+              partnerId != null && doneKeys.has(occurrenceKey(ev.id, ev.start, partnerId))
             // 상대의 개인 일정은 체크하지 않는다 — 남의 할 일을 대신 지우는 셈이다.
             const canCheck = !readOnly && (ev.visibility === 'SHARED' || ev.owner_id === myId)
             // 새로 들어온 항목만 살짝 떠오른다(CSS 키프레임 — 0KB).
@@ -750,6 +764,18 @@ function DayAgenda({
                         {isDone ? '✓' : ''}
                       </span>
                     </button>
+                  ) : null}
+                  {/* 상대가 이미 끝냈으면 알려준다 — 내 칸은 비어 있는 게 맞지만(각자 자기 별),
+                      아무 표시도 없으면 "왜 체크가 안 돼 있지"로 읽힌다. */}
+                  {partnerDone && partnerId ? (
+                    <span className={styles.partnerDone}>
+                      <SourceAvatar
+                        userId={partnerId}
+                        profiles={profiles}
+                        myId={myId}
+                        context=" 완료함"
+                      />
+                    </span>
                   ) : null}
                   <button
                     type="button"

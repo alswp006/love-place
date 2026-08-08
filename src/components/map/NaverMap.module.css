@@ -63,7 +63,8 @@
   margin-left: -6px;
   margin-top: -10px;
   font-size: 11px;
-  color: #fff;
+  /* 흰 ✓는 라이트 민트 위에서 3.71:1이라 11px 글리프 기준(4.5:1)에 못 미친다. */
+  color: var(--c-on-success);
   background: var(--c-success);
   border-radius: 50%;
   width: 14px;
@@ -232,7 +233,7 @@
   padding: 0 6px;
   border-radius: 999px;
   background: var(--c-brand);
-  color: #fff;
+  color: var(--c-on-brand);
   font-weight: 600;
   font-size: 0.875rem;
   display: inline-flex;

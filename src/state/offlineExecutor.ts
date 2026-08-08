@@ -115,10 +115,12 @@ export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
     case 'event.done': {
       // 재연결 시점의 실제 상태로 토글(방향을 큐에 고정하지 않음 — wish.toggle과 동형).
       const p = entry.payload as EventDonePayload
+      // created_by 필터 필수 — 없으면 상대가 체크한 행을 내 것으로 보고 지운다(0023).
       const { data: live } = await supabase
         .from('event_completions').select('id, version')
         .eq('couple_id', p.coupleId).eq('event_id', p.eventId)
-        .eq('occurrence_start', p.occurrenceStart).is('deleted_at', null).limit(1)
+        .eq('occurrence_start', p.occurrenceStart).eq('created_by', p.myId)
+        .is('deleted_at', null).limit(1)
       const row = live?.[0] as { id: string; version: number } | undefined
       if (row) return (await softDelete('event_completions', row.id, row.version, p.myId)).status
       const { error } = await supabase.from('event_completions').insert({

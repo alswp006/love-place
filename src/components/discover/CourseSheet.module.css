@@ -93,8 +93,8 @@
   width: 1.6rem;
   height: 1.6rem;
   border-radius: 50%;
-  background: var(--pink-600);
-  color: #fff;
+  background: var(--c-brand);
+  color: var(--c-on-brand);
   font-size: var(--fs-caption);
   font-weight: 600;
   display: flex;

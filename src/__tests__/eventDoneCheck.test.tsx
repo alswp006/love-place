@@ -40,11 +40,16 @@ vi.mock('@/hooks/useEventMutations', () => ({
 vi.mock('@/hooks/useTrash', () => ({
   useSoftDeleteWithUndo: () => ({ deleteWithUndo: vi.fn(), isPending: false }),
 }))
-vi.mock('@/hooks/useEventCompletions', () => ({
-  useEventCompletions: () => ({ data: state.completions }),
-  useToggleEventDone: () => ({ mutate: state.toggle, isPending: false }),
-  occurrenceKey: (id: string, start: string) => `${id}@${start}`,
-}))
+// occurrenceKey는 **진짜를 쓴다**. 예전엔 이걸 단순 문자열 결합으로 목했는데, 그래서
+// 클라/서버 포맷 불일치(반복 회차가 영영 안 켜지던 버그)를 테스트가 통째로 가렸다.
+vi.mock('@/hooks/useEventCompletions', async (orig) => {
+  const real = await orig<typeof import('@/hooks/useEventCompletions')>()
+  return {
+    ...real,
+    useEventCompletions: () => ({ data: state.completions }),
+    useToggleEventDone: () => ({ mutate: state.toggle, isPending: false }),
+  }
+})
 
 import CalendarPage from '@/pages/CalendarPage'
 
@@ -186,5 +191,59 @@ describe('별자리 스트립', () => {
     fireEvent.click(screen.getByRole('button', { name: /별자리 펼치기/ }))
     const year = screen.getByLabelText('올해 열두 달')
     expect(within(year).getAllByRole('img')).toHaveLength(12)
+  })
+})
+
+// ── 회귀: 오늘 리뷰에서 나온 두 결함 ───────────────────────────────────────────
+describe('완료 체크 회귀(리뷰 A1·A2)', () => {
+  it('반복 회차: 서버가 돌려준 timestamptz 포맷과 클라 ISO가 같은 회차로 인식된다', () => {
+    // rrule은 `...T00:00:00.000Z`를, PostgREST는 `...+00:00`을 준다. 정규화가 없으면
+    // 체크가 저절로 풀리고 재탭이 no-op가 되어 그 회차는 영영 안 켜졌다.
+    const occIso = at('09:00') // 클라이언트 ISO(밀리초 포함, Z)
+    const serverIso = occIso.replace('.000Z', '+00:00') // PostgREST 렌더 포맷
+    expect(serverIso).not.toBe(occIso) // 포맷이 실제로 다르다는 것부터 못박는다
+
+    state.events = [ev({ id: 'e1', title: '매일 운동', recurrence_rule: 'FREQ=DAILY;INTERVAL=1' })]
+    state.completions = [
+      { id: 'c1', event_id: 'e1', occurrence_start: serverIso, done_at: serverIso, version: 1, created_by: 'u1' },
+    ]
+    renderPage()
+    expect(screen.getByRole('checkbox', { name: /매일 운동 완료 해제/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+  })
+
+  it('상대가 체크한 것은 내 체크가 아니다 — 내 칸은 비어 있고 해제가 아니라 완료를 보낸다', () => {
+    // 유니크 키에 created_by가 없어 상대 행을 지우던 버그(0023이 스키마도 고쳤다).
+    state.completions = [
+      { id: 'c1', event_id: 'e1', occurrence_start: at('09:00'), done_at: at('09:30'), version: 1, created_by: 'u2' },
+    ]
+    renderPage()
+    const box = screen.getByRole('checkbox', { name: /운동 완료/ })
+    expect(box).toHaveAttribute('aria-checked', 'false')
+    fireEvent.click(box)
+    expect(state.toggle).toHaveBeenCalledWith(
+      expect.objectContaining({ eventId: 'e1', done: true }),
+    )
+  })
+
+  it('상대가 끝냈으면 그 사실을 아바타로 알려준다(빈 체크칸만 두면 오해한다)', () => {
+    state.completions = [
+      { id: 'c1', event_id: 'e1', occurrence_start: at('09:00'), done_at: at('09:30'), version: 1, created_by: 'u2' },
+    ]
+    renderPage()
+    expect(screen.getByLabelText('지민 완료함')).toBeInTheDocument()
+  })
+
+  it('둘 다 체크하면 별이 둘 — 한 회차에 두 사람의 완료가 공존한다', () => {
+    state.completions = [
+      { id: 'c1', event_id: 'e1', occurrence_start: at('09:00'), done_at: at('09:30'), version: 1, created_by: 'u1' },
+      { id: 'c2', event_id: 'e1', occurrence_start: at('09:00'), done_at: at('09:40'), version: 1, created_by: 'u2' },
+    ]
+    renderPage()
+    // 내 체크는 켜져 있고, 상대 표시도 함께 뜬다.
+    expect(screen.getByRole('checkbox', { name: /운동 완료 해제/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByLabelText('지민 완료함')).toBeInTheDocument()
   })
 })

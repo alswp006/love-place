@@ -34,7 +34,7 @@ export default function UsPage() {
   const [exportError, setExportError] = useState<string | null>(null)
   // JSON 내보냄 표시(카드 affordance용) — 해제 게이트는 zipExported만 사용.
   const [, setExported] = useState(false)
-  // 해제 게이트는 ZIP(원본 사진 포함) 전용으로만 충족 — JSON-only 내보내기가 게이트를 우회하지 못하게(§10.4).
+  // 해제 게이트는 ZIP(사진 포함) 전용으로만 충족 — JSON-only 내보내기가 게이트를 우회하지 못하게(§10.4).
   const [zipExported, setZipExported] = useState(false)
   const cancelRef = useRef<HTMLButtonElement>(null)
   const myId = user?.id ?? null
@@ -86,7 +86,7 @@ export default function UsPage() {
     }
   }
 
-  // ZIP 내보내기(§10.4 회수권) — JSON 봉투 + 원본 사진 blob을 묶어 다운로드. 양측 동등(RLS 대칭).
+  // ZIP 내보내기(§10.4 회수권) — JSON 봉투 + 사진 표시본(1600px) blob을 묶어 다운로드. 양측 동등(RLS 대칭).
   const onExportZip = async () => {
     if (!couple?.coupleId) return
     setExporting(true)

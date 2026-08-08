@@ -29,11 +29,23 @@ export function fitWithin(w: number, h: number, max: number): { w: number; h: nu
 
 async function toBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   // webp는 같은 화질에서 jpeg보다 훨씬 작다. Safari 14+/Chrome 전부 지원.
-  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/webp', quality))
-  if (blob) return blob
+  //
+  // 폴백 판정을 blob==null로 하면 안 된다: 명세상 toBlob은 **미지원 MIME이면 null이 아니라
+  // PNG를 돌려준다**. 그래서 예전 코드의 jpeg 폴백은 절대 실행되지 않았고, 미지원 엔진에서는
+  // .webp 이름표를 단 PNG가 올라갔다. 실제로 나온 타입을 보고 판정한다.
+  const webp = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/webp', quality))
+  if (webp && webp.type === 'image/webp') return webp
   const jpeg = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', quality))
-  if (!jpeg) throw new Error('이미지를 변환하지 못했어요.')
-  return jpeg
+  if (jpeg && jpeg.type === 'image/jpeg') return jpeg
+  if (webp) return webp // PNG라도 이름표만 맞으면 된다(아래 ext가 blob.type에서 나온다)
+  throw new Error('이미지를 변환하지 못했어요.')
+}
+
+/** blob MIME → 파일 확장자. 저장 경로가 실제 내용과 어긋나지 않게 한다. */
+export function extOf(blob: Blob): string {
+  if (blob.type === 'image/webp') return 'webp'
+  if (blob.type === 'image/jpeg') return 'jpg'
+  return 'png'
 }
 
 function draw(src: CanvasImageSource, w: number, h: number): HTMLCanvasElement {
@@ -61,7 +73,9 @@ export async function resizePhoto(file: File): Promise<ResizedPhoto> {
   let h: number
 
   if (typeof createImageBitmap === 'function') {
-    const bmp = await createImageBitmap(file)
+    // imageOrientation: 'from-image' — 세로로 찍은 사진이 눕지 않게 EXIF 회전을 디코딩 단계에서
+    // 적용한다. 기본값은 명세 이력상 엔진마다 갈려서 명시하지 않으면 <img> 폴백과 결과가 달라진다.
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' })
     source = bmp
     w = bmp.width
     h = bmp.height
@@ -82,12 +96,14 @@ export async function resizePhoto(file: File): Promise<ResizedPhoto> {
     }
   }
 
-  const d = fitWithin(w, h, DISPLAY_MAX)
-  const t = fitWithin(w, h, THUMB_MAX)
-  const display = await toBlob(draw(source, d.w, d.h), 0.86)
-  const thumb = await toBlob(draw(source, t.w, t.h), 0.78)
-
-  if (typeof ImageBitmap !== 'undefined' && source instanceof ImageBitmap) source.close()
-
-  return { display, thumb, width: d.w, height: d.h }
+  try {
+    const d = fitWithin(w, h, DISPLAY_MAX)
+    const t = fitWithin(w, h, THUMB_MAX)
+    const display = await toBlob(draw(source, d.w, d.h), 0.86)
+    const thumb = await toBlob(draw(source, t.w, t.h), 0.78)
+    return { display, thumb, width: d.w, height: d.h }
+  } finally {
+    // 예외가 나도 반드시 닫는다 — 안 닫으면 원본 해상도 비트맵이 GC까지 그대로 남는다.
+    if (typeof ImageBitmap !== 'undefined' && source instanceof ImageBitmap) source.close()
+  }
 }

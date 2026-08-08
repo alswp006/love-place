@@ -54,7 +54,7 @@
 .primary {
   border: none;
   background: var(--c-brand);
-  color: #fff;
+  color: var(--c-on-brand);
   border-radius: var(--radius-sm);
   cursor: pointer;
   min-height: 44px;
@@ -94,8 +94,8 @@
 /* 삭제 확인(파괴적 강조) — 채운 danger 배경 + 텍스트. */
 .danger {
   border: none;
-  background: var(--c-danger, #d33);
-  color: #fff;
+  background: var(--c-danger);
+  color: var(--c-on-danger);
   border-radius: var(--radius-sm);
   cursor: pointer;
   min-height: 44px;
