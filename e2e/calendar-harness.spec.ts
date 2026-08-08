@@ -231,8 +231,13 @@ test('다가오는 일정 피드 카드 — 지도 화면에 승격', async ({ p
   }
   await seedAuthedMap(page, { events: [feedEvent] })
   await page.goto('/')
-  // 피드 카드 '다가오는 일정' 섹션 + 이벤트 제목. self-hide(없으면 미표시)이므로 시드로 보장.
-  // 라벨이 실행시각 기준 카운트다운(D-2/N분 뒤)이라 픽셀 스냅샷은 비결정적 → 기능 assertion만 둔다.
+  // 알림은 이제 한 줄로 접혀 있다 — 지도 탭의 주인공은 지도라서 첫 화면을 카드로 덮지 않는다.
+  // 접힌 줄에서도 '무슨 일이 다가오는지'는 읽혀야 한다(신호를 없앤 게 아니라 자리만 돌려준 것).
+  const pill = page.getByRole('button', { name: /알림 .*펼치기/ })
+  await expect(pill).toBeVisible()
+  await expect(pill).toContainText('다가오는 데이트')
+  // 탭하면 원래 카드가 그대로 펼쳐진다.
+  await pill.click()
   await expect(page.getByRole('region', { name: '다가오는 일정' })).toBeVisible()
   await expect(page.getByText('다가오는 데이트')).toBeVisible()
 })

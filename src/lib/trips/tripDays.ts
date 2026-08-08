@@ -161,14 +161,22 @@ export function nextStopStartMin<T extends { start: string; end: string }>(
 }
 
 /** 여행 기간 전체에 걸친 스톱 수(목록 카드의 "N곳" 표기용). */
+export function stopsInTrip<T extends StopLike>(
+  events: readonly T[],
+  trip: TripLike,
+  tz: string = DISPLAY_TZ,
+): T[] {
+  return events.filter((e) => {
+    if (e.place_id === null) return false
+    const k = dayKey(e.start, tz)
+    return trip.start_date <= k && k <= trip.end_date
+  })
+}
+
 export function stopCountInTrip<T extends StopLike>(
   events: readonly T[],
   trip: TripLike,
   tz: string = DISPLAY_TZ,
 ): number {
-  return events.filter((e) => {
-    if (e.place_id === null) return false
-    const k = dayKey(e.start, tz)
-    return trip.start_date <= k && k <= trip.end_date
-  }).length
+  return stopsInTrip(events, trip, tz).length
 }

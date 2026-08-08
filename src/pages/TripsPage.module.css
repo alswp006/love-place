@@ -200,3 +200,11 @@
   font-size: var(--fs-h2);
   color: var(--c-text);
 }
+
+/* 지역 그룹 제목 옆 개수 — '강릉 3'. 색이 아니라 숫자로 말한다(§8). */
+.regionCount {
+  margin-left: var(--sp-2);
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  font-variant-numeric: tabular-nums;
+}

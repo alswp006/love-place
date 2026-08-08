@@ -12,8 +12,9 @@ import { useCouple } from '@/hooks/useCouple'
 import { useTrips, useCreateTrip, useDeleteTrip } from '@/hooks/useTrips'
 import { useEvents } from '@/hooks/useEvents'
 import { useVisits } from '@/hooks/useVisits'
-import { visitCountByTrip, groupTripsByRegion } from '@/lib/places/tripGroups'
-import { sortTripsForList, tripPhase, tripPhaseLabel, stopCountInTrip } from '@/lib/trips/tripDays'
+import { usePlaces } from '@/hooks/usePlaces'
+import { visitCountByTrip, deriveTripRegion, groupTripsByKey } from '@/lib/places/tripGroups'
+import { sortTripsForList, tripPhase, tripPhaseLabel, stopCountInTrip, stopsInTrip } from '@/lib/trips/tripDays'
 import { localDayKey } from '@/lib/journey/autoLink'
 import { tabByPath } from '@/app/tabs'
 import styles from './TripsPage.module.css'
@@ -31,6 +32,7 @@ export default function TripsPage() {
   const { data: trips, isLoading } = useTrips(coupleId)
   const { data: events } = useEvents(coupleId)
   const { data: visits } = useVisits(coupleId)
+  const { data: places } = usePlaces(coupleId)
   const create = useCreateTrip(coupleId, myId)
   const del = useDeleteTrip(coupleId, myId)
 
@@ -41,6 +43,19 @@ export default function TripsPage() {
   const today = localDayKey()
   const list = useMemo(() => sortTripsForList(trips ?? [], today), [trips, today])
   const visitCounts = useMemo(() => visitCountByTrip(visits ?? []), [visits])
+
+  // 여행 → 지역. 담긴 장소의 지역에서 도출한다(§7) — 따로 고르게 하면 전부 '미지정'에 쌓인다.
+  const regionOf = useMemo(() => {
+    const labelById = new Map((places ?? []).map((p) => [p.id, p.region_label]))
+    const m = new Map<string, string | null>()
+    for (const t of trips ?? []) {
+      const labels = stopsInTrip(events ?? [], t).map((e) =>
+        e.place_id ? (labelById.get(e.place_id) ?? null) : null,
+      )
+      m.set(t.id, deriveTripRegion(t, labels))
+    }
+    return m
+  }, [trips, events, places])
 
   const canSubmit =
     Boolean(form.title.trim()) && Boolean(form.start) && Boolean(form.end) && form.end >= form.start
@@ -210,10 +225,12 @@ export default function TripsPage() {
               )
             })()
           ) : (
-            groupTripsByRegion(list).map((g) => (
+            groupTripsByKey(list, (t) => regionOf.get(t.id) ?? null).map((g) => (
               <div key={g.regionKey} className={styles.regionGroup}>
                 <h2 className={styles.regionTitle}>
                   {g.regionKey === '미지정' ? '지역 미지정' : g.regionKey}
+                  {/* 개수를 같이 — '강릉 3'처럼 지역이 얼마나 쌓였는지 한눈에. */}
+                  <span className={styles.regionCount}>{g.trips.length}</span>
                 </h2>
                 <ul className={styles.list}>{g.trips.map(renderTrip)}</ul>
               </div>

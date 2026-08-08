@@ -77,7 +77,7 @@ export function JourneyRecordControl({ coupleId, userId }: Props) {
           className={styles.consentLink}
           onClick={() => setConsentOpen(true)}
         >
-          <Icon name="pin" /> 위치 동의하고 동선 기록하기 →
+          <Icon name="pin" /> 위치 동의하고 동선 기록
         </button>
         <ConsentSheet
           open={consentOpen}
@@ -92,7 +92,7 @@ export function JourneyRecordControl({ coupleId, userId }: Props) {
   return (
     <div className={styles.wrap}>
       <Button variant="primary" className={styles.startBtn} onClick={() => void onStart()}>
-        ● 여행 동선 시작
+        ● 동선 시작
       </Button>
     </div>
   )

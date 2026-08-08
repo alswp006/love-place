@@ -61,14 +61,14 @@ beforeEach(() => {
 describe('JourneyRecordControl', () => {
   it('동의 있고 idle: "여행 동선 시작" → start 호출', () => {
     renderControl()
-    fireEvent.click(screen.getByRole('button', { name: /여행 동선 시작/ }))
+    fireEvent.click(screen.getByRole('button', { name: /동선 시작/ }))
     expect(rec.start).toHaveBeenCalledOnce()
   })
 
   it('동의 없으면 그 자리에서 ConsentSheet를 연다(탭 이동 강제 없음, 시작 버튼 없음)', () => {
     consent.canRecord = false
     renderControl()
-    expect(screen.queryByRole('button', { name: /여행 동선 시작/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /동선 시작/ })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /위치 동의/ }))
     expect(screen.getByRole('dialog', { name: '위치 동선 동의 관리' })).toBeInTheDocument()
   })

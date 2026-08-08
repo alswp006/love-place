@@ -40,3 +40,21 @@
 .feedOverlay > * {
   pointer-events: auto;
 }
+
+/* 동선 기록 레일 — '내 위치' 버튼(48px, right/bottom: sp-3) 바로 위. 지도 우하단 세로 스택.
+   가운데 위에 있던 CTA가 지도와 검색 결과를 가리던 것을 여기로 옮겼다. */
+.journeyRail {
+  position: absolute;
+  right: var(--sp-3);
+  bottom: calc(var(--map-bottom-reserve, calc(var(--sheet-peek-h) + var(--tabbar-h))) + var(--sp-3) + 48px + var(--sp-2));
+  /* 기록 중 배지는 넓어질 수 있으므로 왼쪽 여백만 확보하고 오른쪽 정렬 */
+  left: var(--sp-3);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 41;
+  pointer-events: none;
+}
+
+.journeyRail > * {
+  pointer-events: auto;
+}

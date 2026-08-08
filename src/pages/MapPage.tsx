@@ -13,8 +13,7 @@ import { useWishes } from '@/hooks/useWishes'
 import { useVisits } from '@/hooks/useVisits'
 import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
-import { UpcomingFeed } from '@/components/common/UpcomingFeed'
-import { ActivityFeed } from '@/components/common/ActivityFeed'
+import { MapNotices } from '@/components/common/MapNotices'
 import { JourneyRecordControl } from '@/components/journey/JourneyRecordControl'
 import { useReactions } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
@@ -154,14 +153,18 @@ export default function MapPage() {
               <ConflictBanner onDismiss={conflict.clear} />
             </div>
           ) : null}
-          {/* 다가오는 일정 인앱 피드(Task 15) — 배너와 지도 사이 상단 오버레이. 항목 0이면 self-hide. */}
+          {/* 알림(다가오는 일정 + 상대 활동)은 한 줄로 접어 둔다 — 지도 탭의 주인공은 지도다.
+              탭하면 원래 카드가 그대로 펼쳐지고, 0건이면 통째로 사라진다(ux §6). */}
           <div className={styles.feedOverlay}>
-            <UpcomingFeed coupleId={coupleId} myId={myId} />
-            {/* 상대의 최근 활동(ux §6 — 웹푸시가 안 되는 자리를 메우는 1차 알림 수단). 0건이면 self-hide. */}
-            <ActivityFeed coupleId={coupleId} myId={myId} />
-            {/* R6 동선 기록(A안) — 만나서 바로 시작. 동의 없으면 /us로 유도. */}
-            {coupleActive ? <JourneyRecordControl coupleId={coupleId} userId={myId} /> : null}
+            <MapNotices coupleId={coupleId} myId={myId} />
           </div>
+          {/* R6 동선 기록(A안) — 화면 한가운데 위를 막던 것을 '내 위치' 버튼 위 우하단 레일로 옮겼다.
+              엄지 도달 영역이고, 지도를 가리지 않으며, 기록 중 배지도 같은 자리에서 커진다. */}
+          {coupleActive ? (
+            <div className={styles.journeyRail}>
+              <JourneyRecordControl coupleId={coupleId} userId={myId} />
+            </div>
+          ) : null}
           {/* 검색바는 시트가 아니라 지도 위 상단 오버레이(spec §5) — peek에서도 도달, ≤3탭 보존. */}
           {coupleActive ? (
             <MapSearchOverlay
