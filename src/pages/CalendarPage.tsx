@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/common/Skeleton'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { JourneyStrip } from '@/components/streak/JourneyStrip'
 import { useEventCompletions, useToggleEventDone, occurrenceKey } from '@/hooks/useEventCompletions'
+import { flyStar } from '@/components/streak/flyStar'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { EventSheet } from '@/components/calendar/EventSheet'
 import { ScopeSheet, type Scope } from '@/components/calendar/ScopeSheet'
@@ -61,8 +62,16 @@ export default function CalendarPage() {
     () => new Set((completions ?? []).map((c) => occurrenceKey(c.event_id, c.occurrence_start))),
     [completions],
   )
-  const onToggleDone = (eventId: string, occurrenceStart: string, done: boolean) =>
+  // 체크 → 별이 별자리로 날아가 박힌다. 해제엔 모션 없음(되돌리는 건 축하할 일이 아니다).
+  const onToggleDone = (
+    eventId: string,
+    occurrenceStart: string,
+    done: boolean,
+    from?: Element | null,
+  ) => {
+    if (done) flyStar(from ?? null)
     toggleDone.mutate({ eventId, occurrenceStart, done })
+  }
 
   const conflict = useConflict()
   // 권한거부(상대 PERSONAL 수정 시도) — 버전충돌과 분리해 별도 배너로 안내(Task 7). 시트는 유지.
@@ -648,7 +657,12 @@ function DayAgenda({
   onCategoryChange: (v: string | null) => void
   /** 완료된 회차 키 집합(occurrenceKey). */
   doneKeys: ReadonlySet<string>
-  onToggleDone: (eventId: string, occurrenceStart: string, done: boolean) => void
+  onToggleDone: (
+    eventId: string,
+    occurrenceStart: string,
+    done: boolean,
+    from?: Element | null,
+  ) => void
   onEdit: (ev: Occurrence<EventRow>) => void
   onDelete: (ev: Occurrence<EventRow>) => void
   onQuickAdd: (e: NewEvent, done: () => void) => void
@@ -711,7 +725,7 @@ function DayAgenda({
                       role="checkbox"
                       aria-checked={isDone}
                       className={isDone ? `${styles.doneBox} ${styles.doneBoxOn}` : styles.doneBox}
-                      onClick={() => onToggleDone(ev.id, ev.start, !isDone)}
+                      onClick={(e) => onToggleDone(ev.id, ev.start, !isDone, e.currentTarget)}
                       aria-label={`${ev.title} ${isDone ? '완료 해제' : '완료'}`}
                     >
                       {/* 색만으로 상태를 말하지 않는다(§8) — 체크 표시 자체가 신호다. */}

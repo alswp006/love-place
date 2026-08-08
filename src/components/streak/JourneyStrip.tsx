@@ -2,30 +2,30 @@ import { useMemo, useState } from 'react'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useEvents } from '@/hooks/useEvents'
-import { useProfiles } from '@/hooks/useProfiles'
 import { useEventCompletions } from '@/hooks/useEventCompletions'
 import {
   dailyDoneCounts,
-  gardenGrid,
-  journeyProgress,
-  weekDoneCount,
-  levelOf,
-  ownerOf,
+  recentWeeks,
+  mondayOf,
+  constellationOf,
+  STARS_PER_WEEK,
   type EventMeta,
 } from '@/lib/streak/garden'
 import { localDayKey } from '@/lib/journey/autoLink'
-import { JourneyPath } from './JourneyPath'
+import { Constellation, WeekGlyph } from './Constellation'
+import { STAR_TARGET_ID } from './flyStar'
 import styles from './JourneyStrip.module.css'
 
-// 일정 탭 맨 위의 여정/잔디 — 기본은 한 줄, 탭하면 펼쳐진다.
+// 일정 탭 맨 위 — 이번 주 별자리. 기본은 한 줄, 탭하면 펼쳐진다.
 //
-// 접어 두는 이유는 지도 알림과 같다: 이 탭의 주인공은 캘린더다. 여정은 "오늘 뭘 할까"를
-// 밀어내지 않는 선에서 곁에 있어야 한다.
+// 접어 두는 이유는 지도 알림과 같다: 이 탭의 주인공은 캘린더다.
 //
-// categoryId를 받으면 그 분류의 잔디만 센다 — 캘린더의 카테고리 칩과 같은 축으로 움직인다.
+// 별자리로 정한 이유: 앞서 쓰던 '카페→해변' 여정은 우리 데이터와 아무 상관 없는 가짜 서사였다.
+// 별자리는 "채운 만큼 하늘에 남는다" 말고 다른 주장을 하지 않고, 캘린더가 이미 쓰는
+// 주(週) 리듬을 그대로 쓴다.
+//
+// categoryId를 받으면 그 분류만 센다 — 캘린더의 카테고리 칩과 같은 축으로 움직인다.
 // (undefined = 전체. null = '분류 없음'이라는 하나의 칸.)
-
-const DOW = ['월', '화', '수', '목', '금', '토', '일']
 
 export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
   const [open, setOpen] = useState(false)
@@ -36,7 +36,6 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
 
   const { data: events } = useEvents(coupleId)
   const { data: completions } = useEventCompletions(coupleId)
-  const { data: profiles } = useProfiles(coupleId)
 
   const today = localDayKey()
 
@@ -59,21 +58,13 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
     [completions, metaOf, myId, categoryId],
   )
 
-  const steps = useMemo(() => {
-    let n = 0
-    for (const c of counts.values()) n += c.total
-    return n
-  }, [counts])
-
-  const progress = journeyProgress(steps)
-  const week = weekDoneCount(counts, today)
-  const grid = useMemo(() => gardenGrid(counts, today), [counts, today])
-
-  const mineColor =
-    (myId ? profiles?.[myId]?.color : null) ?? 'var(--c-track-mine)'
-  const partnerId = Object.keys(profiles ?? {}).find((id) => id !== myId)
-  const partnerColor =
-    (partnerId ? profiles?.[partnerId]?.color : null) ?? 'var(--c-track-partner)'
+  const weeks = useMemo(() => recentWeeks(counts, today), [counts, today])
+  const thisWeek = weeks[weeks.length - 1]!
+  const past = weeks.slice(0, -1)
+  const thisMonday = mondayOf(today)
+  const shape = constellationOf(thisMonday)
+  const left = Math.max(0, STARS_PER_WEEK - thisWeek.stars.length)
+  const doneWeeks = past.filter((w) => w.complete).length
 
   if (!open) {
     return (
@@ -82,17 +73,12 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
         className={styles.pill}
         onClick={() => setOpen(true)}
         aria-expanded={false}
-        aria-label={`이번 주 ${week}칸 완료, 다음 정거장까지 ${progress.remaining}걸음 — 잔디 펼치기`}
+        aria-label={`이번 주 별 ${thisWeek.stars.length}개 — 별자리 펼치기`}
       >
         <span className={styles.pillPath}>
-          <JourneyPath
-            progress={progress}
-            mineColor={mineColor}
-            partnerColor={partnerColor}
-            compact
-          />
+          <Constellation mondayKey={thisMonday} stars={thisWeek.stars} compact />
         </span>
-        <span className={styles.pillText}>이번 주 {week}칸</span>
+        <span className={styles.pillText}>이번 주 {thisWeek.stars.length}별</span>
         <span className={styles.chevron} aria-hidden>
           ▾
         </span>
@@ -101,60 +87,47 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
   }
 
   return (
-    <section className={styles.open} aria-label="우리의 여정">
+    <section className={styles.open} aria-label="우리가 만든 별자리">
       <p className={styles.lead}>
-        {progress.steps === 0
-          ? '일정을 체크하면 한 걸음씩 나아가요'
-          : `${progress.to.label}까지 ${progress.remaining}걸음`}
+        {thisWeek.complete
+          ? `이번 주 ‘${shape.name}’ 완성`
+          : thisWeek.stars.length === 0
+            ? '일정을 체크하면 별이 하나씩 떠요'
+            : `${left}별 더 모으면 ‘${shape.name}’ 완성`}
       </p>
 
-      <JourneyPath progress={progress} mineColor={mineColor} partnerColor={partnerColor} />
+      <Constellation
+        mondayKey={thisMonday}
+        stars={thisWeek.stars}
+        targetId={STAR_TARGET_ID}
+      />
 
-      <h3 className={styles.gridTitle}>12주 기록</h3>
-      <div className={styles.gridWrap}>
-        <ul className={styles.dow} aria-hidden>
-          {DOW.map((d) => (
-            <li key={d}>{d}</li>
-          ))}
-        </ul>
-        <div
-          className={styles.grid}
-          role="img"
-          aria-label={`최근 12주 완료 기록 — 이번 주 ${week}칸, 통틀어 ${steps}칸`}
-        >
-          {grid.map((col) => (
-            <div key={col[0]!.key} className={styles.col}>
-              {col.map((cell) => {
-                const lv = levelOf(cell.total)
-                const who = ownerOf(cell)
-                return (
-                  <span
-                    key={cell.key}
-                    className={`${styles.cell} ${styles[`lv${lv}`]} ${styles[who]}`}
-                    title={`${cell.key} · ${cell.total}칸`}
-                  />
-                )
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 색만으로 읽히지 않게 범례를 글자로 함께 둔다(§8). */}
+      {/* 누구 별인지 — 색만으로 말하지 않는다(§8). */}
       <ul className={styles.legend}>
         <li>
-          <span className={`${styles.cell} ${styles.lv0}`} aria-hidden /> 없음
+          <span className={`${styles.dot} ${styles.mine}`} aria-hidden /> 나
         </li>
         <li>
-          <span className={`${styles.cell} ${styles.lv1} ${styles.mine}`} aria-hidden /> 나
+          <span className={`${styles.dot} ${styles.partner}`} aria-hidden /> 상대
         </li>
         <li>
-          <span className={`${styles.cell} ${styles.lv2} ${styles.partner}`} aria-hidden /> 상대
-        </li>
-        <li>
-          <span className={`${styles.cell} ${styles.lv3} ${styles.shared}`} aria-hidden /> 함께
+          <span className={`${styles.dot} ${styles.shared}`} aria-hidden /> 함께
         </li>
       </ul>
+
+      <h3 className={styles.gridTitle}>
+        지난 주들 <span className={styles.count}>{doneWeeks}개 완성</span>
+      </h3>
+      <div className={styles.weeks}>
+        {past.map((w) => (
+          <WeekGlyph
+            key={w.mondayKey}
+            mondayKey={w.mondayKey}
+            filled={w.stars.length}
+            complete={w.complete}
+          />
+        ))}
+      </div>
 
       <button type="button" className={styles.collapse} onClick={() => setOpen(false)} aria-expanded>
         접기 ▴

@@ -59,117 +59,88 @@ export function dailyDoneCounts(
   return map
 }
 
-/** 칸의 농도 0~4. 색만으로 구분하지 않으므로(§8) UI는 이 단계에 모양도 함께 바꾼다. */
-export function levelOf(total: number): 0 | 1 | 2 | 3 | 4 {
-  if (total <= 0) return 0
-  if (total === 1) return 1
-  if (total === 2) return 2
-  if (total === 3) return 3
-  return 4
-}
+// ── 별자리 ──────────────────────────────────────────────────────────────────
+// 완료 1건 = 별 하나. 한 주에 STARS_PER_WEEK개를 모으면 그 주의 별자리가 완성된다.
+//
+// 왜 주 단위인가: 캘린더가 이미 주로 끊겨 있다. 그 리듬을 그대로 쓰면 "이번 주"라는 단위가
+// 화면 어디서나 같은 뜻이 된다. 달 단위는 너무 멀고, 일 단위는 서사가 안 생긴다.
+//
+// 정거장 은유(카페→해변)를 버린 이유: 우리 데이터와 아무 상관 없는 가짜 서사였다.
+// 별자리는 "우리가 채운 만큼 하늘에 남는다"는 것 말고 다른 주장을 하지 않는다.
 
-/** 그 칸의 주인 — 가장 많은 쪽. 동수면 '함께'로 본다(둘이 쓰는 앱의 기본값은 공유다). */
-export function ownerOf(cell: DayCell): 'mine' | 'partner' | 'shared' | 'none' {
-  if (cell.total === 0) return 'none'
-  const max = Math.max(cell.mine, cell.partner, cell.shared)
-  const tied = [cell.mine === max, cell.partner === max, cell.shared === max].filter(Boolean).length
-  if (tied > 1) return 'shared'
-  if (cell.shared === max) return 'shared'
-  if (cell.mine === max) return 'mine'
-  return 'partner'
+export const STARS_PER_WEEK = 7
+
+export type StarOwner = 'mine' | 'partner' | 'shared'
+
+/** 그 주 월요일 키. */
+export function mondayOf(dayKeyStr: string): string {
+  const [y, m, d] = dayKeyStr.split('-').map(Number)
+  const wd = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay()
+  return addDays(dayKeyStr, -((wd + 6) % 7))
 }
 
 /**
- * 12주 격자 — 오늘이 마지막 열에 오게 주 단위로 자른다.
- * 반환은 열(주) 배열이고 각 열은 월~일 7칸. 미래 칸도 자리를 지킨다(빈칸) —
- * 이번 주만 짧게 그리면 격자가 들쭉날쭉해 보인다.
+ * 한 주의 별들 — 날짜순으로 편 완료 기록.
+ * 같은 날 안에서는 함께 → 나 → 상대 순으로 낸다(정렬 규칙이 있어야 별 위치가 안 흔들린다).
  */
-export function gardenGrid(
+export function weekStars(
+  counts: ReadonlyMap<string, DayCell>,
+  mondayKey: string,
+): StarOwner[] {
+  const out: StarOwner[] = []
+  for (let i = 0; i < 7; i++) {
+    const cell = counts.get(addDays(mondayKey, i))
+    if (!cell) continue
+    for (let n = 0; n < cell.shared; n++) out.push('shared')
+    for (let n = 0; n < cell.mine; n++) out.push('mine')
+    for (let n = 0; n < cell.partner; n++) out.push('partner')
+  }
+  return out
+}
+
+export type WeekSummary = {
+  mondayKey: string
+  stars: StarOwner[]
+  /** 별자리가 완성됐나(STARS_PER_WEEK 이상). */
+  complete: boolean
+}
+
+/** 최근 n주(오늘이 속한 주가 마지막). */
+export function recentWeeks(
   counts: ReadonlyMap<string, DayCell>,
   todayKey: string,
   weeks = 12,
-): DayCell[][] {
-  // 오늘이 속한 주의 월요일부터 역산.
-  const dow = (key: string): number => {
-    const [y, m, d] = key.split('-').map(Number)
-    const wd = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay()
-    return (wd + 6) % 7 // 월=0 … 일=6
+): WeekSummary[] {
+  const thisMonday = mondayOf(todayKey)
+  const out: WeekSummary[] = []
+  for (let w = weeks - 1; w >= 0; w--) {
+    const mondayKey = addDays(thisMonday, -w * 7)
+    const stars = weekStars(counts, mondayKey)
+    out.push({ mondayKey, stars, complete: stars.length >= STARS_PER_WEEK })
   }
-  const thisMonday = addDays(todayKey, -dow(todayKey))
-  const firstMonday = addDays(thisMonday, -(weeks - 1) * 7)
-  const cols: DayCell[][] = []
-  for (let w = 0; w < weeks; w++) {
-    const col: DayCell[] = []
-    for (let d = 0; d < 7; d++) {
-      const key = addDays(firstMonday, w * 7 + d)
-      col.push(counts.get(key) ?? { key, total: 0, mine: 0, partner: 0, shared: 0 })
-    }
-    cols.push(col)
-  }
-  return cols
+  return out
 }
 
-// ── 여정 ────────────────────────────────────────────────────────────────────
-// 완료 1건 = 한 걸음. STEPS_PER_STATION 걸음마다 정거장 하나를 지난다.
-// 숫자(연속 N일)를 주인공으로 두지 않는 이유: 끊기면 0으로 떨어져 벌처럼 느껴진다.
-// 여정은 뒤로 가지 않는다 — 쉬어도 걸어온 길은 남는다.
-
-export const STEPS_PER_STATION = 10
-
-/** 정거장 — 여행 앱답게 '가본 곳'의 결로. 순환하므로 끝나지 않는다. */
-export const STATIONS = [
-  { key: 'cafe', label: '카페' },
-  { key: 'beach', label: '해변' },
-  { key: 'mountain', label: '전망대' },
-  { key: 'tent', label: '캠핑장' },
-  { key: 'ferris', label: '놀이공원' },
+/**
+ * 주마다 다른 별자리 모양 — 주 키에서 결정론적으로 고른다.
+ * 저장하지 않고 도출한다: 같은 주는 언제 열어도 같은 모양·같은 이름이다.
+ */
+export const CONSTELLATIONS = [
+  { name: '돛단배', points: [[14, 46], [30, 30], [46, 14], [54, 34], [72, 30], [84, 46], [50, 52]] },
+  { name: '리본', points: [[16, 24], [34, 40], [16, 54], [50, 40], [84, 24], [66, 40], [84, 54]] },
+  { name: '작은곰', points: [[14, 50], [28, 40], [44, 44], [58, 34], [70, 22], [82, 32], [78, 48]] },
+  { name: '나비', points: [[24, 22], [40, 38], [24, 54], [50, 38], [76, 22], [60, 38], [76, 54]] },
+  { name: '왕관', points: [[14, 50], [26, 26], [38, 44], [50, 20], [62, 44], [74, 26], [86, 50]] },
+  { name: '물결', points: [[12, 42], [26, 30], [40, 44], [54, 30], [68, 44], [82, 30], [92, 42]] },
 ] as const
 
-export type StationKey = (typeof STATIONS)[number]['key']
-
-export type JourneyProgress = {
-  /** 총 걸음(=총 완료 수). */
-  steps: number
-  /** 지나온 정거장 수. */
-  stationsPassed: number
-  /** 직전 정거장(출발점)과 다음 정거장. */
-  from: (typeof STATIONS)[number]
-  to: (typeof STATIONS)[number]
-  /** 이번 구간에서 걸은 칸 0…STEPS_PER_STATION-1. */
-  stepInLeg: number
-  /** 다음 정거장까지 남은 걸음. */
-  remaining: number
-  /** 이번 구간 진행도 0~1 — 캐릭터를 길 위 어디에 놓을지. */
-  ratio: number
+/** 문자열 → 안정 해시(주 키에서 모양을 고르는 데만 쓴다). */
+export function hashKey(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return h
 }
 
-export function journeyProgress(steps: number): JourneyProgress {
-  const safe = Math.max(0, Math.floor(steps))
-  const stationsPassed = Math.floor(safe / STEPS_PER_STATION)
-  const stepInLeg = safe % STEPS_PER_STATION
-  const fromIdx = stationsPassed % STATIONS.length
-  const toIdx = (stationsPassed + 1) % STATIONS.length
-  return {
-    steps: safe,
-    stationsPassed,
-    from: STATIONS[fromIdx]!,
-    to: STATIONS[toIdx]!,
-    stepInLeg,
-    remaining: STEPS_PER_STATION - stepInLeg,
-    ratio: stepInLeg / STEPS_PER_STATION,
-  }
-}
-
-/** 이번 주(월~오늘) 완료 수 — 접힌 줄에 보여줄 한 개의 숫자. */
-export function weekDoneCount(counts: ReadonlyMap<string, DayCell>, todayKey: string): number {
-  const [y, m, d] = todayKey.split('-').map(Number)
-  const wd = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay()
-  const monday = addDays(todayKey, -((wd + 6) % 7))
-  let n = 0
-  for (let i = 0; i < 7; i++) {
-    const key = addDays(monday, i)
-    if (key > todayKey) break
-    n += counts.get(key)?.total ?? 0
-  }
-  return n
+export function constellationOf(mondayKey: string): (typeof CONSTELLATIONS)[number] {
+  return CONSTELLATIONS[hashKey(mondayKey) % CONSTELLATIONS.length]!
 }

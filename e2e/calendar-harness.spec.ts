@@ -280,20 +280,20 @@ test('완료 체크 — 회차 단위로 기록되고 여정이 한 걸음 나�
   })
 })
 
-test('여정 스트립 — 기본은 한 줄, 펼치면 길과 12주 기록', async ({ page }) => {
+test('별자리 스트립 — 기본은 한 줄, 펼치면 이번 주 별자리와 지난 주들', async ({ page }) => {
   await seedAuthedMap(page, { events: [] })
   await page.goto('/calendar')
 
   // 캘린더 자리를 뺏지 않게 접혀 있다(지도 알림과 같은 규약).
-  const pill = page.getByRole('button', { name: /잔디 펼치기/ })
+  const pill = page.getByRole('button', { name: /별자리 펼치기/ })
   await expect(pill).toBeVisible()
   expect((await pill.boundingBox())!.height).toBeGreaterThanOrEqual(44)
-  await expect(page.getByRole('region', { name: '우리의 여정' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: '우리가 만든 별자리' })).toHaveCount(0)
 
   await pill.click()
-  await expect(page.getByRole('region', { name: '우리의 여정' })).toBeVisible()
-  // 그림만으로 말하지 않는다(§8) — 걸음 수·범례가 글자로 함께 있다.
-  await expect(page.getByText('일정을 체크하면 한 걸음씩 나아가요')).toBeVisible()
-  await expect(page.getByRole('img', { name: /최근 12주 완료 기록/ })).toBeVisible()
-  await expect(page.getByText('함께', { exact: true }).last()).toBeVisible()
+  await expect(page.getByRole('region', { name: '우리가 만든 별자리' })).toBeVisible()
+  // 그림만으로 말하지 않는다(§8) — 안내문과 범례가 글자로 함께 있다.
+  await expect(page.getByText('일정을 체크하면 별이 하나씩 떠요')).toBeVisible()
+  await expect(page.getByRole('img', { name: /이번 주 별/ })).toBeVisible()
+  await expect(page.getByText('지난 주들')).toBeVisible()
 })

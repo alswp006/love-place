@@ -1,0 +1,99 @@
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  /* 전폭으로 두면 세로 230px를 먹어 캘린더를 밀어낸다 — 하늘 한 조각이면 충분하다. */
+  max-width: 260px;
+  margin: 0 auto;
+}
+
+.compact {
+  max-height: 40px;
+  max-width: none;
+  margin: 0;
+}
+
+/* 이어진 선 — 별과 별 사이. 얇고 조용하게(주인공은 별). */
+.link {
+  stroke: var(--c-brand-weak);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+}
+
+.linkClose {
+  stroke: var(--c-brand);
+  stroke-width: 1;
+}
+
+/* 아직 안 찍힌 자리 — 빈 고리. 색이 아니라 모양으로 '없음'을 말한다(§8). */
+.empty {
+  fill: none;
+  stroke: var(--c-border);
+  stroke-width: 0.9;
+  stroke-dasharray: 1.5 1.5;
+}
+
+.star {
+  animation: land 320ms var(--ease) backwards;
+}
+
+.glow {
+  fill: currentColor;
+  opacity: 0.18;
+}
+
+.core {
+  fill: currentColor;
+}
+
+.anchor {
+  fill: none;
+  stroke: none;
+  pointer-events: none;
+}
+
+@keyframes land {
+  0% { opacity: 0; transform: scale(0.2); }
+  60% { opacity: 1; transform: scale(1.35); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* 지난 주 글리프 — 채운 만큼의 호 + 완성이면 별. */
+.glyph {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.glyphSvg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.glyphTrack {
+  fill: none;
+  stroke: var(--c-border);
+  stroke-width: 2;
+}
+
+.glyphFill {
+  fill: none;
+  stroke: var(--c-brand);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.glyphStar {
+  fill: var(--c-brand);
+  transform: rotate(90deg);
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star {
+    animation: none;
+  }
+}

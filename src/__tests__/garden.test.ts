@@ -1,13 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   dailyDoneCounts,
-  levelOf,
-  ownerOf,
-  gardenGrid,
-  journeyProgress,
-  weekDoneCount,
-  STEPS_PER_STATION,
-  STATIONS,
+  weekStars,
+  recentWeeks,
+  mondayOf,
+  constellationOf,
+  STARS_PER_WEEK,
 } from '@/lib/streak/garden'
 
 // 잔디·여정은 집계 테이블 없이 event_completions에서 도출한다(§7) — 그 도출 규칙을 못박는다.
@@ -82,72 +80,49 @@ describe('dailyDoneCounts', () => {
   })
 })
 
-describe('levelOf · ownerOf — 색만으로 구분하지 않으려면 단계가 결정론적이어야 한다', () => {
-  it('0~4단계', () => {
-    expect([0, 1, 2, 3, 7].map(levelOf)).toEqual([0, 1, 2, 3, 4])
-  })
-
-  it('가장 많은 쪽이 칸의 주인, 동수면 함께', () => {
-    expect(ownerOf({ key: 'k', total: 3, mine: 2, partner: 1, shared: 0 })).toBe('mine')
-    expect(ownerOf({ key: 'k', total: 2, mine: 1, partner: 1, shared: 0 })).toBe('shared')
-    expect(ownerOf({ key: 'k', total: 0, mine: 0, partner: 0, shared: 0 })).toBe('none')
-  })
-})
-
-describe('gardenGrid', () => {
-  it('12주 × 7칸, 오늘이 마지막 열에 든다', () => {
-    // 2026-08-05는 수요일 → 마지막 열의 3번째 칸.
-    const counts = dailyDoneCounts([done('a', kst('2026-08-05'))], metaOf, 'me')
-    const grid = gardenGrid(counts, '2026-08-05')
-    expect(grid).toHaveLength(12)
-    expect(grid[0]).toHaveLength(7)
-    const last = grid[11]!
-    expect(last[2]!.key).toBe('2026-08-05')
-    expect(last[2]!.total).toBe(1)
-  })
-
-  it('빈 날도 자리를 지킨다 — 격자가 들쭉날쭉하면 안 된다', () => {
-    const grid = gardenGrid(new Map(), '2026-08-05', 2)
-    expect(grid.flat()).toHaveLength(14)
-    expect(grid.flat().every((c) => c.total === 0)).toBe(true)
-  })
-})
-
-describe('journeyProgress — 뒤로 가지 않는 여정', () => {
-  it('완료 1건 = 한 걸음, 10걸음마다 정거장', () => {
-    expect(journeyProgress(0)).toMatchObject({ stationsPassed: 0, stepInLeg: 0, remaining: 10 })
-    expect(journeyProgress(4)).toMatchObject({ stationsPassed: 0, stepInLeg: 4, remaining: 6 })
-    expect(journeyProgress(STEPS_PER_STATION)).toMatchObject({ stationsPassed: 1, stepInLeg: 0 })
-  })
-
-  it('정거장은 순환한다 — 끝나서 멈추는 여정이 아니다', () => {
-    const p = journeyProgress(STEPS_PER_STATION * STATIONS.length)
-    expect(p.from.key).toBe(STATIONS[0]!.key)
-  })
-
-  it('구간 진행도는 0~1', () => {
-    expect(journeyProgress(5).ratio).toBe(0.5)
-    expect(journeyProgress(0).ratio).toBe(0)
-  })
-
-  it('음수·소수를 넣어도 깨지지 않는다', () => {
-    expect(journeyProgress(-3).steps).toBe(0)
-    expect(journeyProgress(3.7).steps).toBe(3)
-  })
-})
-
-describe('weekDoneCount', () => {
-  it('이번 주 월요일부터 오늘까지만 센다 — 미래는 세지 않는다', () => {
+describe('별자리 — 완료 1건이 별 하나, 한 주에 7개면 완성', () => {
+  it('그 주 완료를 날짜순으로 편다 — 같은 날은 함께→나→상대 순(위치가 흔들리면 안 된다)', () => {
     const counts = dailyDoneCounts(
       [
-        done('a', kst('2026-08-03')), // 월
-        done('b', kst('2026-08-05')), // 수(오늘)
-        done('c', kst('2026-08-07')), // 금(미래)
-        done('d', kst('2026-07-31')), // 지난주
+        done('a', kst('2026-08-04'), { owner_id: 'you' }), // 화 · 상대
+        done('b', kst('2026-08-03'), { owner_id: 'me' }), // 월 · 나
+        done('c', kst('2026-08-03'), { owner_id: 'you', visibility: 'SHARED' }), // 월 · 함께
       ],
       metaOf,
       'me',
     )
-    expect(weekDoneCount(counts, '2026-08-05')).toBe(2)
+    expect(weekStars(counts, '2026-08-03')).toEqual(['shared', 'mine', 'partner'])
+  })
+
+  it('7개를 채우면 그 주 별자리가 완성된다', () => {
+    const many = Array.from({ length: 7 }, (_, i) => done(`s${i}`, kst('2026-08-05')))
+    const counts = dailyDoneCounts(many, metaOf, 'me')
+    const weeks = recentWeeks(counts, '2026-08-05', 2)
+    expect(weeks).toHaveLength(2)
+    expect(weeks[1]!.complete).toBe(true)
+    expect(weeks[0]!.complete).toBe(false) // 지난주는 비어 있다
+  })
+
+  it('오늘이 속한 주가 마지막이고, 월요일 키로 정렬된다', () => {
+    const weeks = recentWeeks(new Map(), '2026-08-05', 3)
+    expect(weeks.map((w) => w.mondayKey)).toEqual(['2026-07-20', '2026-07-27', '2026-08-03'])
+  })
+
+  it('mondayOf는 그 주 월요일 — 일요일도 그 주로 묶인다', () => {
+    expect(mondayOf('2026-08-05')).toBe('2026-08-03') // 수
+    expect(mondayOf('2026-08-03')).toBe('2026-08-03') // 월
+    expect(mondayOf('2026-08-09')).toBe('2026-08-03') // 일
+  })
+
+  it('별자리 모양은 주 키에서 결정론적으로 나온다 — 새로고침해도 같은 별자리', () => {
+    const a = constellationOf('2026-08-03')
+    const b = constellationOf('2026-08-03')
+    expect(a.name).toBe(b.name)
+    expect(a.points).toHaveLength(STARS_PER_WEEK)
+    // 주가 다르면 대체로 다른 모양이 나온다(전부 같은 모양이면 재미가 없다).
+    const names = new Set(
+      Array.from({ length: 12 }, (_, i) => constellationOf(`2026-0${(i % 9) + 1}-0${(i % 7) + 1}`).name),
+    )
+    expect(names.size).toBeGreaterThan(1)
   })
 })

@@ -142,29 +142,29 @@ describe('일정 완료 체크', () => {
   })
 })
 
-describe('여정 스트립', () => {
+describe('별자리 스트립', () => {
   it('기본은 접힌 한 줄 — 캘린더 자리를 뺏지 않는다', () => {
     renderPage()
-    expect(screen.getByRole('button', { name: /잔디 펼치기/ })).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: '우리의 여정' })).toBeNull()
+    expect(screen.getByRole('button', { name: /별자리 펼치기/ })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '우리가 만든 별자리' })).toBeNull()
   })
 
-  it('펼치면 여정과 12주 기록이 보인다', () => {
+  it('펼치면 이번 주 별자리와 지난 주들이 보인다', () => {
     state.completions = [
       { id: 'c1', event_id: 'e1', occurrence_start: at('09:00'), done_at: at('09:30'), version: 1, created_by: 'u1' },
     ]
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: /잔디 펼치기/ }))
-    const region = screen.getByRole('region', { name: '우리의 여정' })
+    fireEvent.click(screen.getByRole('button', { name: /별자리 펼치기/ }))
+    const region = screen.getByRole('region', { name: '우리가 만든 별자리' })
     expect(region).toBeInTheDocument()
-    // 걸음 수는 숫자로도 읽혀야 한다(색·그림만으로 말하지 않는다 §8).
-    expect(screen.getByText(/걸음/)).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: /최근 12주 완료 기록/ })).toBeInTheDocument()
+    // 별 수는 숫자로도 읽혀야 한다(색·그림만으로 말하지 않는다 §8).
+    expect(screen.getByText(/별 더 모으면/)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /이번 주 별/ })).toBeInTheDocument()
   })
 
   it('완료가 0이면 무엇을 하면 되는지 알려준다(죽은 화면 금지)', () => {
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: /잔디 펼치기/ }))
-    expect(screen.getByText('일정을 체크하면 한 걸음씩 나아가요')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /별자리 펼치기/ }))
+    expect(screen.getByText('일정을 체크하면 별이 하나씩 떠요')).toBeInTheDocument()
   })
 })
