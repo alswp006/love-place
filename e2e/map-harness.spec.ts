@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { seedAuthedMap } from './harness/seed'
+import { seedAuthedMap, USER_A } from './harness/seed'
 
 const PLACES = [
   { id: 'p1', name: '속초 칠성조선소', address: '강원 속초시', region_label: '속초', lat: 38.2, lng: 128.59, category: '카페', kakao_place_id: 'k1', added_by: '00000000-0000-4000-8000-000000000a01', version: 1 },
@@ -148,4 +148,44 @@ test.describe('작은/큰 뷰포트', () => {
     test.skip(s.skip, `베이스라인 없음(${process.platform})`)
     await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
   })
+})
+
+test('사진 — 있으면 카드에 썸네일, 없으면 슬롯 자체를 안 그린다', async ({ page }) => {
+  // 회색 자리표시는 빈 화면보다 나쁘다(§7) — 사진이 없을 때 빈 박스가 생기지 않는지가 요점.
+  const PLACES = [
+    { id: 'p1', name: '사진 있는 곳', address: '속초시', region_label: '속초', lat: 38.2, lng: 128.59, category: null, kakao_place_id: 'k1', added_by: USER_A, version: 1 },
+    { id: 'p2', name: '사진 없는 곳', address: '속초시', region_label: '속초', lat: 38.21, lng: 128.6, category: null, kakao_place_id: 'k2', added_by: USER_A, version: 1 },
+  ]
+  await seedAuthedMap(page, {
+    places: PLACES,
+    photos: [
+      {
+        id: 'ph1', storage_url: 'c1/ph1.webp', thumbnail_url: 'c1/ph1_t.webp',
+        place_id: 'p1', trip_id: null, taken_at: null, caption: null,
+        uploaded_by: USER_A, version: 1,
+      },
+    ],
+  })
+  // 서명 URL(Storage API) — 응답 키는 signedURL(대문자 URL)이고 클라이언트가 base URL을 앞에
+  // 붙여 signedUrl로 바꾼다. 여기선 앞에 붙어도 무해한 절대경로를 주고, 그 경로에 1×1 PNG를 세운다.
+  await page.route('**/e2e.supabase.co/storage/v1/object/sign/photos**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ error: null, path: 'c1/ph1_t.webp', signedURL: '/e2e-photo.png' }]),
+    }),
+  )
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+    'base64',
+  )
+  await page.route('**/e2e-photo.png', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: png }),
+  )
+  await page.goto('/')
+
+  const withPhoto = page.getByRole('button', { name: /사진 있는 곳 지도에서 보기/ })
+  const without = page.getByRole('button', { name: /사진 없는 곳 지도에서 보기/ })
+  await expect(withPhoto.locator('img')).toHaveCount(1)
+  await expect(without.locator('img')).toHaveCount(0)
 })

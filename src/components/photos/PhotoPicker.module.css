@@ -1,0 +1,48 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  align-self: flex-start;
+  border: 1px dashed var(--c-border);
+  background: none;
+  color: var(--c-text-weak);
+  border-radius: var(--r-pill);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  /* 터치 타깃 ≥44px(HIG) */
+  min-height: 44px;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--c-brand);
+  color: var(--c-brand);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* 실제 파일 입력은 숨긴다 — 버튼이 대신 연다. display:none이면 일부 브라우저에서
+   click()이 무시되므로 화면 밖으로만 치운다. */
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-danger);
+}

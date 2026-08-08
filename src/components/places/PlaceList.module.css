@@ -30,9 +30,12 @@
 }
 
 .cardMain {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  /* 썸네일이 붙으면 [사진][이름/주소/찜] 두 열이 된다. 없으면 그리드가 한 열로 접힌다. */
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: var(--sp-3);
+  row-gap: 2px;
   min-width: 0;
   flex: 1;
   text-align: left;
@@ -177,4 +180,21 @@
   /* 터치 타깃 ≥44px(HIG) */
   min-height: 44px;
   white-space: nowrap;
+}
+
+/* 카드 썸네일(§5.4) — 있을 때만 그려진다. 이름·주소가 오른쪽으로 밀리며 목록에 리듬이 생긴다. */
+.cardThumb {
+  width: 56px;
+  height: 56px;
+  grid-column: 1;
+  grid-row: 1 / -1;
+}
+
+/* 썸네일이 없으면 텍스트가 1열부터 차지한다(빈 열이 남지 않게). */
+.cardMain > :not(.cardThumb) {
+  grid-column: 2;
+}
+
+.cardMain:not(:has(.cardThumb)) > * {
+  grid-column: 1;
 }

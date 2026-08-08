@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { useToast } from '@/components/common/ToastProvider'
+import { usePhotosByPlace, useSignedPhotoUrls } from '@/hooks/usePhotos'
 import { PlaceList } from '@/components/places/PlaceList'
 import { PlaceDetail } from '@/components/places/PlaceDetail'
 import { PlacePreviewDetail } from '@/components/places/PlacePreviewDetail'
@@ -79,6 +80,17 @@ export function PlaceSheet({
   collections?: CollectionRow[]
   placeCollections?: PlaceCollectionRow[]
 }) {
+  // 사진(§5.4) — 목록 썸네일과 상세 그리드가 같은 데이터를 쓴다. 비공개 버킷이라 서명 URL로.
+  const photosByPlace = usePhotosByPlace(coupleId)
+  const photoPaths = useMemo(() => {
+    const out: string[] = []
+    for (const list of photosByPlace.values()) {
+      for (const ph of list) out.push(ph.thumbnail_url ?? ph.storage_url)
+    }
+    return out
+  }, [photosByPlace])
+  const { data: photoUrls } = useSignedPhotoUrls(coupleId, photoPaths)
+
   const toast = useToast()
   const conflict = useConflict()
   const markVisited = useMarkVisited(coupleId, myId)
@@ -446,6 +458,10 @@ export function PlaceSheet({
                 />
               ) : selectedPlace ? (
                 <PlaceDetail
+                  coupleId={coupleId}
+                  myId={myId}
+                  photos={photosByPlace.get(selectedPlace.id)}
+                  photoUrls={photoUrls}
                   place={selectedPlace}
                   visited={visitedIds.has(selectedPlace.id)}
                   didIReact={reactions?.[selectedPlace.id]?.didIReact ?? false}
@@ -505,6 +521,8 @@ export function PlaceSheet({
               {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
 
               <PlaceList
+                photosByPlace={photosByPlace}
+                photoUrls={photoUrls}
                 visible={visible}
                 wishes={wishes}
                 visitedIds={visitedIds}

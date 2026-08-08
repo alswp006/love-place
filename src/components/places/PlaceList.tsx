@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/common/Skeleton'
 import { Heart } from '@/components/nav/icons'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { PhotoThumb } from '@/components/photos/PhotoThumb'
 import { Chip } from '@/components/ui/Chip'
 import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
@@ -35,6 +36,8 @@ export function PlaceList({
   onToastAction,
   restorePlace,
   onToggleWish,
+  photosByPlace,
+  photoUrls,
 }: {
   visible: WithWish<PlaceRow>[]
   wishes: WishData | undefined
@@ -47,6 +50,9 @@ export function PlaceList({
   priorityPending: boolean
   /** 내 wish가 없는 장소에 '＋ 나도 찜'을 붙인다. 미지정이면 컨트롤을 숨긴다(점진 도입). */
   onToggleWish?: (placeId: string) => void
+  /** 장소별 사진(§5.4) — 첫 장을 카드 썸네일로. 없으면 슬롯을 안 그린다. */
+  photosByPlace?: Map<string, { id: string; storage_url: string; thumbnail_url: string | null }[]>
+  photoUrls?: Record<string, string>
   markVisited: MarkVisited
   onUnvisit: (placeId: string) => void
   unvisitPending: boolean
@@ -93,6 +99,8 @@ export function PlaceList({
             const myWish = wishes?.mine[p.id]
             const visited = visitedIds.has(p.id)
             const isSelected = p.id === selectedId
+            const first = photosByPlace?.get(p.id)?.[0]
+            const thumbUrl = first ? photoUrls?.[first.thumbnail_url ?? first.storage_url] : undefined
             return (
               <Card
                 as="li"
@@ -107,6 +115,10 @@ export function PlaceList({
                   aria-pressed={isSelected}
                   aria-label={`${p.name} 지도에서 보기`}
                 >
+                  {/* 썸네일이 있을 때만 그린다 — 회색 자리표시는 빈 화면보다 나쁘다. */}
+                  {thumbUrl ? (
+                    <PhotoThumb url={thumbUrl} alt="" className={styles.cardThumb} />
+                  ) : null}
                   <span className={styles.cardName}>{p.name}</span>
                   {p.address ? <span className={styles.cardAddr}>{p.address}</span> : null}
                   <span className={styles.wishLine}>

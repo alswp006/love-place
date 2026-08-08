@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Background: solid #FDEBED, edge-to-edge. iOS applies squircle mask. -->
+  <rect width="1024" height="1024" fill="#FDEBED"/>
+
+  <!--
+    v2 GEOMETRY
+    ===========
+    Goal: read as TWO PINS first, heart second.
+
+    Approach:
+      - Two identical teardrop pins, tilted inward at 22° each (less than v1's 32°,
+        so each still reads as a "vertical" pin, not as a heart-lobe).
+      - Tips meet at a shared bottom point.
+      - Heads (circles) overlap in the middle, but each pin is a separate colored
+        shape with a thin BACKGROUND-COLOR gap between them — the gap is a "seam"
+        of the background pink showing through, which:
+           (a) proves there are two distinct objects
+           (b) draws the heart shape as NEGATIVE SPACE — a subtle heart-outline gap
+               where the two pins meet at the top-center, and the V between the tips.
+      - Each pin has a "pin hole" — small circle inside the head, in the background
+        color, dead-center of the head. This is the universal map-pin signal.
+
+    Pin geometry (unchanged from v1):
+      Head radius R = 150, tip distance d = 360 from head center.
+      Tangent angle θ = acos(R/d) = acos(0.4167) ≈ 65.38°.
+      Tangent points: (±136.36, 62.50). Tip: (0, 360).
+
+    Placement:
+      Shared tip at (512, 780).
+      Tilt: left pin -22°, right pin +22° (rotations around the tip).
+
+    Envelope check:
+      Pin length 510. At 22° tilt:
+        vertical extent above tip: 510*cos(22°) ≈ 473
+        top of head circle above head center: +R vertical = -R after rotation +
+        head-center offset. Head center in local coords is (0,0) rotated? No — head
+        center is at (0,0) in the untransformed pin; we translate(0,-360) so head
+        goes to (0,-360). Then rotate ±22°. Then translate to (512,780).
+        Head center world position:
+          x = 512 + (-360)*sin(±22°) * (-1?) — let's just compute:
+          rotate(θ) applied to (0,-360) gives (0*cos - (-360)*sin, 0*sin + (-360)*cos)
+                                            = (360*sin(θ), -360*cos(θ))
+          Then + (512,780) → (512 + 360*sin(θ), 780 - 360*cos(θ))
+        For θ=+22° (right pin): (512 + 360*0.3746, 780 - 360*0.9272)
+                              = (512 + 134.9, 780 - 333.8) = (646.9, 446.2)
+        For θ=-22° (left pin):  (512 - 134.9, 446.2) = (377.1, 446.2)
+      Head center distance apart: 646.9 - 377.1 = 269.8. Head radii sum = 300.
+      Overlap between the two head circles: 300 - 269.8 = 30.2 (a modest overlap
+      producing a lens where the two circles meet — good for the heart cusp).
+
+      Top of mark: 446.2 - 150 = 296.2. Bottom of mark: 780. Height = 483.8.
+      That's 47% of 1024 — a bit under the 62% target. Let's scale up.
+
+      Scale the whole pin geometry by 1.25 (R=187.5, d=450), keep tilts.
+        Head center offset from tip: 450 in local; rotated → (450*sin22, -450*cos22)
+                                                          = (168.6, -417.2)
+        Left head center: (512 - 168.6, 780 - 417.2) = (343.4, 362.8)
+        Right head center: (680.6, 362.8)
+        Head centers apart: 337.2. Head radii sum: 375. Overlap: 37.8. Good.
+        Top of mark: 362.8 - 187.5 = 175.3. Bottom: 780. Height: 604.7. ≈59% -> good.
+        Width extremes: left head-outer = 343.4 - 187.5 = 155.9;
+                         right head-outer = 680.6 + 187.5 = 868.1.
+        Width: 712. ≈70% — good.
+      But wait — the pins are TILTED, so the outermost point isn't the head's left/
+      right edge; it's the tangent line running down to the tip. Actually the head
+      itself, being a circle, has its outermost x at head_cx ± R regardless of tilt.
+      So max x = 868.1, min x = 155.9 → mark width 712 = 70% of canvas. Some tilt
+      pushes the tips further out too but the tips meet at 512, so no. Only the
+      head's outer edge sets the width. Fine.
+
+    Final pin params: R=187.5, d=450, tip=(512,780), tilts ±22°.
+
+    Colors:
+      Left pin: primary rose #B03D5B
+      Right pin: primary rose #B03D5B  (same color — the "two pins one place" reads
+        stronger when both pins are the SAME KIND; the pink is used elsewhere)
+      Seam gap: #FDEBED (background) — 8px gap between the two pins
+      Pin holes: #F9CED4 (soft pink) — visible against rose
+      Mint accent: a tiny mint dot inside the heart-shaped negative space between
+        the pins, at the "shared destination" spot. Skip — the seam + heart negative
+        space is doing the work. Actually the brief says mint is OPTIONAL at most
+        one small element. Let's use it for BOTH pin holes? No — brief says at most
+        ONE mint element. Skip mint entirely for a cleaner two-color system icon.
+
+    Wait — re-reading brief: "2–3 colors max". With rose + pink + background that's
+    already 3. Mint would push to 4. So skip mint. Cleaner anyway.
+
+    Revised color plan (2 colors on the pink background):
+      - Both pins: #B03D5B (rose)
+      - Pin holes: #F9CED4 (soft pink) — this IS the second color
+      - Seam gap: #FDEBED (background pink, so it "disappears" into the bg and
+        reads as negative space forming the heart cusp)
+
+    Result: two rose pins, each with a pink dot for a pin-hole, converging at the
+    bottom. Between them, the background pink is visible in the shape of a heart
+    (top cusp between overlapping heads, bottom V between tips = classic heart
+    negative-space).
+  -->
+
+  <defs>
+    <!-- Pin symbol: head at origin, tip at (0, 450). R=187.5. -->
+    <symbol id="pin" overflow="visible">
+      <!-- Tangent points recomputed for R=187.5, d=450:
+           θ = acos(187.5/450) = acos(0.4167) ≈ 65.38° (same ratio as v1)
+           Tangent (±sin θ * R, cos θ * R) = (±170.44, 78.13)
+           Tip: (0, 450)
+      -->
+      <path d="M -170.44 78.13
+               A 187.5 187.5 0 1 1 170.44 78.13
+               L 0 450
+               Z"/>
+    </symbol>
+
+    <!-- Slightly enlarged pin, used as the "seam" cutter: same shape but expanded
+         by 4px in all directions, drawn in the background color between the two
+         pins to create an 8px gap between them. We approximate the expansion by
+         using stroke on a copy of the same path with stroke-width=8 and paint-order
+         set so stroke is UNDER the fill of the top pin. Cleaner: draw one pin,
+         then draw the OTHER pin with an outer stroke of #FDEBED (8px), then fill
+         with rose. The stroke on the second pin creates a background-colored gap
+         wherever it overlaps the first pin. -->
+  </defs>
+
+  <!-- LEFT pin (drawn first, will be partially covered by the right pin's stroke) -->
+  <g transform="translate(512 780) rotate(-22) translate(0 -450)">
+    <use href="#pin" fill="#B03D5B"/>
+    <!-- pin hole -->
+    <circle cx="0" cy="0" r="52" fill="#F9CED4"/>
+  </g>
+
+  <!-- RIGHT pin: draw with a thick background-colored stroke UNDER the fill so
+       wherever this pin meets the left pin, an 8px background-pink seam appears. -->
+  <g transform="translate(512 780) rotate(22) translate(0 -450)">
+    <use href="#pin" fill="#B03D5B" stroke="#FDEBED" stroke-width="12" stroke-linejoin="round" paint-order="stroke fill"/>
+    <!-- pin hole -->
+    <circle cx="0" cy="0" r="52" fill="#F9CED4"/>
+  </g>
+</svg>

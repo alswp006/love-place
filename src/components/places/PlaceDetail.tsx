@@ -6,6 +6,8 @@ import type { PlaceRow } from '@/hooks/usePlaces'
 import type { CollectionRow } from '@/hooks/useCollections'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { PhotoThumb } from '@/components/photos/PhotoThumb'
+import { PhotoPicker } from '@/components/photos/PhotoPicker'
 import { Chip } from '@/components/ui/Chip'
 import { LikeButton } from '@/components/ui/LikeButton'
 import styles from './PlaceDetail.module.css'
@@ -17,6 +19,7 @@ export function PlaceDetail({
   place, visited, didIReact, reactionCount, reactionState, busy,
   onVisit, onUnvisit, onReact, onClose,
   collections, memberCollIds, onToggleCollection, onManageCollections,
+  coupleId, myId, photos, photoUrls,
 }: {
   place: WithWish<PlaceRow>
   visited: boolean
@@ -32,6 +35,11 @@ export function PlaceDetail({
   collections?: CollectionRow[]
   memberCollIds?: Set<string>
   onToggleCollection?: (collectionId: string) => void
+  /** 사진(§5.4) — 이 장소에 붙은 것들. 없으면 슬롯 자체를 안 그린다(회색 박스 금지). */
+  coupleId?: string | null
+  myId?: string | null
+  photos?: { id: string; storage_url: string; thumbnail_url: string | null }[]
+  photoUrls?: Record<string, string>
   onManageCollections?: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -130,6 +138,27 @@ export function PlaceDetail({
               </button>
             ) : null}
           </div>
+        </div>
+      ) : null}
+
+      {/* 사진(§5.4) — 이 앱은 여행 기록이다. 사진이 붙어야 목록이 '조회 결과'가 아니게 된다.
+          없을 땐 그리드를 그리지 않고 담기 버튼만 둔다(회색 플레이스홀더 금지). */}
+      {coupleId ? (
+        <div className={styles.photos}>
+          {photos && photos.length > 0 ? (
+            <ul className={styles.photoGrid} aria-label={`${place.name} 사진`}>
+              {photos.map((ph) => {
+                const url = photoUrls?.[ph.thumbnail_url ?? ph.storage_url]
+                if (!url) return null
+                return (
+                  <li key={ph.id}>
+                    <PhotoThumb url={url} alt="" className={styles.photoCell} />
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
+          <PhotoPicker coupleId={coupleId} myId={myId ?? null} placeId={place.id} />
         </div>
       ) : null}
     </Card>

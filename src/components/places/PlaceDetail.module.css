@@ -153,3 +153,26 @@
   font-size: var(--fs-caption);
   color: var(--c-text-weak);
 }
+
+/* 사진(§5.4) — 상세 하단. 없으면 그리드를 안 그리고 담기 버튼만 남는다. */
+.photos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+.photoGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: var(--sp-2);
+}
+
+.photoCell {
+  /* 정사각 셀 — 사진 비율이 제각각이라 격자가 들쭉날쭉해지는 것을 막는다(object-fit: cover). */
+  aspect-ratio: 1;
+  width: 100%;
+}
