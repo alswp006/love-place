@@ -41,8 +41,8 @@ function topPx(el: HTMLElement): number {
 }
 
 const PROFILES = {
-  me: { id: 'me', displayName: '나', color: '#2f7d62', avatarUrl: null },
-  you: { id: 'you', displayName: '지민', color: '#e2638a', avatarUrl: null },
+  me: { id: 'me', displayName: '나', color: '#2f7d62', avatarUrl: null, avatarPath: null },
+  you: { id: 'you', displayName: '지민', color: '#e2638a', avatarUrl: null, avatarPath: null },
 }
 
 describe('DayTimeline(Task 12 — 시간축 배치 + 종일 밴드)', () => {

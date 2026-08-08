@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import { signAvatarPaths } from '@/lib/photos/signAvatars'
 import { useAuth } from '@/state/auth'
 
 export type Partner = {
@@ -66,10 +67,12 @@ export function useCouple() {
             .eq('id', partnerId)
             .maybeSingle()
           if (p) {
+            // avatar_url은 Storage 경로다 — 서명하지 않으면 <img src>가 상대 경로로 깨진다.
+            const signed = await signAvatarPaths([p.avatar_url])
             base.partner = {
               id: p.id,
               displayName: p.display_name,
-              avatarUrl: p.avatar_url,
+              avatarUrl: p.avatar_url ? (signed[p.avatar_url] ?? null) : null,
               color: p.color,
             }
           }

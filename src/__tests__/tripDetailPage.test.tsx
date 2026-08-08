@@ -52,8 +52,8 @@ vi.mock('@/hooks/useVisits', () => ({
 vi.mock('@/hooks/useProfiles', () => ({
   useProfiles: () => ({
     data: {
-      u1: { id: 'u1', displayName: '나', color: '#3b6db5', avatarUrl: null },
-      u2: { id: 'u2', displayName: '지민', color: '#e58', avatarUrl: null },
+      u1: { id: 'u1', displayName: '나', color: '#3b6db5', avatarUrl: null, avatarPath: null },
+      u2: { id: 'u2', displayName: '지민', color: '#e58', avatarUrl: null, avatarPath: null },
     },
   }),
 }))

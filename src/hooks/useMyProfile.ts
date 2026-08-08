@@ -6,6 +6,8 @@ export type MyProfile = {
   id: string
   display_name: string
   color: string
+  /** Storage 경로(서명 전). 표시용 URL은 useProfiles가 서명해 준다. */
+  avatar_url: string | null
   version: number
   location_consent_at: string | null
   photo_consent_at: string | null
@@ -21,7 +23,7 @@ export function useMyProfile() {
       if (!user) return null
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, color, version, location_consent_at, photo_consent_at')
+        .select('id, display_name, color, avatar_url, version, location_consent_at, photo_consent_at')
         .eq('id', user.id)
         .maybeSingle()
       if (error || !data) return null

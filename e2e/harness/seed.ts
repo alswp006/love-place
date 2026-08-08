@@ -71,6 +71,7 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
             id: USER_A,
             display_name: '나',
             color: '#3b6db5',
+            avatar_url: null,
             version: 1,
             location_consent_at: '2020-01-01T00:00:00Z',
             photo_consent_at: '2020-01-01T00:00:00Z',

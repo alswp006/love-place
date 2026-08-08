@@ -25,8 +25,8 @@ import { CommentThread } from '@/components/calendar/CommentThread'
 import { COMMENT_MAX_LEN } from '@/hooks/useComments'
 
 const profiles = {
-  me: { id: 'me', displayName: '민제', color: '#3b6db5', avatarUrl: null },
-  you: { id: 'you', displayName: '지민', color: '#e58', avatarUrl: null },
+  me: { id: 'me', displayName: '민제', color: '#3b6db5', avatarUrl: null, avatarPath: null },
+  you: { id: 'you', displayName: '지민', color: '#e58', avatarUrl: null, avatarPath: null },
 }
 
 function renderThread() {

@@ -7,8 +7,8 @@ vi.mock('@/hooks/useActivityFeed', () => ({ useActivityFeed: () => ({ data: stat
 vi.mock('@/hooks/useProfiles', () => ({
   useProfiles: () => ({
     data: {
-      me: { id: 'me', displayName: '나', color: '#3b6db5', avatarUrl: null },
-      you: { id: 'you', displayName: '지민', color: '#e58', avatarUrl: null },
+      me: { id: 'me', displayName: '나', color: '#3b6db5', avatarUrl: null, avatarPath: null },
+      you: { id: 'you', displayName: '지민', color: '#e58', avatarUrl: null, avatarPath: null },
     },
   }),
 }))

@@ -27,7 +27,8 @@ export function fitWithin(w: number, h: number, max: number): { w: number; h: nu
   return { w: Math.round(w * k), h: Math.round(h * k) }
 }
 
-async function toBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+/** 캔버스 → blob(webp 우선). 아바타 크롭도 같은 규칙을 써야 해서 export한다. */
+export async function encodeCanvas(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   // webp는 같은 화질에서 jpeg보다 훨씬 작다. Safari 14+/Chrome 전부 지원.
   //
   // 폴백 판정을 blob==null로 하면 안 된다: 명세상 toBlob은 **미지원 MIME이면 null이 아니라
@@ -99,8 +100,8 @@ export async function resizePhoto(file: File): Promise<ResizedPhoto> {
   try {
     const d = fitWithin(w, h, DISPLAY_MAX)
     const t = fitWithin(w, h, THUMB_MAX)
-    const display = await toBlob(draw(source, d.w, d.h), 0.86)
-    const thumb = await toBlob(draw(source, t.w, t.h), 0.78)
+    const display = await encodeCanvas(draw(source, d.w, d.h), 0.86)
+    const thumb = await encodeCanvas(draw(source, t.w, t.h), 0.78)
     return { display, thumb, width: d.w, height: d.h }
   } finally {
     // 예외가 나도 반드시 닫는다 — 안 닫으면 원본 해상도 비트맵이 GC까지 그대로 남는다.

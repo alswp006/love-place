@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
-// useUpdateProfile / useMyProfile / useCouple / useToast 모킹 — 에디터의 UI·상호작용 계약만 검증.
-const { updateProfile, showToast, myProfile } = vi.hoisted(() => ({
+// useUpdateProfile / useMyProfile / useCouple / useProfiles / useToast 모킹 — 에디터의 UI·상호작용 계약만 검증.
+const { updateProfile, showToast, myProfile, profileMap } = vi.hoisted(() => ({
   updateProfile: vi.fn(),
   showToast: vi.fn(),
   // 안정적 참조 — useMyProfile이 매 렌더 새 객체를 주면 시드 useEffect가 입력을 되돌려버린다.
@@ -10,9 +10,13 @@ const { updateProfile, showToast, myProfile } = vi.hoisted(() => ({
     id: 'u1',
     display_name: '민제',
     color: '#6e5aa8',
+    avatar_url: null as string | null,
     version: 4,
     location_consent_at: null,
     photo_consent_at: null,
+  },
+  profileMap: {
+    u1: { id: 'u1', displayName: '민제', color: '#6e5aa8', avatarUrl: null, avatarPath: null },
   },
 }))
 
@@ -27,6 +31,12 @@ vi.mock('@/hooks/useCouple', () => ({
   useCouple: () => ({ data: { coupleId: 'c1', status: 'ACTIVE', myRole: 'user_a' }, isLoading: false }),
 }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ show: showToast }) }))
+// 아바타 서명 URL은 useProfiles가 준다 — 여기선 네트워크 없이 고정 맵으로.
+vi.mock('@/hooks/useProfiles', () => ({ useProfiles: () => ({ data: profileMap }) }))
+// 사진 업로드는 별도 mutation(Storage) — 여기선 이름·색 계약만 보므로 no-op으로 둔다.
+vi.mock('@/hooks/useAvatarUpload', () => ({
+  useAvatarUpload: () => ({ upload: vi.fn(), remove: vi.fn(), isPending: false, error: null }),
+}))
 
 import { ProfileEditor } from '@/components/profile/ProfileEditor'
 import { PROFILE_PALETTE } from '@/lib/profileColor'

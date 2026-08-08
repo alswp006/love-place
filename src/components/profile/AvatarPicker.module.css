@@ -1,0 +1,145 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex-wrap: wrap; /* 글자 200%에서 버튼이 아래로 흐르게(고정 행 금지, §4) */
+}
+
+/* 현재 사진 — 앱에서 보이는 그대로 원형. 이니셜 폴백일 땐 색 배경 + 글자. */
+.current {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-on-brand);
+  font-weight: 700;
+  font-size: 1.5rem;
+  border: 2px solid var(--c-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* 파일 입력은 시각적으로만 숨긴다 — display:none이면 스크린리더에서도 사라진다. */
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-family: var(--font-display);
+  color: var(--c-text);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  text-align: center;
+}
+
+/* 크롭 스테이지 — 정사각 프레임. 안의 이미지는 절대 배치(계산은 previewLayout이 한다). */
+.stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  background: var(--c-surface-2);
+  touch-action: none; /* 끌기가 페이지 스크롤로 새지 않게 */
+  cursor: grab;
+  max-width: 100%;
+}
+
+.stage:active {
+  cursor: grabbing;
+}
+
+.stage:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+}
+
+.stageImg {
+  position: absolute;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.stageLoading {
+  position: absolute;
+  inset: 0;
+  background: var(--c-surface-2);
+}
+
+/* 원형 가이드 — 바깥을 어둡게 덮어 '이만큼 보인다'를 알려준다. 포인터는 통과시킨다. */
+.mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 9999px oklch(0% 0 0 / 0.42);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 49.5%, #000 50%);
+  mask-image: radial-gradient(circle at 50% 50%, transparent 49.5%, #000 50%);
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  max-width: 260px;
+}
+
+.zoom input[type='range'] {
+  flex: 1;
+  min-height: 44px; /* 터치 타깃(§1) */
+  accent-color: var(--c-brand);
+}
+
+.zoomLabel {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.sheetActions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-danger);
+  text-align: center;
+}

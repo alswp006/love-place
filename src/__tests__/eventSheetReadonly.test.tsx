@@ -28,8 +28,8 @@ const baseEvent: EventRow = {
 }
 
 const profiles: ProfileMap = {
-  partner: { id: 'partner', displayName: '지민', color: '#f0a', avatarUrl: null },
-  me: { id: 'me', displayName: '나', color: '#0af', avatarUrl: null },
+  partner: { id: 'partner', displayName: '지민', color: '#f0a', avatarUrl: null, avatarPath: null },
+  me: { id: 'me', displayName: '나', color: '#0af', avatarUrl: null, avatarPath: null },
 }
 
 function setup(overrides: Partial<Parameters<typeof EventSheet>[0]> = {}) {
