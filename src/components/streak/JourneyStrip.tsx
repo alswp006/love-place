@@ -71,6 +71,7 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
   const shape = constellationOfMonth(monthKey)
   const left = Math.max(0, thisMonth.needed - thisMonth.stars.length)
   const doneMonths = past.filter((m) => m.complete).length
+  // 접힌 줄에서 "오늘 내 몫을 채웠나"만 쓴다 — 펼친 하늘에는 글자를 더 얹지 않는다.
   const todayFilled = useMemo(() => filledToday(counts, today), [counts, today])
 
   if (!open) {
@@ -115,25 +116,7 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
       />
       {/* 왜 하필 이 별자리인지 — 지어낸 게 아니라 지금 하늘에 있는 것이다. */}
       <p className={styles.hint}>
-        {shape.hint} · 하루에 한 사람이 별 하나
-      </p>
-
-      {/* 오늘 각자 채웠는지 — 이 기능에서 가장 자주 궁금한 한 줄. */}
-      <p
-        className={styles.today}
-        // 색·기호로 갈린 조각들이라 스크린리더가 이어 읽으면 뜻이 흐려진다 — 한 문장으로 준다.
-        aria-label={`오늘 — 나 ${todayFilled.mine ? '채움' : '아직'}, 상대 ${
-          todayFilled.partner ? '채움' : '아직'
-        }`}
-      >
-        오늘 ·{' '}
-        <span className={styles.mineText}>
-          나 {todayFilled.mine ? '●' : '○'} {todayFilled.mine ? '채움' : '아직'}
-        </span>{' '}
-        ·{' '}
-        <span className={styles.partnerText}>
-          상대 {todayFilled.partner ? '●' : '○'} {todayFilled.partner ? '채움' : '아직'}
-        </span>
+        {shape.hint}
       </p>
 
       {/* 누구 별인지 — 색만으로 말하지 않는다(§8). '함께'는 없다: 별은 체크한 사람 것이다. */}

@@ -163,19 +163,18 @@ describe('별자리 스트립', () => {
     expect(screen.getByRole('img', { name: /이번 달 .*별 \d+개/ })).toBeInTheDocument()
   })
 
-  it('오늘 각자 채웠는지 알려준다 — 하루에 한 사람이 별 하나', () => {
+  it('펼친 하늘에는 설명 문구를 더 얹지 않는다 — 별자리가 말하게 둔다', () => {
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: /별자리 펼치기/ }))
-    expect(screen.getByLabelText('오늘 — 나 아직, 상대 아직')).toBeInTheDocument()
-    expect(screen.getByText(/하루에 한 사람이 별 하나/)).toBeInTheDocument()
+    expect(screen.queryByText(/하루에 한 사람이 별 하나/)).toBeNull()
+    expect(screen.queryByText(/오늘 · 나/)).toBeNull()
   })
 
-  it('내가 오늘 채우면 그렇게 말한다', () => {
+  it('오늘 내 몫을 채웠는지는 접힌 줄에서만 말한다', () => {
     state.completions = [
       { id: 'c1', event_id: 'e1', occurrence_start: at('09:00'), done_at: at('09:30'), version: 1, created_by: 'u1' },
     ]
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: /별자리 펼치기/ }))
-    expect(screen.getByLabelText('오늘 — 나 채움, 상대 아직')).toBeInTheDocument()
+    expect(screen.getByText(/오늘 채움/)).toBeInTheDocument()
   })
 })
