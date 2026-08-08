@@ -13,6 +13,8 @@ import { useTrips, useCreateTrip, useDeleteTrip } from '@/hooks/useTrips'
 import { useEvents } from '@/hooks/useEvents'
 import { useVisits } from '@/hooks/useVisits'
 import { usePlaces } from '@/hooks/usePlaces'
+import { usePhotosByTrip, useSignedPhotoUrls } from '@/hooks/usePhotos'
+import { PhotoThumb } from '@/components/photos/PhotoThumb'
 import { visitCountByTrip, deriveTripRegion, groupTripsByKey } from '@/lib/places/tripGroups'
 import { sortTripsForList, tripPhase, tripPhaseLabel, stopCountInTrip, stopsInTrip } from '@/lib/trips/tripDays'
 import { localDayKey } from '@/lib/journey/autoLink'
@@ -33,6 +35,17 @@ export default function TripsPage() {
   const { data: events } = useEvents(coupleId)
   const { data: visits } = useVisits(coupleId)
   const { data: places } = usePlaces(coupleId)
+  // 여행 커버 — 그 여행에서 찍은 사진 중 첫 장. 없으면 커버 자리를 아예 안 그린다.
+  const photosByTrip = usePhotosByTrip(coupleId)
+  const coverPaths = useMemo(
+    () =>
+      [...photosByTrip.values()]
+        .map((list) => list[0])
+        .filter((p): p is NonNullable<typeof p> => Boolean(p))
+        .map((p) => p.thumbnail_url ?? p.storage_url),
+    [photosByTrip],
+  )
+  const { data: coverUrls } = useSignedPhotoUrls(coupleId, coverPaths)
   const create = useCreateTrip(coupleId, myId)
   const del = useDeleteTrip(coupleId, myId)
 
@@ -65,9 +78,14 @@ export default function TripsPage() {
     const phase = tripPhase(t, today)
     const planned = stopCountInTrip(events ?? [], t)
     const visited = visitCounts[t.id] ?? 0
+    const cover = photosByTrip.get(t.id)?.[0]
+    const coverUrl = cover ? coverUrls?.[cover.thumbnail_url ?? cover.storage_url] : undefined
     return (
       <li key={t.id} className={styles.item}>
         <Link className={styles.card} to={`/trips/${t.id}`} aria-label={`${t.title} 여행 상세 열기`}>
+          {/* 커버가 있으면 카드 위를 사진이 덮는다 — 목록이 앨범처럼 읽힌다.
+              없으면 아예 안 그린다(회색 자리표시 금지). */}
+          {coverUrl ? <PhotoThumb url={coverUrl} alt="" className={styles.cover} /> : null}
           <div className={styles.cardHead}>
             <span className={styles.title}>{t.title}</span>
             {/* 상태는 색이 아니라 텍스트로 말한다(§8 색만 의존 금지). */}

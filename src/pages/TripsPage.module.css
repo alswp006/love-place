@@ -88,12 +88,15 @@
   gap: var(--sp-2);
 }
 
+/* 커버가 들어오면서 카드가 항목 폭을 다 써야 한다 — 삭제 버튼이 옆에 flex로 있으면
+   커버가 그 자리에서 잘려 오른쪽 모서리가 어긋난다. 버튼을 위에 띄운다. */
 .item {
+  position: relative;
   display: flex;
   align-items: stretch;
-  gap: var(--sp-2);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 
 .card {
@@ -103,6 +106,8 @@
   flex: 1;
   min-width: 0;
   padding: var(--sp-3);
+  /* 커버가 카드 모서리 밖으로 삐져나오지 않게 */
+  overflow: hidden;
   text-decoration: none;
   color: inherit;
   /* 터치 타깃 ≥44px(HIG) */
@@ -129,14 +134,24 @@
 }
 
 .del {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  background: transparent;
+  /* 사진 위에 놓일 수 있으므로 옅은 판을 깔아 아이콘이 늘 읽히게 한다. */
+  background: color-mix(in oklab, var(--c-surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-bottom-left-radius: var(--radius-sm);
   color: var(--c-text-weak);
   cursor: pointer;
   font-size: 1rem;
   min-width: 44px;
   min-height: 44px;
-  flex-shrink: 0;
+  z-index: 1;
 }
 
 .del:disabled {
@@ -235,4 +250,14 @@
 
 .fab:focus-visible {
   box-shadow: var(--focus-ring);
+}
+
+/* 여행 커버 — 카드 맨 위를 사진이 덮는다. 없으면 이 요소 자체가 안 그려진다.
+   16:9라 목록을 훑을 때 카드 높이가 일정하고, 앨범처럼 리듬이 생긴다. */
+.cover {
+  width: calc(100% + 2 * var(--sp-3));
+  margin: calc(-1 * var(--sp-3)) calc(-1 * var(--sp-3)) var(--sp-2);
+  /* 16:9는 목록에서 카드 하나가 화면 절반을 먹는다 — 앨범 느낌은 살리되 훑기 좋게 낮춘다. */
+  aspect-ratio: 21 / 9;
+  border-radius: 0;
 }

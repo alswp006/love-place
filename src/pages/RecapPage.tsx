@@ -1,11 +1,15 @@
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useTripRecap } from '@/hooks/useTripRecap'
 import { useSnappedPolyline } from '@/hooks/useSnappedPolyline'
 import { useTripRecordedRoute } from '@/hooks/useTripRecordedRoute'
 import { recordedDurationMin } from '@/lib/recap/routeStats'
 import { usePlaces } from '@/hooks/usePlaces'
+import { usePhotosByTrip, useSignedPhotoUrls } from '@/hooks/usePhotos'
+import { PhotoThumb } from '@/components/photos/PhotoThumb'
+import { PhotoPicker } from '@/components/photos/PhotoPicker'
 import { NaverMap } from '@/components/map/NaverMap'
 import { isNaverMapConfigured } from '@/lib/naver/loadNaverMaps'
 import { Button } from '@/components/ui/Button'
@@ -22,10 +26,20 @@ import styles from './RecapPage.module.css'
 export default function RecapPage() {
   const navigate = useNavigate()
   const { tripId } = useParams<{ tripId: string }>()
+  const { user } = useAuth()
+  const myId = user?.id ?? null
   const { data: couple } = useCouple()
   const coupleId = couple?.coupleId ?? null
   const { trip, vertices, stats, isLoading } = useTripRecap(coupleId, tripId)
   const { data: allPlaces } = usePlaces(coupleId)
+  // 리캡의 사진 — 지금까지 이 화면은 동선과 숫자뿐이라 '경로 요약'이었지 추억이 아니었다.
+  const photosByTrip = usePhotosByTrip(coupleId)
+  const tripPhotos = useMemo(() => (tripId ? (photosByTrip.get(tripId) ?? []) : []), [photosByTrip, tripId])
+  const photoPaths = useMemo(
+    () => tripPhotos.map((p) => p.thumbnail_url ?? p.storage_url),
+    [tripPhotos],
+  )
+  const { data: photoUrls } = useSignedPhotoUrls(coupleId, photoPaths)
 
   const stopIds = useMemo(() => new Set(vertices.map((v) => v.placeId)), [vertices])
   const markerPlaces = useMemo(
@@ -130,6 +144,24 @@ export default function RecapPage() {
               </Chip>
             ) : null}
           </div>
+
+          {/* 사진 — 있을 때만. 동선·숫자 위에 두어 리캡을 열면 먼저 보이게 한다. */}
+          {tripPhotos.length > 0 ? (
+            <ul className={styles.photoGrid} aria-label="이 여행의 사진">
+              {tripPhotos.map((ph) => {
+                const url = photoUrls?.[ph.thumbnail_url ?? ph.storage_url]
+                if (!url) return null
+                return (
+                  <li key={ph.id}>
+                    <PhotoThumb url={url} alt="" className={styles.photoCell} />
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
+
+          {/* 사진을 여기서 바로 더할 수 있게 — 리캡을 보다 "아 그때 사진"이 떠오르는 자리다. */}
+          {trip ? <PhotoPicker coupleId={coupleId} myId={myId} tripId={trip.id} label="이 여행 사진 추가" /> : null}
 
           {/* 순서 정거장 목록 — 번호+이름+날짜+지역 */}
           <ol className={styles.stops} aria-label="정거장 순서">

@@ -303,3 +303,37 @@ test('상세 — 다크 모드', async ({ page }) => {
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
 })
+
+test('사진 — 여행 카드에 커버, 없으면 커버 자리 없음', async ({ page }) => {
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+    'base64',
+  )
+  await seedAuthedMap(page, {
+    trips: TRIPS,
+    photos: [
+      {
+        id: 'ph1', storage_url: 'c1/ph1.webp', thumbnail_url: 'c1/ph1_t.webp',
+        place_id: null, trip_id: 't1', taken_at: null, caption: null,
+        uploaded_by: USER_A, version: 1,
+      },
+    ],
+  })
+  await page.route('**/e2e.supabase.co/storage/v1/object/sign/photos**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ error: null, path: 'c1/ph1_t.webp', signedURL: '/e2e-photo.png' }]),
+    }),
+  )
+  await page.route('**/e2e-photo.png', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: png }),
+  )
+  await page.goto('/trips')
+
+  // t1은 커버가 있고 t2는 없다 — 없는 쪽에 회색 자리표시가 생기면 안 된다(§7).
+  const withCover = page.getByRole('link', { name: /속초 1박2일 여행 상세 열기/ })
+  const without = page.getByRole('link', { name: /지난 제주 여행 상세 열기/ })
+  await expect(withCover.locator('img')).toHaveCount(1)
+  await expect(without.locator('img')).toHaveCount(0)
+})

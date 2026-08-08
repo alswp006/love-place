@@ -11,6 +11,13 @@ const recap = vi.hoisted(() => ({
   stats: { stopCount: 2, distanceKm: 52.3, days: 3 },
   isLoading: false,
 }))
+// 사진 추가(§5.4)가 들어오며 RecapPage가 myId를 쓴다 — 프로바이더 대신 훅을 목한다.
+vi.mock('@/state/auth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }))
+vi.mock('@/hooks/usePhotos', () => ({
+  usePhotosByTrip: () => new Map(),
+  useSignedPhotoUrls: () => ({ data: {} }),
+  useUploadPhoto: () => ({ mutate: vi.fn(), isPending: false }),
+}))
 vi.mock('@/hooks/useCouple', () => ({ useCouple: () => ({ data: { coupleId: 'c1' } }) }))
 vi.mock('@/hooks/useTripRecap', () => ({ useTripRecap: () => recap }))
 vi.mock('@/hooks/usePlaces', () => ({ usePlaces: () => ({ data: [], isLoading: false }) }))

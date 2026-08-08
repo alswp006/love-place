@@ -75,6 +75,21 @@ export function usePhotosByPlace(coupleId: string | null) {
   }, [data])
 }
 
+/** 여행별로 묶어 둔다 — 커버(첫 장)와 리캡 갤러리가 같은 데이터를 쓴다. */
+export function usePhotosByTrip(coupleId: string | null) {
+  const { data } = usePhotos(coupleId)
+  return useMemo(() => {
+    const m = new Map<string, PhotoRow[]>()
+    for (const p of data ?? []) {
+      if (!p.trip_id) continue
+      const list = m.get(p.trip_id)
+      if (list) list.push(p)
+      else m.set(p.trip_id, [p])
+    }
+    return m
+  }, [data])
+}
+
 /**
  * 비공개 파일을 볼 수 있는 서명 URL. 만료되므로 캐시 수명을 만료보다 짧게 둔다.
  * 한 장씩 부르면 목록에서 수십 번 왕복하므로 한 번에 묶어 받는다.

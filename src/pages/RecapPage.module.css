@@ -105,3 +105,18 @@
   font-size: var(--fs-caption);
   color: var(--ink-muted);
 }
+
+/* 리캡 사진 — 동선 아래, 정거장 목록 위. 3열 정사각 격자라 사진 비율이 제각각이어도 안 흔들린다. */
+.photoGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+
+.photoCell {
+  aspect-ratio: 1;
+  width: 100%;
+}

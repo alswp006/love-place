@@ -39,11 +39,13 @@ export function CategoryFilterRow({ coupleId, myId, value, onChange, disabled = 
             key={c.id}
             type="button"
             className={styles.chip}
+            /* 점 대신 칩 자체를 그 분류 색으로 옅게 물들인다 — 이름이 옆에 있으니
+               색은 거들 뿐이고(§8), 작은 점보다 훨씬 잘 읽힌다. */
+            style={{ '--cat': c.color } as React.CSSProperties}
             aria-pressed={value === c.id}
             onClick={() => onChange(c.id)}
             disabled={disabled}
           >
-            <span className={styles.dot} style={{ background: c.color }} aria-hidden />
             {c.name}
           </button>
         ))}

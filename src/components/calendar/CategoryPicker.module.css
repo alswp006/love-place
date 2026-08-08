@@ -43,13 +43,6 @@
   cursor: default;
 }
 
-.dot {
-  width: 0.65em;
-  height: 0.65em;
-  border-radius: var(--r-pill);
-  flex-shrink: 0;
-}
-
 .hint {
   margin: 0;
   font-size: var(--fs-caption);

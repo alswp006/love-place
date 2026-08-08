@@ -760,12 +760,11 @@ function DayAgenda({
                     <span className={styles.eventTime}>{ev.is_all_day ? '종일' : formatTime(ev.start)}</span>
                     <span className={styles.eventTitle}>{ev.title}</span>
                     {category ? (
-                      <span className={styles.eventCategory}>
-                        <span
-                          className={styles.eventCategoryDot}
-                          style={{ background: category.color }}
-                          aria-hidden
-                        />
+                      // 점 + 이름 대신 이름 자체를 그 분류 색으로 옅게 물들인다.
+                      <span
+                        className={styles.eventCategory}
+                        style={{ '--cat': category.color } as React.CSSProperties}
+                      >
                         {category.name}
                       </span>
                     ) : null}

@@ -271,24 +271,22 @@
 
 /* 카테고리 칩 — 색 점 + 이름을 함께 낸다(색만으로 구분 금지 §8).
    제목이 길면 카테고리부터 줄어들되 완전히 사라지지는 않게 최소 폭을 둔다. */
+/* 분류 표시 — 작은 색 점 + 이름이던 것을 '이름을 그 색으로 옅게 물들인 알약'으로.
+   점은 4px짜리라 무슨 색인지도 안 읽혔고 화면만 지저분했다. 색은 거들 뿐 이름이 본체다(§8). */
 .eventCategory {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
   flex-shrink: 0;
   font-size: var(--fs-micro);
-  color: var(--c-text-weak);
+  color: var(--c-text);
+  background: color-mix(in oklab, var(--cat, transparent) 16%, transparent);
+  border: 1px solid color-mix(in oklab, var(--cat, transparent) 34%, transparent);
+  border-radius: var(--r-pill);
+  padding: 1px var(--sp-2);
   max-width: 8em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.eventCategoryDot {
-  width: 0.6em;
-  height: 0.6em;
-  border-radius: var(--r-pill);
-  flex-shrink: 0;
 }
 
 /* Day 타임라인 뷰(Task 12) */
