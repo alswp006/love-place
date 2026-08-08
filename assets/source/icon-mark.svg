@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    Mark alone on transparent background. Same geometry as icon.svg, minus the
+    background rect. The "seam" that in the full icon was drawn in #FDEBED
+    (background) is here drawn as TRANSPARENT so the gap remains truly negative
+    space on any host background. We do this by clipping: the right pin is drawn
+    normally, then the LEFT pin is drawn with an outer stroke that PUNCHES OUT of
+    the right pin by using a mask.
+
+    Simpler and just as correct: draw both pins as filled rose paths, and separate
+    them with a stroke of transparent... which doesn't work directly. Instead:
+      - Build a MASK that is white everywhere except a small transparent gap along
+        the boundary between the two pins.
+      - OR: draw the right pin, then draw the left pin as a slightly-enlarged shape
+        first in a "cutter" mask.
+
+    Cleanest solution: use a <mask>. Mark region = union of both pins (white).
+    Subtract from it a 12px-wide "seam" that runs along the right pin's boundary
+    where it meets the left pin. Since the seam in icon.svg was achieved with a
+    12px stroke on the right pin painted UNDER its fill, here we replicate that:
+    draw the right pin's stroke (12px) in the mask as BLACK (subtracts) and its
+    fill (and the left pin's fill) as WHITE. Anywhere the black stroke overlaps
+    the white left-pin fill, we get transparency — exactly the seam we want.
+
+    Implementation:
+      - <mask id="markMask">
+          - Both pins filled white (this defines the visible mark)
+          - Right pin with black 12px stroke ONLY (no fill), which subtracts a
+            12px-wide band along the right pin's outline; the parts of that band
+            that fall INSIDE the left pin become transparent seam; parts that
+            fall on background were transparent anyway.
+        </mask>
+      - A single rose rectangle masked by markMask → produces both pins in rose
+        with the transparent seam between them.
+      - Pink pin-hole circles drawn on top of the rose (unmasked).
+  -->
+
+  <defs>
+    <symbol id="pin" overflow="visible">
+      <path d="M -170.44 78.13
+               A 187.5 187.5 0 1 1 170.44 78.13
+               L 0 450
+               Z"/>
+    </symbol>
+
+    <mask id="markMask" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <!-- Both pins as white (mark is visible here) -->
+      <g transform="translate(512 780) rotate(-22) translate(0 -450)">
+        <use href="#pin" fill="#ffffff"/>
+      </g>
+      <g transform="translate(512 780) rotate(22) translate(0 -450)">
+        <use href="#pin" fill="#ffffff"/>
+      </g>
+      <!-- Right pin's outline stroked in BLACK: subtracts a 12px seam. Where the
+           seam falls inside the left pin (i.e. along the overlap boundary), it
+           creates the negative-space gap. Where it falls on background, no effect. -->
+      <g transform="translate(512 780) rotate(22) translate(0 -450)">
+        <use href="#pin" fill="none" stroke="#000000" stroke-width="12" stroke-linejoin="round"/>
+      </g>
+    </mask>
+  </defs>
+
+  <!-- Rose fill for the whole mark, clipped to the mask (both pins minus seam) -->
+  <rect x="0" y="0" width="1024" height="1024" fill="#B03D5B" mask="url(#markMask)"/>
+
+  <!-- Pin holes on top -->
+  <g transform="translate(512 780) rotate(-22) translate(0 -450)">
+    <circle cx="0" cy="0" r="52" fill="#F9CED4"/>
+  </g>
+  <g transform="translate(512 780) rotate(22) translate(0 -450)">
+    <circle cx="0" cy="0" r="52" fill="#F9CED4"/>
+  </g>
+</svg>

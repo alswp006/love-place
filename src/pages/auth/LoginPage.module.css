@@ -19,7 +19,11 @@
 }
 
 .logo {
-  font-size: 3rem;
+  /* 홈 화면 아이콘과 같은 마크. rem이라 글자 크기 설정을 따라 같이 커진다(Dynamic Type §4). */
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0 auto;
 }
 
 .title {
