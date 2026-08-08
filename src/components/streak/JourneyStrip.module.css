@@ -16,10 +16,20 @@
 }
 
 .pillPath {
-  /* 접힌 줄에서는 별자리가 주인공이 아니다 — 고정 폭으로 왼쪽에 두고 글자에 자리를 넘긴다. */
-  display: block;
+  /* 접힌 줄에서는 별자리가 주인공이 아니다 — 고정 폭으로 왼쪽에 두고 글자에 자리를 넘긴다.
+     그래도 하늘 조각 위에 있어야 별로 읽힌다. */
+  display: flex;
+  align-items: center;
   flex: 0 0 auto;
-  width: 68px;
+  width: 76px;
+  padding: 3px 7px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, #1d2140 0%, #12142a 100%);
+
+  --sky-dust: #dfe4ff;
+  --sky-link: rgba(223, 228, 255, 0.34);
+  --sky-link-strong: rgba(255, 233, 170, 0.85);
+  --sky-empty: rgba(223, 228, 255, 0.35);
 }
 
 .pillText {
@@ -36,26 +46,40 @@
   font-size: var(--fs-caption);
 }
 
+/* 펼친 별자리는 '밤하늘 한 조각'이다 — 흰 카드 위에 점을 찍으면 별로 안 읽힌다.
+   라이트/다크 어느 쪽에서도 같은 하늘을 쓴다(테마를 따라 밝아지면 하늘이 아니게 된다). */
 .open {
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
-  border: 1px solid var(--c-border);
-  background: var(--c-surface);
+  border: 1px solid #2b2f52;
   border-radius: var(--radius);
-  padding: var(--sp-3);
+  padding: var(--sp-4) var(--sp-3) var(--sp-3);
+  background:
+    radial-gradient(120% 90% at 22% 8%, #2f3566 0%, rgba(47, 53, 102, 0) 58%),
+    radial-gradient(100% 80% at 88% 96%, #4a2f5e 0%, rgba(74, 47, 94, 0) 55%),
+    linear-gradient(180deg, #171a33 0%, #0f1124 100%);
+  color: #e8ebff;
+
+  /* Constellation이 읽는 하늘 토큰 — 이 카드 안에서만 유효하다. */
+  --sky-dust: #dfe4ff;
+  --sky-link: rgba(223, 228, 255, 0.32);
+  --sky-link-strong: rgba(255, 233, 170, 0.85);
+  --sky-empty: rgba(223, 228, 255, 0.35);
+  --sky-arc: #ffd98a;
 }
 
 .lead {
   margin: 0;
   font-size: var(--fs-caption);
-  color: var(--c-text-weak);
+  /* 밤하늘 위 글자 — 흰빛에 가깝게(대비 AA). */
+  color: #cfd5ff;
 }
 
 .gridTitle {
   margin: var(--sp-2) 0 0;
   font-size: var(--fs-caption);
-  color: var(--c-text-weak);
+  color: #cfd5ff;
   font-weight: 600;
 }
 
@@ -68,7 +92,7 @@
 .count {
   margin-left: var(--sp-2);
   font-weight: 400;
-  color: var(--c-text-weak);
+  color: #9aa2d8;
   font-variant-numeric: tabular-nums;
 }
 
@@ -99,7 +123,7 @@
   flex-wrap: wrap;
   gap: var(--sp-3);
   font-size: var(--fs-micro);
-  color: var(--c-text-weak);
+  color: #b9c0ee;
 }
 
 .legend li {
@@ -110,9 +134,9 @@
 
 .collapse {
   align-self: center;
-  border: 1px solid var(--c-border);
-  background: var(--c-surface);
-  color: var(--c-text-weak);
+  border: 1px solid rgba(223, 228, 255, 0.25);
+  background: rgba(223, 228, 255, 0.08);
+  color: #cfd5ff;
   border-radius: var(--r-pill);
   padding: 0 var(--sp-4);
   font-size: var(--fs-caption);

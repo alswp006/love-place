@@ -3,48 +3,56 @@
   width: 100%;
   height: auto;
   overflow: visible;
-  /* 전폭으로 두면 세로 230px를 먹어 캘린더를 밀어낸다 — 하늘 한 조각이면 충분하다. */
-  max-width: 260px;
-  margin: 0 auto;
+  /* 하늘이되 화면을 다 먹지는 않게 */
+  max-height: 190px;
 }
 
 .compact {
   max-height: 40px;
-  max-width: none;
-  margin: 0;
+}
+
+/* 배경 별먼지 — 흰 카드 위에 점 몇 개를 찍는 게 아니라, 하늘 위에 있다고 읽히게 하는 층. */
+.dust circle {
+  fill: var(--sky-dust, #cdd6ff);
 }
 
 /* 이어진 선 — 별과 별 사이. 얇고 조용하게(주인공은 별). */
 .link {
-  stroke: var(--c-brand-weak);
-  stroke-width: 0.8;
+  stroke: var(--sky-link, rgba(205, 214, 255, 0.35));
+  stroke-width: 0.6;
   stroke-linecap: round;
 }
 
 .linkClose {
-  stroke: var(--c-brand);
-  stroke-width: 1;
+  stroke: var(--sky-link-strong, rgba(205, 214, 255, 0.7));
+  stroke-width: 0.8;
 }
 
-/* 아직 안 찍힌 자리 — 빈 고리. 색이 아니라 모양으로 '없음'을 말한다(§8). */
-.empty {
-  fill: none;
-  stroke: var(--c-border);
-  stroke-width: 0.9;
-  stroke-dasharray: 1.5 1.5;
+/* 아직 안 찍힌 자리 — 희미한 십자. 색이 아니라 모양으로 '없음'을 말한다(§8). */
+.empty line {
+  stroke: var(--sky-empty, rgba(205, 214, 255, 0.4));
+  stroke-width: 0.7;
+  stroke-linecap: round;
 }
 
 .star {
-  animation: land 320ms var(--ease) backwards;
+  animation: land 380ms var(--ease) backwards, twinkle 3.4s ease-in-out infinite;
+  transform-origin: center;
 }
 
-.glow {
+/* 별빛 번짐 — 별이 '빛난다'고 읽히게 하는 유일한 요소. 없으면 그냥 도형이다. */
+.halo {
   fill: currentColor;
-  opacity: 0.18;
+  opacity: 0.35;
+  filter: blur(1.6px);
 }
 
-.core {
-  fill: currentColor;
+.spark {
+  fill: #fff;
+  /* 테두리가 누구 별인지 말한다 — 흰 별만 있으면 색 구분이 사라진다. */
+  stroke: currentColor;
+  stroke-width: 2.6;
+  paint-order: stroke;
 }
 
 .anchor {
@@ -54,9 +62,15 @@
 }
 
 @keyframes land {
-  0% { opacity: 0; transform: scale(0.2); }
-  60% { opacity: 1; transform: scale(1.35); }
-  100% { opacity: 1; transform: scale(1); }
+  0% { opacity: 0; transform: scale(0.2) rotate(-40deg); }
+  60% { opacity: 1; transform: scale(1.4) rotate(6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+/* 반짝임 — 아주 얕게. 크게 흔들면 눈이 아프다. */
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
 }
 
 /* 지난 주 글리프 — 채운 만큼의 호 + 완성이면 별. */
@@ -75,21 +89,19 @@
 
 .glyphTrack {
   fill: none;
-  stroke: var(--c-border);
+  stroke: var(--sky-empty, rgba(205, 214, 255, 0.28));
   stroke-width: 2;
 }
 
 .glyphFill {
   fill: none;
-  stroke: var(--c-brand);
+  stroke: var(--sky-arc, #ffd98a);
   stroke-width: 2;
   stroke-linecap: round;
 }
 
 .glyphStar {
-  fill: var(--c-brand);
-  transform: rotate(90deg);
-  transform-origin: center;
+  fill: #fff;
 }
 
 @media (prefers-reduced-motion: reduce) {
