@@ -3,10 +3,16 @@ import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
 import { useEvents } from '@/hooks/useEvents'
 import { useEventCompletions } from '@/hooks/useEventCompletions'
-import { dailyDoneCounts, recentWeeks, mondayOf, type EventMeta } from '@/lib/streak/garden'
-import { constellationOfWeek } from '@/lib/streak/constellations'
+import {
+  dailyDoneCounts,
+  recentMonths,
+  monthOf,
+  filledToday,
+  type EventMeta,
+} from '@/lib/streak/garden'
+import { constellationOfMonth } from '@/lib/streak/constellations'
 import { localDayKey } from '@/lib/journey/autoLink'
-import { Constellation, WeekGlyph } from './Constellation'
+import { Constellation, MonthGlyph } from './Constellation'
 import { STAR_TARGET_ID } from './flyStar'
 import styles from './JourneyStrip.module.css'
 
@@ -58,13 +64,14 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
     [completions, metaOf, myId, categoryId],
   )
 
-  const weeks = useMemo(() => recentWeeks(counts, today), [counts, today])
-  const thisWeek = weeks[weeks.length - 1]!
-  const past = weeks.slice(0, -1)
-  const thisMonday = mondayOf(today)
-  const shape = constellationOfWeek(thisMonday)
-  const left = Math.max(0, thisWeek.needed - thisWeek.stars.length)
-  const doneWeeks = past.filter((w) => w.complete).length
+  const months = useMemo(() => recentMonths(counts, today), [counts, today])
+  const thisMonth = months[months.length - 1]!
+  const past = months.slice(0, -1)
+  const monthKey = monthOf(today)
+  const shape = constellationOfMonth(monthKey)
+  const left = Math.max(0, thisMonth.needed - thisMonth.stars.length)
+  const doneMonths = past.filter((m) => m.complete).length
+  const todayFilled = useMemo(() => filledToday(counts, today), [counts, today])
 
   if (!open) {
     return (
@@ -73,12 +80,18 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
         className={styles.pill}
         onClick={() => setOpen(true)}
         aria-expanded={false}
-        aria-label={`이번 주 별 ${thisWeek.stars.length}개 — 별자리 펼치기`}
+        aria-label={`이번 달 별 ${thisMonth.stars.length}/${thisMonth.needed}개 — 별자리 펼치기`}
       >
         <span className={styles.pillPath}>
-          <Constellation mondayKey={thisMonday} stars={thisWeek.stars} compact />
+          <Constellation monthKey={monthKey} stars={thisMonth.stars} compact />
         </span>
-        <span className={styles.pillText}>이번 주 {thisWeek.stars.length}별</span>
+        <span className={styles.pillText}>
+          {thisMonth.stars.length}/{thisMonth.needed}
+          {/* 오늘 내 몫을 채웠는지가 가장 궁금한 것 — 한 줄에서 바로 말한다. */}
+          <span className={styles.pillToday}>
+            {todayFilled.mine ? ' · 오늘 채움' : ' · 오늘 아직'}
+          </span>
+        </span>
         <span className={styles.chevron} aria-hidden>
           ▾
         </span>
@@ -89,25 +102,41 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
   return (
     <section className={styles.open} aria-label="우리가 만든 별자리">
       <p className={styles.lead}>
-        {thisWeek.complete
-          ? `이번 주 ${shape.name} 완성`
-          : thisWeek.stars.length === 0
-            ? `일정을 체크하면 ${shape.name}에 별이 하나씩 떠요`
-            : `${left}별 더 모으면 ${shape.name} 완성`}
+        {thisMonth.complete
+          ? `이번 달 ${shape.name} 완성`
+          : `${shape.name} · ${thisMonth.stars.length}/${thisMonth.needed} · ${left}개 남음`}
       </p>
 
       <Constellation
-        mondayKey={thisMonday}
-        stars={thisWeek.stars}
+        monthKey={monthKey}
+        stars={thisMonth.stars}
         targetId={STAR_TARGET_ID}
         labelOf={(s) => `${s.dayKey.slice(5).replace('-', '.')} · ${titleOf(s.eventId) ?? '완료'}`}
       />
       {/* 왜 하필 이 별자리인지 — 지어낸 게 아니라 지금 하늘에 있는 것이다. */}
       <p className={styles.hint}>
-        {shape.name} · {shape.hint}
+        {shape.hint} · 하루에 한 사람이 별 하나
       </p>
 
-      {/* 누구 별인지 — 색만으로 말하지 않는다(§8). */}
+      {/* 오늘 각자 채웠는지 — 이 기능에서 가장 자주 궁금한 한 줄. */}
+      <p
+        className={styles.today}
+        // 색·기호로 갈린 조각들이라 스크린리더가 이어 읽으면 뜻이 흐려진다 — 한 문장으로 준다.
+        aria-label={`오늘 — 나 ${todayFilled.mine ? '채움' : '아직'}, 상대 ${
+          todayFilled.partner ? '채움' : '아직'
+        }`}
+      >
+        오늘 ·{' '}
+        <span className={styles.mineText}>
+          나 {todayFilled.mine ? '●' : '○'} {todayFilled.mine ? '채움' : '아직'}
+        </span>{' '}
+        ·{' '}
+        <span className={styles.partnerText}>
+          상대 {todayFilled.partner ? '●' : '○'} {todayFilled.partner ? '채움' : '아직'}
+        </span>
+      </p>
+
+      {/* 누구 별인지 — 색만으로 말하지 않는다(§8). '함께'는 없다: 별은 체크한 사람 것이다. */}
       <ul className={styles.legend}>
         <li>
           <span className={`${styles.dot} ${styles.mine}`} aria-hidden /> 나
@@ -115,22 +144,19 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
         <li>
           <span className={`${styles.dot} ${styles.partner}`} aria-hidden /> 상대
         </li>
-        <li>
-          <span className={`${styles.dot} ${styles.shared}`} aria-hidden /> 함께
-        </li>
       </ul>
 
       <h3 className={styles.gridTitle}>
-        지난 주들 <span className={styles.count}>{doneWeeks}개 완성</span>
+        지난 달들 <span className={styles.count}>{doneMonths}개 완성</span>
       </h3>
       <div className={styles.weeks}>
-        {past.map((w) => (
-          <WeekGlyph
-            key={w.mondayKey}
-            mondayKey={w.mondayKey}
-            filled={w.stars.length}
-            needed={w.needed}
-            complete={w.complete}
+        {past.map((m) => (
+          <MonthGlyph
+            key={m.monthKey}
+            monthKey={m.monthKey}
+            filled={m.stars.length}
+            needed={m.needed}
+            complete={m.complete}
           />
         ))}
       </div>

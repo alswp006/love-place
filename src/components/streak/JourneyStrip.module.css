@@ -151,3 +151,25 @@
   color: #9aa2d8;
   text-align: center;
 }
+
+/* 오늘 각자 채웠는지 — 색·모양(⬤/○) + 글자로 이중화(§8). */
+.today {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: #cfd5ff;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.pillToday {
+  color: var(--c-text-weak);
+}
+
+/* 오늘 줄의 나/상대 — 색 + 모양(●/○) + 글자로 삼중 표시(§8). */
+.mineText {
+  color: var(--c-track-mine);
+}
+
+.partnerText {
+  color: var(--c-track-partner);
+}

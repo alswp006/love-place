@@ -280,7 +280,7 @@ test('완료 체크 — 회차 단위로 기록되고 여정이 한 걸음 나�
   })
 })
 
-test('별자리 스트립 — 기본은 한 줄, 펼치면 이번 주 별자리와 지난 주들', async ({ page }) => {
+test('별자리 스트립 — 기본은 한 줄, 펼치면 이번 달 별자리와 지난 달들', async ({ page }) => {
   await seedAuthedMap(page, { events: [] })
   await page.goto('/calendar')
 
@@ -293,7 +293,9 @@ test('별자리 스트립 — 기본은 한 줄, 펼치면 이번 주 별자리�
   await pill.click()
   await expect(page.getByRole('region', { name: '우리가 만든 별자리' })).toBeVisible()
   // 그림만으로 말하지 않는다(§8) — 안내문과 범례가 글자로 함께 있다.
-  await expect(page.getByText(/일정을 체크하면 .*별이 하나씩 떠요/)).toBeVisible()
-  await expect(page.getByRole('img', { name: /이번 주 별/ })).toBeVisible()
-  await expect(page.getByText('지난 주들')).toBeVisible()
+  // 규칙(하루 한 사람 한 별)과 오늘 상태를 글자로도 말한다(§8).
+  await expect(page.getByText(/하루에 한 사람이 별 하나/)).toBeVisible()
+  await expect(page.getByLabel('오늘 — 나 아직, 상대 아직')).toBeVisible()
+  await expect(page.getByRole('img', { name: /이번 달 .*별 \d+개/ })).toBeVisible()
+  await expect(page.getByText('지난 달들')).toBeVisible()
 })

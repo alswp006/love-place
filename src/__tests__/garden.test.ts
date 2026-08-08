@@ -1,76 +1,68 @@
 import { describe, it, expect } from 'vitest'
+import { dailyDoneCounts, monthStars, recentMonths, monthOf, filledToday } from '@/lib/streak/garden'
 import {
-  dailyDoneCounts,
-  weekStars,
-  recentWeeks,
-  mondayOf,
-} from '@/lib/streak/garden'
-import { constellationOfWeek, CONSTELLATIONS } from '@/lib/streak/constellations'
+  constellationOfMonth,
+  starSlots,
+  starsNeededForMonth,
+  daysInMonth,
+  CONSTELLATIONS,
+} from '@/lib/streak/constellations'
 
-// 잔디·여정은 집계 테이블 없이 event_completions에서 도출한다(§7) — 그 도출 규칙을 못박는다.
+// 별자리는 집계 테이블 없이 event_completions에서 도출한다(§7) — 그 도출 규칙을 못박는다.
 
-// 완료는 event_completions 행이고, 색·카테고리는 그 회차가 가리키는 events에서 온다.
-// 테스트에서는 한 번에 둘을 만들어 metaOf에 실어 준다.
-const metas = new Map<string, { owner_id: string; visibility: 'SHARED' | 'PERSONAL'; category_id: string | null }>()
+const metas = new Map<
+  string,
+  { owner_id: string; visibility: 'SHARED' | 'PERSONAL'; category_id: string | null }
+>()
 const metaOf = (id: string) => metas.get(id)
 
+/** 완료 기록 하나 + 그 회차가 가리키는 일정 메타를 함께 만든다. */
 const done = (
-  id: string,
-  at: string | null,
-  over: Partial<{ owner_id: string; visibility: 'SHARED' | 'PERSONAL'; category_id: string | null }> = {},
+  eventId: string,
+  at: string,
+  by: string,
+  over: Partial<{ visibility: 'SHARED' | 'PERSONAL'; category_id: string | null }> = {},
 ) => {
-  metas.set(id, {
-    owner_id: over.owner_id ?? 'me',
+  metas.set(eventId, {
+    owner_id: 'me',
     visibility: over.visibility ?? ('PERSONAL' as const),
     category_id: over.category_id ?? null,
   })
-  return { event_id: id, done_at: at ?? '' }
+  return { event_id: eventId, done_at: at, created_by: by }
 }
 
 const kst = (day: string, hhmm = '12:00') => new Date(`${day}T${hhmm}:00+09:00`).toISOString()
 
 describe('dailyDoneCounts', () => {
-  it('지워진 일정의 완료는 잔디에서 빠진다 — 없는 일을 했다고 하지 않는다', () => {
-    const orphan = { event_id: 'gone', done_at: kst('2026-08-05') }
+  it('지워진 일정의 완료는 빠진다 — 없는 일을 했다고 하지 않는다', () => {
+    const orphan = { event_id: 'gone', done_at: kst('2026-08-05'), created_by: 'me' }
     expect(dailyDoneCounts([orphan], metaOf, 'me').size).toBe(0)
   })
 
-  it('완료 기록이 있는 날만 잔디가 찬다', () => {
-    // done_at이 없는 회차는 애초에 완료 기록이 아니다 — 행이 없으면 잔디도 없다.
-    const counts = dailyDoneCounts([done('b', kst('2026-08-05'))], metaOf, 'me')
-    expect(counts.size).toBe(1)
-    expect(counts.get('2026-08-05')?.total).toBe(1)
-  })
-
-  it('누구 칸인지 갈린다 — 함께는 소유자와 무관하게 함께', () => {
+  it('별의 주인은 일정 소유자가 아니라 체크한 사람이다', () => {
+    // 함께 일정을 내가 끝내면 내 별이다 — 하루 한 사람 한 별 규칙과 앞뒤가 맞아야 한다.
     const counts = dailyDoneCounts(
-      [
-        done('a', kst('2026-08-05'), { owner_id: 'me' }),
-        done('b', kst('2026-08-05'), { owner_id: 'you' }),
-        done('c', kst('2026-08-05'), { owner_id: 'you', visibility: 'SHARED' }),
-      ],
+      [done('a', kst('2026-08-05'), 'me', { visibility: 'SHARED' })],
       metaOf,
       'me',
     )
-    const cell = counts.get('2026-08-05')!
-    expect(cell).toMatchObject({ total: 3, mine: 1, partner: 1, shared: 1 })
+    expect(counts.get('2026-08-05')).toMatchObject({ mine: 1, partner: 0 })
   })
 
   it('카테고리를 주면 그 카테고리만 — 전체 보기는 필터하지 않는다', () => {
     const evs = [
-      done('a', kst('2026-08-05'), { category_id: 'study' }),
-      done('b', kst('2026-08-05'), { category_id: 'gym' }),
-      done('c', kst('2026-08-05'), { category_id: null }),
+      done('a', kst('2026-08-05', '09:00'), 'me', { category_id: 'study' }),
+      done('b', kst('2026-08-05', '10:00'), 'me', { category_id: 'gym' }),
+      done('c', kst('2026-08-05', '11:00'), 'me', { category_id: null }),
     ]
     expect(dailyDoneCounts(evs, metaOf, 'me').get('2026-08-05')?.total).toBe(3)
     expect(dailyDoneCounts(evs, metaOf, 'me', { categoryId: 'study' }).get('2026-08-05')?.total).toBe(1)
-    // 분류 없음(null)도 하나의 칸으로 고를 수 있어야 한다.
     expect(dailyDoneCounts(evs, metaOf, 'me', { categoryId: null }).get('2026-08-05')?.total).toBe(1)
   })
 
   it('한국 시간 자정 직전/직후가 다른 날로 갈린다', () => {
     const counts = dailyDoneCounts(
-      [done('a', kst('2026-08-05', '23:59')), done('b', kst('2026-08-06', '00:01'))],
+      [done('a', kst('2026-08-05', '23:59'), 'me'), done('b', kst('2026-08-06', '00:01'), 'me')],
       metaOf,
       'me',
     )
@@ -79,70 +71,102 @@ describe('dailyDoneCounts', () => {
   })
 })
 
-describe('별자리 — 완료 1건이 별 하나, 한 주에 7개면 완성', () => {
-  it('그 주 완료를 실제로 체크한 순서(done_at)대로 편다', () => {
-    // 앞서는 같은 날 안에서 함께→나→상대로 임의 정렬했는데, 체크한 순서가 진짜 순서다.
+describe('monthStars — 하루에 한 사람이 별 하나', () => {
+  it('같은 사람이 그 날 여러 번 끝내도 별은 하나', () => {
+    // 개수 경쟁이 되면 하루에 몰아치고 나머지 날을 비우는 게 유리해진다 — 그걸 막는 규칙이다.
     const counts = dailyDoneCounts(
       [
-        done('a', kst('2026-08-04', '09:00'), { owner_id: 'you' }), // 화 · 상대
-        done('b', kst('2026-08-03', '20:00'), { owner_id: 'me' }), // 월 저녁 · 나
-        done('c', kst('2026-08-03', '08:00'), { owner_id: 'you', visibility: 'SHARED' }), // 월 아침 · 함께
+        done('a', kst('2026-08-05', '09:00'), 'me'),
+        done('b', kst('2026-08-05', '15:00'), 'me'),
+        done('c', kst('2026-08-05', '21:00'), 'me'),
       ],
       metaOf,
       'me',
     )
-    expect(weekStars(counts, '2026-08-03').map((s) => s.owner)).toEqual([
-      'shared',
-      'mine',
-      'partner',
-    ])
-    // 어떤 일정이었는지도 들고 있어야 별을 눌러 되짚을 수 있다.
-    expect(weekStars(counts, '2026-08-03')[0]).toMatchObject({ eventId: 'c', dayKey: '2026-08-03' })
+    const stars = monthStars(counts, '2026-08')
+    expect(stars).toHaveLength(1)
+    // 그 날 '처음' 챙긴 순간이 기록이다.
+    expect(stars[0]).toMatchObject({ eventId: 'a', dayKey: '2026-08-05' })
   })
 
-  it('그 주 별자리가 요구하는 만큼 채우면 완성된다(별 수는 별자리마다 다르다)', () => {
-    const need = constellationOfWeek('2026-08-03').points.length
-    const many = Array.from({ length: need }, (_, i) =>
-      done(`s${i}`, kst('2026-08-05', `0${i % 9}:00`)),
+  it('같은 날이라도 사람이 다르면 별 둘', () => {
+    const counts = dailyDoneCounts(
+      [done('a', kst('2026-08-05', '09:00'), 'me'), done('b', kst('2026-08-05', '10:00'), 'you')],
+      metaOf,
+      'me',
     )
-    const counts = dailyDoneCounts(many, metaOf, 'me')
-    const weeks = recentWeeks(counts, '2026-08-05', 2)
-    expect(weeks).toHaveLength(2)
-    expect(weeks[1]!.needed).toBe(need)
-    expect(weeks[1]!.complete).toBe(true)
-    expect(weeks[0]!.complete).toBe(false) // 지난주는 비어 있다
-
-    // 하나 모자라면 완성이 아니다.
-    const short = dailyDoneCounts(many.slice(0, need - 1), metaOf, 'me')
-    expect(recentWeeks(short, '2026-08-05', 1)[0]!.complete).toBe(false)
+    const stars = monthStars(counts, '2026-08')
+    expect(stars.map((s) => s.owner)).toEqual(['mine', 'partner'])
   })
 
-  it('오늘이 속한 주가 마지막이고, 월요일 키로 정렬된다', () => {
-    const weeks = recentWeeks(new Map(), '2026-08-05', 3)
-    expect(weeks.map((w) => w.mondayKey)).toEqual(['2026-07-20', '2026-07-27', '2026-08-03'])
+  it('다른 달의 완료는 섞이지 않는다', () => {
+    const counts = dailyDoneCounts(
+      [done('a', kst('2026-07-31'), 'me'), done('b', kst('2026-08-01'), 'me')],
+      metaOf,
+      'me',
+    )
+    expect(monthStars(counts, '2026-08')).toHaveLength(1)
+    expect(monthStars(counts, '2026-07')).toHaveLength(1)
   })
 
-  it('mondayOf는 그 주 월요일 — 일요일도 그 주로 묶인다', () => {
-    expect(mondayOf('2026-08-05')).toBe('2026-08-03') // 수
-    expect(mondayOf('2026-08-03')).toBe('2026-08-03') // 월
-    expect(mondayOf('2026-08-09')).toBe('2026-08-03') // 일
+  it('체크한 순서대로 늘어선다', () => {
+    const counts = dailyDoneCounts(
+      [done('a', kst('2026-08-06', '08:00'), 'me'), done('b', kst('2026-08-05', '20:00'), 'you')],
+      metaOf,
+      'me',
+    )
+    expect(monthStars(counts, '2026-08').map((s) => s.dayKey)).toEqual(['2026-08-05', '2026-08-06'])
+  })
+})
+
+describe('recentMonths · filledToday', () => {
+  it('한 달을 다 채우려면 날 수 × 2개가 필요하다', () => {
+    expect(starsNeededForMonth('2026-08')).toBe(62) // 31일 × 2
+    expect(starsNeededForMonth('2026-02')).toBe(56) // 28일 × 2
+    expect(starsNeededForMonth('2024-02')).toBe(58) // 윤년 29일 × 2
   })
 
-  it('별자리는 주 키에서 결정론적으로 나온다 — 새로고침해도 같은 별자리', () => {
-    expect(constellationOfWeek('2026-08-03').key).toBe(constellationOfWeek('2026-08-03').key)
+  it('이번 달이 마지막이고 최근 n개월이 순서대로 온다', () => {
+    const ms = recentMonths(new Map(), '2026-08-05', 3)
+    expect(ms.map((m) => m.monthKey)).toEqual(['2026-06', '2026-07', '2026-08'])
+    expect(ms[2]!.needed).toBe(62)
+  })
+
+  it('다 채우면 완성', () => {
+    const entries = Array.from({ length: 31 }, (_, i) => {
+      const d = `2026-08-${String(i + 1).padStart(2, '0')}`
+      return [done(`m${i}`, kst(d, '09:00'), 'me'), done(`y${i}`, kst(d, '10:00'), 'you')]
+    }).flat()
+    const counts = dailyDoneCounts(entries, metaOf, 'me')
+    const ms = recentMonths(counts, '2026-08-31', 1)
+    expect(ms[0]!.stars).toHaveLength(62)
+    expect(ms[0]!.complete).toBe(true)
+  })
+
+  it('오늘 각자 채웠는지 따로 말한다', () => {
+    const counts = dailyDoneCounts([done('a', kst('2026-08-05'), 'me')], metaOf, 'me')
+    expect(filledToday(counts, '2026-08-05')).toEqual({ mine: true, partner: false })
+    expect(filledToday(counts, '2026-08-06')).toEqual({ mine: false, partner: false })
+  })
+
+  it('monthOf는 그 날이 속한 달', () => {
+    expect(monthOf('2026-08-05')).toBe('2026-08')
+  })
+})
+
+describe('별자리 — 그 계절에 실제로 뜨는 것', () => {
+  it('달이 정해지면 별자리도 정해진다 — 새로고침해도 같다', () => {
+    expect(constellationOfMonth('2026-08').key).toBe(constellationOfMonth('2026-08').key)
   })
 
   it('그 계절에 실제로 보이는 별자리가 배정된다', () => {
-    // 지어낸 모양이 아니라 하늘에 있는 것 — 여름엔 여름 별자리, 겨울엔 겨울 별자리.
-    const summer = ['cygnus', 'lyra', 'scorpius']
-    const winter = ['orion', 'gemini']
-    expect(summer).toContain(constellationOfWeek('2026-07-06').key)
-    expect(winter).toContain(constellationOfWeek('2026-01-05').key)
-    expect(['cassiopeia', 'pegasus']).toContain(constellationOfWeek('2026-10-05').key)
+    expect(['cygnus', 'lyra', 'scorpius']).toContain(constellationOfMonth('2026-07').key)
+    expect(['orion', 'gemini']).toContain(constellationOfMonth('2026-01').key)
+    expect(['cassiopeia', 'pegasus']).toContain(constellationOfMonth('2026-10').key)
   })
 
-  it('같은 달 안에서도 주가 바뀌면 별자리가 돌아간다', () => {
-    const keys = ['2026-07-06', '2026-07-13', '2026-07-20'].map((k) => constellationOfWeek(k).key)
+  it('해가 바뀌면 같은 달이라도 다른 별자리가 나온다', () => {
+    const keys = ['2026-07', '2027-07', '2028-07'].map((k) => constellationOfMonth(k).key)
     expect(new Set(keys).size).toBeGreaterThan(1)
   })
 
@@ -155,5 +179,49 @@ describe('별자리 — 완료 1건이 별 하나, 한 주에 7개면 완성', (
       }
       expect(c.points.length).toBeGreaterThanOrEqual(4)
     }
+  })
+})
+
+describe('starSlots — 밝은 별 먼저, 나머지는 선 위에', () => {
+  it('요구 개수만큼 자리를 낸다', () => {
+    for (const c of CONSTELLATIONS) {
+      expect(starSlots(c, 62)).toHaveLength(62)
+      expect(starSlots(c, 56)).toHaveLength(56)
+    }
+  })
+
+  it('앞자리는 실제 밝은 별(anchor) — 초반에도 모양이 읽혀야 한다', () => {
+    const c = CONSTELLATIONS[0]!
+    const slots = starSlots(c, 62)
+    expect(slots.slice(0, c.points.length).every((s) => s.anchor)).toBe(true)
+    expect(slots.slice(c.points.length).every((s) => !s.anchor)).toBe(true)
+  })
+
+  it('채움 별은 선 위에 놓인다 — 허공에 흩어지지 않는다', () => {
+    for (const c of CONSTELLATIONS) {
+      const onEdge = starSlots(c, 40)
+        .filter((s) => !s.anchor)
+        .every((s) =>
+          c.edges.some(([a, b]) => {
+            const p = c.points[a]!
+            const q = c.points[b]!
+            // 점이 선분 위에 있으면 외적이 0이다(부동소수 오차 허용).
+            const cross = (s.x - p[0]) * (q[1] - p[1]) - (s.y - p[1]) * (q[0] - p[0])
+            return Math.abs(cross) < 1e-6
+          }),
+        )
+      expect(onEdge).toBe(true)
+    }
+  })
+
+  it('요구 개수가 밝은 별보다 적으면 밝은 별만 낸다', () => {
+    const c = CONSTELLATIONS[0]!
+    expect(starSlots(c, 3)).toHaveLength(3)
+  })
+
+  it('daysInMonth는 달마다 맞다', () => {
+    expect(daysInMonth('2026-08')).toBe(31)
+    expect(daysInMonth('2026-04')).toBe(30)
+    expect(daysInMonth('2026-02')).toBe(28)
   })
 })

@@ -1,6 +1,5 @@
-import { DISPLAY_TZ, dayKey } from '@/lib/calendar/eventDays'
-import { addDays } from '@/lib/trips/tripDays'
-import { constellationOfWeek } from './constellations'
+import { DISPLAY_TZ, dayKey, pad2 } from '@/lib/calendar/eventDays'
+import { starsNeededForMonth } from './constellations'
 
 // 잔디 · 여정 도출 — 순수 함수(테스트로 못박음).
 //
@@ -12,9 +11,13 @@ import { constellationOfWeek } from './constellations'
 //   SHARED = 함께(보라) / PERSONAL & 내 것 = 나(민트) / PERSONAL & 상대 것 = 상대(핑크)
 
 /** 완료 기록 — event_completions 행에서 필요한 것만. */
-export type CompletionLike = { event_id: string; done_at: string }
+export type CompletionLike = { event_id: string; done_at: string; created_by: string }
 
-export type StarOwner = 'mine' | 'partner' | 'shared'
+/**
+ * 별의 주인 — '함께'는 없다. 별은 하루에 사람마다 하나이므로 **누가 체크했나**로만 갈린다
+ * (함께 일정을 내가 체크하면 내 별이다). 색은 캘린더 트랙의 나/상대와 같은 축.
+ */
+export type StarOwner = 'mine' | 'partner'
 
 /** 완료가 가리키는 일정의 메타 — 색·카테고리를 정한다. */
 export type EventMeta = {
@@ -23,9 +26,11 @@ export type EventMeta = {
   category_id: string | null
 }
 
-/** 별 하나 = 완료 기록 하나. 무엇을 한 건지까지 들고 있어야 별을 눌러 되짚을 수 있다. */
+/** 별 하나 = 그 사람이 그 날 처음 챙긴 일. 무엇이었는지까지 들고 있어야 눌러 되짚을 수 있다. */
 export type StarEntry = {
   eventId: string
+  /** 체크한 사람 — 하루 한 사람 한 별의 기준이다. */
+  userId: string
   owner: StarOwner
   dayKey: string
   doneAt: string
@@ -37,7 +42,6 @@ export type DayCell = {
   total: number
   mine: number
   partner: number
-  shared: number
   entries: StarEntry[]
 }
 
@@ -61,72 +65,94 @@ export function dailyDoneCounts(
     // categoryId가 주어지면 그 카테고리만(전체 보기는 undefined를 넘긴다).
     if (opts.categoryId !== undefined && e.category_id !== opts.categoryId) continue
     const key = dayKey(c.done_at, tz)
-    const cell = map.get(key) ?? { key, total: 0, mine: 0, partner: 0, shared: 0, entries: [] }
-    const owner: StarOwner =
-      e.visibility === 'SHARED' ? 'shared' : myId && e.owner_id === myId ? 'mine' : 'partner'
+    const cell = map.get(key) ?? { key, total: 0, mine: 0, partner: 0, entries: [] }
+    // 별의 주인은 일정 소유자가 아니라 **체크한 사람**이다(함께 일정을 내가 끝내면 내 별).
+    const owner: StarOwner = myId && c.created_by === myId ? 'mine' : 'partner'
     cell.total += 1
-    if (owner === 'shared') cell.shared += 1
-    else if (owner === 'mine') cell.mine += 1
+    if (owner === 'mine') cell.mine += 1
     else cell.partner += 1
-    cell.entries.push({ eventId: c.event_id, owner, dayKey: key, doneAt: c.done_at })
+    cell.entries.push({
+      eventId: c.event_id,
+      userId: c.created_by,
+      owner,
+      dayKey: key,
+      doneAt: c.done_at,
+    })
     map.set(key, cell)
   }
   return map
 }
 
 // ── 별자리 ──────────────────────────────────────────────────────────────────
-// 완료 1건 = 별 하나. 그 주에 배정된 **실제 별자리**의 별을 다 채우면 완성이다.
+// 한 달 = 별자리 하나. 채워야 할 별은 **그 달의 날 수 × 2명**이다(8월이면 62개).
 //
-// 별자리는 그 달에 실제로 보이는 것 중에서 고른다(constellations.ts) — 지어낸 모양·이름이
-// 아니라서 "지금 하늘에 있는 걸 채운다"는 말이 참이 된다. 별 개수도 별자리마다 다르다
-// (카시오페이아 5, 북두칠성 7, 전갈자리 8) — 주마다 목표가 달라지는 게 오히려 리듬이 된다.
+// 하루에 한 사람이 채울 수 있는 별은 하나다. 그 날 일정을 열 개 끝냈든 하나 끝냈든 별은 하나 —
+// 그래야 별자리가 "며칠이나 챙겼나"의 기록이 된다. 개수 경쟁이 되면 하루에 몰아치고
+// 나머지 날을 비우는 게 유리해지는데, 그건 이 기능이 응원하려던 것과 정반대다.
 //
-// 주 단위로 간 이유: 캘린더가 이미 주로 끊겨 있어 "이번 주"가 화면 어디서나 같은 뜻이 된다.
+// 별자리는 그 달에 실제로 보이는 것에서 온다(constellations.ts) — 지어낸 모양·이름이 아니다.
 
-/** 그 주 월요일 키. */
-export function mondayOf(dayKeyStr: string): string {
-  const [y, m, d] = dayKeyStr.split('-').map(Number)
-  const wd = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay()
-  return addDays(dayKeyStr, -((wd + 6) % 7))
+/** 'YYYY-MM' — 그 날이 속한 달. */
+export function monthOf(dayKeyStr: string): string {
+  return dayKeyStr.slice(0, 7)
 }
 
 /**
- * 한 주의 별들 — 실제로 체크한 순서(done_at)대로.
- * 앞서는 같은 날 안에서 함께→나→상대로 임의 정렬했는데, 체크한 순서가 진짜 순서다.
+ * 한 달의 별들 — 사람마다 하루 하나까지.
+ *
+ * 같은 사람이 같은 날 여러 번 체크했으면 **가장 먼저 체크한 것**이 그 별이 된다
+ * (그 날 처음 챙긴 순간이 기록이다). 정렬은 체크한 순서.
  */
-export function weekStars(
+export function monthStars(
   counts: ReadonlyMap<string, DayCell>,
-  mondayKey: string,
+  monthKey: string,
 ): StarEntry[] {
-  const out: StarEntry[] = []
-  for (let i = 0; i < 7; i++) {
-    const cell = counts.get(addDays(mondayKey, i))
-    if (cell) out.push(...cell.entries)
+  const first = new Map<string, StarEntry>()
+  for (const [dayKeyStr, cell] of counts) {
+    if (!dayKeyStr.startsWith(monthKey)) continue
+    for (const e of cell.entries) {
+      const slot = `${e.userId}|${e.dayKey}`
+      const prev = first.get(slot)
+      if (!prev || e.doneAt < prev.doneAt) first.set(slot, e)
+    }
   }
-  return out.sort((a, b) => a.doneAt.localeCompare(b.doneAt))
+  return [...first.values()].sort((a, b) => a.doneAt.localeCompare(b.doneAt))
 }
 
-export type WeekSummary = {
-  mondayKey: string
+export type MonthSummary = {
+  monthKey: string
   stars: StarEntry[]
-  /** 그 주 별자리가 요구하는 별 수. */
+  /** 그 달을 다 채우는 데 필요한 별 수(날 수 × 2). */
   needed: number
   complete: boolean
 }
 
-/** 최근 n주(오늘이 속한 주가 마지막). */
-export function recentWeeks(
+/** 최근 n개월(이번 달이 마지막). */
+export function recentMonths(
   counts: ReadonlyMap<string, DayCell>,
   todayKey: string,
-  weeks = 12,
-): WeekSummary[] {
-  const thisMonday = mondayOf(todayKey)
-  const out: WeekSummary[] = []
-  for (let w = weeks - 1; w >= 0; w--) {
-    const mondayKey = addDays(thisMonday, -w * 7)
-    const stars = weekStars(counts, mondayKey)
-    const needed = constellationOfWeek(mondayKey).points.length
-    out.push({ mondayKey, stars, needed, complete: stars.length >= needed })
+  months = 6,
+): MonthSummary[] {
+  const [y, m] = todayKey.split('-').map(Number)
+  const out: MonthSummary[] = []
+  for (let k = months - 1; k >= 0; k--) {
+    const d = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1 - k, 1))
+    const monthKey = `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}`
+    const stars = monthStars(counts, monthKey)
+    const needed = starsNeededForMonth(monthKey)
+    out.push({ monthKey, stars, needed, complete: stars.length >= needed })
   }
   return out
+}
+
+/** 오늘 내가/상대가 이미 별을 채웠는지 — "오늘은 채웠어요"를 말해주기 위한 것. */
+export function filledToday(
+  counts: ReadonlyMap<string, DayCell>,
+  todayKey: string,
+): { mine: boolean; partner: boolean } {
+  const cell = counts.get(todayKey)
+  return {
+    mine: Boolean(cell?.entries.some((e) => e.owner === 'mine')),
+    partner: Boolean(cell?.entries.some((e) => e.owner === 'partner')),
+  }
 }

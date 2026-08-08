@@ -125,16 +125,104 @@ const BY_MONTH: Record<number, readonly string[]> = {
 const byKey = new Map(CONSTELLATIONS.map((c) => [c.key, c]))
 
 /**
- * 그 주에 채울 별자리 — 월(계절)에서 후보를 고르고, 주차로 돌려 연속된 주가 겹치지 않게 한다.
- * 저장하지 않는다: 같은 주는 언제 열어도 같은 별자리다.
+ * 그 달에 채울 별자리 — 그 달에 실제로 보이는 것 중 하나.
+ * 해가 바뀌면 같은 달이라도 다른 별자리가 나온다(여름을 세 해 보내면 백조·거문고·전갈을 다 채운다).
+ * 저장하지 않는다: 같은 달은 언제 열어도 같은 별자리다.
  */
-export function constellationOfWeek(mondayKey: string): ConstellationDef {
-  const [y, m, d] = mondayKey.split('-').map(Number)
+export function constellationOfMonth(monthKey: string): ConstellationDef {
+  const [y, m] = monthKey.split('-').map(Number)
   const month = m ?? 1
   const pool = BY_MONTH[month] ?? BY_MONTH[1]!
-  // 그 해의 몇 번째 주인지 — 같은 달 안에서 주마다 다른 별자리가 나오게.
-  const jan1 = Date.UTC(y ?? 1970, 0, 1)
-  const cur = Date.UTC(y ?? 1970, month - 1, d ?? 1)
-  const weekIdx = Math.floor((cur - jan1) / (7 * 86400000))
-  return byKey.get(pool[weekIdx % pool.length]!)!
+  return byKey.get(pool[(y ?? 0) % pool.length]!)!
+}
+
+export type Slot = { x: number; y: number; anchor: boolean }
+
+/**
+ * 별자리를 count개의 자리로 편다.
+ *
+ * 실제 별자리의 밝은 별은 4~8개인데 한 달치 별은 56~62개다. 그래서 밝은 별(anchor)을 먼저 두고,
+ * 나머지는 별자리를 잇는 선 위에 고르게 흩뿌린다. 초반엔 모양의 뼈대가 먼저 서고,
+ * 채울수록 선이 별로 촘촘해져 마지막엔 빛나는 선 그림이 된다.
+ *
+ * 순서는 '모든 변에 한 점씩'을 한 바퀴로 돌린다 — 한 변만 먼저 채우면 한쪽으로 쏠려 보인다.
+ */
+export function starSlots(def: ConstellationDef, count: number): Slot[] {
+  const anchors: Slot[] = def.points.map(([x, y]) => ({ x, y, anchor: true }))
+  if (count <= anchors.length) return anchors.slice(0, count)
+
+  const remaining = count - anchors.length
+
+  // 변 길이에 비례해 나눈다. 같은 개수씩 나누면 짧은 변에 별이 몰려 밝은 별을 덮는다.
+  const lens = def.edges.map(([a, b]) => {
+    const p = def.points[a]!
+    const q = def.points[b]!
+    return Math.hypot(q[0] - p[0], q[1] - p[1])
+  })
+  const total = lens.reduce((s2, v) => s2 + v, 0)
+  const quota = lens.map((l) => (l / total) * remaining)
+  const counts = quota.map(Math.floor)
+  // 내림하고 남은 자리는 소수부가 큰 변부터(최대잉여법) — 합이 정확히 remaining이 되게.
+  let left = remaining - counts.reduce((s2, v) => s2 + v, 0)
+  const order = quota
+    .map((q, i) => ({ i, frac: q - Math.floor(q) }))
+    .sort((a, b) => b.frac - a.frac)
+  for (const { i } of order) {
+    if (left <= 0) break
+    counts[i] = (counts[i] ?? 0) + 1
+    left--
+  }
+
+  // 각 변 안에서 균등 간격. 양 끝(밝은 별)에는 붙지 않는다.
+  const perEdge: Slot[][] = def.edges.map(([a, b], e) => {
+    const n = counts[e] ?? 0
+    const p = def.points[a]!
+    const q = def.points[b]!
+    return Array.from({ length: n }, (_, k) => {
+      const t = (k + 1) / (n + 1)
+      return { x: p[0] + (q[0] - p[0]) * t, y: p[1] + (q[1] - p[1]) * t, anchor: false }
+    })
+  })
+
+  // 채워지는 순서: 각 변의 가운데부터 바깥으로. 한쪽 끝부터 채우면 초반에 한 귀퉁이만 자란다.
+  const spread = (n: number): number[] => {
+    const out: number[] = []
+    const rec = (lo: number, hi: number) => {
+      if (lo > hi) return
+      const mid = (lo + hi) >> 1
+      out.push(mid)
+      rec(lo, mid - 1)
+      rec(mid + 1, hi)
+    }
+    rec(0, n - 1)
+    return out
+  }
+  const seq = perEdge.map((slots) => spread(slots.length).map((i) => slots[i]!))
+
+  // 변끼리도 번갈아 — 한 변만 먼저 다 채우면 한쪽으로 쏠려 보인다.
+  const fills: Slot[] = []
+  for (let round = 0; fills.length < remaining; round++) {
+    let pushed = false
+    for (const list of seq) {
+      const s2 = list[round]
+      if (!s2) continue
+      fills.push(s2)
+      pushed = true
+      if (fills.length >= remaining) break
+    }
+    if (!pushed) break
+  }
+
+  return [...anchors, ...fills]
+}
+
+/** 그 달의 날 수 — 채워야 할 별은 이 값 × 2(둘이 하루에 하나씩)다. */
+export function daysInMonth(monthKey: string): number {
+  const [y, m] = monthKey.split('-').map(Number)
+  return new Date(Date.UTC(y ?? 1970, m ?? 1, 0)).getUTCDate()
+}
+
+/** 한 달을 다 채우는 데 필요한 별 수 = 날 수 × 2명. */
+export function starsNeededForMonth(monthKey: string): number {
+  return daysInMonth(monthKey) * 2
 }

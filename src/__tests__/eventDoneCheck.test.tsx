@@ -149,7 +149,7 @@ describe('별자리 스트립', () => {
     expect(screen.queryByRole('region', { name: '우리가 만든 별자리' })).toBeNull()
   })
 
-  it('펼치면 이번 주 별자리와 지난 주들이 보인다', () => {
+  it('펼치면 이번 달 별자리와 지난 달들이 보인다', () => {
     state.completions = [
       { id: 'c1', event_id: 'e1', occurrence_start: at('09:00'), done_at: at('09:30'), version: 1, created_by: 'u1' },
     ]
@@ -158,14 +158,24 @@ describe('별자리 스트립', () => {
     const region = screen.getByRole('region', { name: '우리가 만든 별자리' })
     expect(region).toBeInTheDocument()
     // 별 수는 숫자로도 읽혀야 한다(색·그림만으로 말하지 않는다 §8).
-    expect(screen.getByText(/별 더 모으면/)).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: /이번 주 별/ })).toBeInTheDocument()
+    // 진행도는 숫자로 읽혀야 한다 — 별자리 이름은 계절마다 달라지므로 뼈대만 본다.
+    expect(screen.getByText(/\d+\/\d+ · \d+개 남음/)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /이번 달 .*별 \d+개/ })).toBeInTheDocument()
   })
 
-  it('완료가 0이면 무엇을 하면 되는지 알려준다(죽은 화면 금지)', () => {
+  it('오늘 각자 채웠는지 알려준다 — 하루에 한 사람이 별 하나', () => {
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: /별자리 펼치기/ }))
-    // 별자리 이름은 그 주 계절에서 오므로 문구가 계절마다 달라진다 — 뼈대만 확인한다.
-    expect(screen.getByText(/일정을 체크하면 .*별이 하나씩 떠요/)).toBeInTheDocument()
+    expect(screen.getByLabelText('오늘 — 나 아직, 상대 아직')).toBeInTheDocument()
+    expect(screen.getByText(/하루에 한 사람이 별 하나/)).toBeInTheDocument()
+  })
+
+  it('내가 오늘 채우면 그렇게 말한다', () => {
+    state.completions = [
+      { id: 'c1', event_id: 'e1', occurrence_start: at('09:00'), done_at: at('09:30'), version: 1, created_by: 'u1' },
+    ]
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: /별자리 펼치기/ }))
+    expect(screen.getByLabelText('오늘 — 나 채움, 상대 아직')).toBeInTheDocument()
   })
 })

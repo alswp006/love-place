@@ -55,6 +55,20 @@
   paint-order: stroke;
 }
 
+/* 선 위를 채우는 작은 별 — 밝은 별을 가리지 않게 작고 조용하게.
+   테두리를 주면 축소될 때 상대적으로 두꺼워져 모양이 뭉개지고 밝은 별처럼 커 보인다. */
+.sparkSmall {
+  fill: currentColor;
+  stroke: none;
+  filter: drop-shadow(0 0 1.2px currentColor);
+}
+
+/* 아직 안 찍힌 채움 자리 — 있는 듯 없는 듯한 점(길이 여기로 이어진다는 힌트). */
+.emptyDot {
+  fill: var(--sky-empty, rgba(205, 214, 255, 0.4));
+  opacity: 0.5;
+}
+
 .anchor {
   fill: none;
   stroke: none;
@@ -76,14 +90,25 @@
 /* 지난 주 글리프 — 채운 만큼의 호 + 완성이면 별. */
 .glyph {
   display: inline-flex;
-  width: 24px;
-  height: 24px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 30px;
   flex-shrink: 0;
 }
 
 .glyphSvg {
-  width: 100%;
-  height: 100%;
+  width: 24px;
+  height: 24px;
+}
+
+.glyphLabel {
+  font-size: var(--fs-micro);
+  color: var(--sky-label, #9aa2d8);
+  font-variant-numeric: tabular-nums;
+}
+
+.glyphSvg {
   transform: rotate(-90deg);
 }
 
