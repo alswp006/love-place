@@ -10,14 +10,22 @@ export function PlaceSearch({
   savedKakaoIds,
   onPick,
   initialQuery,
+  onActiveChange,
 }: {
   coupleId: string | null
   savedKakaoIds: Set<string>
   onPick: (hit: KakaoPlaceHit) => void
   initialQuery?: string | null
+  /** 검색을 시작/끝냈다 — 부모가 겹치는 오버레이(알림 줄)를 치우는 데 쓴다. */
+  onActiveChange?: (active: boolean) => void
 }) {
   const { query, setQuery, clear, status, hits, error } = useKakaoSearch()
   const inputRef = useRef<HTMLInputElement>(null)
+  // 검색어가 있으면 그 아래로 결과가 펼쳐진다 — 같은 자리에 있는 알림 줄과 겹치므로 부모에 알린다.
+  const active = query.trim().length > 0
+  useEffect(() => {
+    onActiveChange?.(active)
+  }, [active, onActiveChange])
   void coupleId // coupleId는 부모 저장 흐름에서 사용(여기선 표식만 유지).
   // 추천 SEED 카드의 ?q= 딥링크 — 최초 1회 검색어 시드 → 디바운스 자동완성 실행(빈 값 무시).
   const seeded = useRef(false)

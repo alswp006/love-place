@@ -37,11 +37,13 @@ function shot(name: string) {
   return { skip: !process.env.SEED_SNAPSHOT && !existsSync(baseline), file: `${name}.png` }
 }
 
-test('연결됨-빈 — 일정 없을 때 친근한 CTA', async ({ page }) => {
+test('연결됨-빈 — 일정이 없어도 한 줄 입력이 남는다', async ({ page }) => {
   await seedAuthedMap(page, { events: [] })
   await page.goto(`/calendar?date=${D}`)
-  // 연결됨이지만 그 날 일정이 없으면 DayAgenda가 EmptyState + '＋ 일정 추가' CTA를 그린다(§7).
-  await expect(page.getByRole('button', { name: '＋ 일정 추가' })).toBeVisible()
+  // 빈 상태 카드와 '＋ 일정 추가'는 걷어냈다 — 바로 위 한 줄 입력이 이미 같은 행동을 권하고 있어
+  // 화면만 길어졌다. 대신 그 입력칸이 항상 있어야 죽은 화면이 되지 않는다(§7).
+  await expect(page.getByRole('button', { name: '＋ 일정 추가' })).toHaveCount(0)
+  await expect(page.getByPlaceholder(/할 일/)).toBeVisible()
   const s = shot('cal-empty')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
@@ -154,8 +156,8 @@ test('카테고리 — 전체가 기본, 고르면 그 분류만 남는다', asy
   // '업무'를 고르면 그 분류가 아닌 '내 운동'은 목록에서 빠진다.
   await cats.getByRole('button', { name: /업무/ }).click()
   await expect(agenda.getByText('내 운동')).toHaveCount(0)
-  // 죽은 화면 대신 분류 기준 빈 상태(§7 다층 빈 상태).
-  await expect(page.getByText('이 분류에는 없어요')).toBeVisible()
+  // 분류를 걸러 비어도 입력칸은 그대로 — 그 분류로 바로 적을 수 있다.
+  await expect(page.getByPlaceholder(/할 일/)).toBeVisible()
 
   // '전체'로 돌아오면 다시 보인다.
   await cats.getByRole('button', { name: '전체' }).click()

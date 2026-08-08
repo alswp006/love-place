@@ -457,7 +457,6 @@ export default function CalendarPage() {
               // 지금 보고 있는 캘린더에 그대로 들어간다 — 함께 탭에서 적으면 함께 일정.
               quickAddVisibility={track === 'shared' ? 'SHARED' : 'PERSONAL'}
               onEdit={openEdit}
-              onAdd={openCreate}
               onDelete={quickDelete}
               onQuickAdd={onQuickAdd}
             />
@@ -630,7 +629,6 @@ function DayAgenda({
   doneKeys,
   onToggleDone,
   onEdit,
-  onAdd,
   onDelete,
   onQuickAdd,
 }: {
@@ -652,7 +650,6 @@ function DayAgenda({
   doneKeys: ReadonlySet<string>
   onToggleDone: (eventId: string, occurrenceStart: string, done: boolean) => void
   onEdit: (ev: Occurrence<EventRow>) => void
-  onAdd: () => void
   onDelete: (ev: Occurrence<EventRow>) => void
   onQuickAdd: (e: NewEvent, done: () => void) => void
 }) {
@@ -686,18 +683,10 @@ function DayAgenda({
         />
       )}
       {shown.length === 0 ? (
-        // 연결됨-빈: 죽은 <p> 대신 친근한 EmptyState + add-event CTA(§7).
-        <EmptyState
-          emoji="🗓️"
-          title={category === null ? '이 날 일정이 없어요' : '이 분류에는 없어요'}
-          action={
-            readOnly ? undefined : (
-              <button type="button" className={styles.agendaAddBtn} onClick={onAdd}>
-                ＋ 일정 추가
-              </button>
-            )
-          }
-        />
+        // 빈 상태 카드는 두지 않는다 — 바로 위 '할 일 입력' 칸이 이미 무엇을 하면 되는지 말하고,
+        // 그 아래 '일정 추가' 버튼까지 있으면 같은 행동을 두 번 권하는 셈이라 화면만 길어졌다.
+        // (readOnly=상대 캘린더는 애초에 추가 경로가 없으므로 조용히 빈 채로 둔다.)
+        null
       ) : (
         <ul className={styles.eventList}>
           {shown.map((ev) => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { EventRow } from '@/hooks/useEvents'
@@ -104,13 +104,14 @@ describe('CalendarPage 상태 분기(Task 13)', () => {
     expect(screen.getByText('먼저 상대와 연결해요')).toBeInTheDocument()
   })
 
-  it('연결됨-빈(ACTIVE & events 0) → 아젠다가 EmptyState(이모지+title+CTA)로, CTA 클릭 시 시트 open', () => {
+  it('연결됨-빈(ACTIVE & events 0) → 빈 카드 없이 한 줄 입력만 남는다', () => {
+    // 빈 상태 카드 + '＋ 일정 추가' 버튼을 걷어냈다: 바로 위 '할 일 입력' 칸이 이미 무엇을
+    // 하면 되는지 말하고 있어서, 같은 행동을 두 번 권하며 화면만 길어졌다.
     renderCalendar()
-    expect(screen.getByText('이 날 일정이 없어요')).toBeInTheDocument()
-    const cta = screen.getByRole('button', { name: '＋ 일정 추가' })
-    fireEvent.click(cta)
-    // EventSheet가 열리면 dialog role이 보인다(시트 open 확인).
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.queryByText('이 날 일정이 없어요')).toBeNull()
+    expect(screen.queryByRole('button', { name: '＋ 일정 추가' })).toBeNull()
+    // 죽은 화면이 되면 안 된다 — 추가 경로(한 줄 입력)는 그대로 있다.
+    expect(screen.getByPlaceholderText(/할 일/)).toBeInTheDocument()
   })
 
   it('장소 연결된 이벤트 → 아젠다 항목에 장소 칩(이름) + 지도 링크(?place=)', () => {

@@ -1,8 +1,8 @@
 /* 지도 위 동선 시작/종료 컨트롤 — 상단 오버레이 중앙 정렬 pill. */
 .wrap {
   display: flex;
-  /* 지도 우하단 레일에 놓인다 — 가운데 정렬이면 지도를 가로지른다. */
-  justify-content: flex-end;
+  /* 지도 좌하단 레일에 놓인다 — 가운데 정렬이면 지도를 가로지른다. */
+  justify-content: flex-start;
   pointer-events: none;
 }
 

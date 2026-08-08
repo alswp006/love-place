@@ -12,12 +12,14 @@ export function MapSearchOverlay({
   onPick,
   snap,
   initialQuery,
+  onActiveChange,
 }: {
   coupleId: string | null
   savedKakaoIds: Set<string>
   onPick: (hit: KakaoPlaceHit) => void
   snap: SnapStop
   initialQuery?: string | null
+  onActiveChange?: (active: boolean) => void
 }) {
   // 시트가 half일 땐 검색창을 유지한다 — 예전엔 half만 돼도 숨어서, 상세가 자동 승격되는 순간
   // 검색창이 사라지고 목록은 "위 검색창에 장소 이름을 입력하면…"이라는 없는 UI를 가리켰다.
@@ -36,6 +38,7 @@ export function MapSearchOverlay({
         savedKakaoIds={savedKakaoIds}
         onPick={onPick}
         initialQuery={initialQuery}
+        onActiveChange={onActiveChange}
       />
     </div>
   )
