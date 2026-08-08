@@ -175,6 +175,7 @@ export default function RecommendPage() {
           <section aria-label="추천 시작">
             <EmptyState
               icon="sparkles"
+          art="recommend"
               title="같은 지역 가고싶은 곳이 모이면 추천이 시작돼요"
               hint={`한 지역에 ${RECO_THRESHOLD}곳이 쌓이면 코스를 제안해요.`}
             />

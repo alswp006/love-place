@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!--
+    SPOT 1 · MAP
+    An empty folded paper map with a single pin standing on it.
+    Mood: "nothing saved yet, put your first place here."
+
+    Shared style contract:
+      - Ink #30252C, stroke-width 6, round joins/caps
+      - No scene outline
+      - Soft flat fills sit behind ink lines
+      - Rose pin = the accented, meaningful element
+  -->
+
+  <defs>
+    <!--
+      Family style. Every stroked path inherits from this group so line weight
+      stays identical across all 4 spots.
+    -->
+    <style>
+      .ink { fill: none; stroke: #30252C; stroke-width: 6; stroke-linejoin: round; stroke-linecap: round; }
+      .ink-thin { fill: none; stroke: #30252C; stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
+      .fill-paper { fill: #FEF8FB; }
+      .fill-pink { fill: #F9CED4; }
+      .fill-yellow { fill: #F2CD64; }
+      .fill-rose { fill: #B03D5B; }
+      .fill-mint { fill: #007C59; }
+      .fill-lav { fill: #6F57AB; }
+    </style>
+  </defs>
+
+  <!--
+    Composition:
+      The map is a folded paper — a slightly tilted quadrilateral with two vertical
+      fold creases. Occupies ~70% of the canvas, sitting slightly below-center to
+      leave headroom for the pin.
+
+      Map corners (chosen for a subtle "unfolded" perspective, not extreme):
+        top-left     ( 60, 145)
+        top-right    (340, 130)
+        bottom-right (355, 305)
+        bottom-left  ( 45, 285)
+
+      Fold creases (verticals across the map): roughly at 1/3 and 2/3 of the
+      map's horizontal span. To follow the perspective, we compute crease
+      endpoints by linear interpolation along top and bottom edges.
+
+      1/3 along top:  x = 60 + (340-60)*1/3 = 60 + 93.33 = 153.33, y interp = 145 + (130-145)*1/3 = 145 - 5 = 140
+      1/3 along bot:  x = 45 + (355-45)*1/3 = 45 + 103.33 = 148.33, y interp = 285 + (305-285)*1/3 = 285 + 6.67 = 291.67
+      2/3 along top:  x = 60 + (340-60)*2/3 = 246.67, y = 145 - 10 = 135
+      2/3 along bot:  x = 45 + (355-45)*2/3 = 251.67, y = 285 + 13.33 = 298.33
+
+      Pin standing on the map at ~its center. Map center approx (200, 216).
+      Pin sits with its tip at (200, 240) — slightly right-of-center so the eye
+      moves from the map's left "empty" side toward the pin. Head above the tip.
+  -->
+
+  <!-- Paper fill — the whole map is one soft-pink surface. Reads as an actual
+       paper map (tinted), the folds shown only as ink creases on top. Cleaner
+       than tinting one panel differently — no boxy pink block. -->
+  <path d="M 60 145 L 340 130 L 355 305 L 45 285 Z"
+        class="fill-pink"/>
+
+  <!-- Map outline (drawn AFTER fill so ink sits on top) -->
+  <path d="M 60 145 L 340 130 L 355 305 L 45 285 Z"
+        class="ink"/>
+
+  <!-- Fold creases -->
+  <line x1="153.33" y1="140" x2="148.33" y2="291.67" class="ink-thin"/>
+  <line x1="246.67" y1="135" x2="251.67" y2="298.33" class="ink-thin"/>
+
+  <!-- Intentionally NO abstract road/river curves. Mood is "empty, waiting."
+       The folded paper + single pin does the work. -->
+
+  <!--
+    The pin. Geometry mirrors the app icon:
+      Head radius r = 22
+      Distance from head center to tip d = 62
+      Tangent angle θ = acos(22/62) = acos(0.3548) ≈ 69.22°
+      Tangent points: (±sin θ * r, cos θ * r) = (±20.57, 7.80)
+      Tip at (0, 62), head center at (0, 0)
+
+    Place the tip at (200, 240). Pin stands upright (no tilt).
+    So head center is at (200, 178).
+  -->
+  <!-- Pin body (rose fill) -->
+  <path d="M 179.43 185.80
+           A 22 22 0 1 1 220.57 185.80
+           L 200 240
+           Z"
+        transform="translate(200 178) translate(-200 -178)"
+        class="fill-rose"/>
+  <!-- Pin outline -->
+  <path d="M 179.43 185.80
+           A 22 22 0 1 1 220.57 185.80
+           L 200 240
+           Z"
+        class="ink"/>
+  <!-- Pin hole (soft pink dot at head center) -->
+  <circle cx="200" cy="178" r="6" class="fill-paper"/>
+  <circle cx="200" cy="178" r="6" fill="none" stroke="#30252C" stroke-width="3"/>
+
+  <!-- Small elliptical shadow contact under pin tip to ground it — using ink-thin
+       as a tiny "kiss line" arc on the paper surface. Keeps consistent with "no
+       drop shadows" by being a line, not a fill blur. -->
+  <path d="M 190 244 Q 200 249 210 244" class="ink-thin"/>
+
+</svg>

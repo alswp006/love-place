@@ -155,6 +155,7 @@ export default function TripsPage() {
       ) : list.length === 0 ? (
         <EmptyState
           icon={tab.empty.icon}
+          art={tab.empty.art}
           title={tab.empty.title}
           hint={tab.empty.hint}
           action={

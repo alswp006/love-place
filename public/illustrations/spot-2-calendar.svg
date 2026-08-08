@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!--
+    SPOT 2 · CALENDAR
+    An open blank calendar page with one small check mark on a single day.
+    Mood: "the first thing checked off."
+
+    Mint checkmark = accented element.
+  -->
+
+  <defs>
+    <style>
+      .ink { fill: none; stroke: #30252C; stroke-width: 6; stroke-linejoin: round; stroke-linecap: round; }
+      .ink-thin { fill: none; stroke: #30252C; stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
+      .ink-hair { fill: none; stroke: #30252C; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+      .fill-paper { fill: #FEF8FB; }
+      .fill-pink { fill: #F9CED4; }
+      .fill-mint { fill: #007C59; }
+    </style>
+  </defs>
+
+  <!--
+    Composition:
+      Calendar is a paper page with two binder rings at the top. Slightly tilted
+      to feel casual — but easier to draw upright. Go upright for grid clarity.
+
+      Page: rectangle from (75, 95) to (325, 335), corner radius 12.
+      Header strip at top of page (pink fill) from y=95 to y=140.
+      Grid area below: y=155 to y=320, columns=7 or use a friendlier 4x3? A real
+        calendar month is 5-6 rows × 7 cols; at 120px that's unreadable. Better:
+        show a stylized month grid with a REASONABLE cell count that reads at
+        small size. Use 5 rows × 5 cols (25 cells) — reads clean at 120px.
+
+      Binder rings at top: two small circles above the page, connected by short
+      vertical stems.
+
+      Checkmark on one specific cell in mint, drawn as two strokes forming a ✓.
+  -->
+
+  <!-- Binder rings (two small circles above the page) -->
+  <circle cx="140" cy="80" r="12" class="fill-paper"/>
+  <circle cx="260" cy="80" r="12" class="fill-paper"/>
+  <circle cx="140" cy="80" r="12" fill="none" stroke="#30252C" stroke-width="6"/>
+  <circle cx="260" cy="80" r="12" fill="none" stroke="#30252C" stroke-width="6"/>
+  <!-- Binder stems (short lines connecting rings to page) -->
+  <line x1="140" y1="92" x2="140" y2="105" class="ink"/>
+  <line x1="260" y1="92" x2="260" y2="105" class="ink"/>
+
+  <!-- Page background -->
+  <rect x="75" y="105" width="250" height="230" rx="12" ry="12" class="fill-paper"/>
+
+  <!-- Header strip (soft pink) — clipped to page's rounded top -->
+  <path d="M 75 117
+           A 12 12 0 0 1 87 105
+           L 313 105
+           A 12 12 0 0 1 325 117
+           L 325 145
+           L 75 145
+           Z"
+        class="fill-pink"/>
+
+  <!-- Page outline -->
+  <rect x="75" y="105" width="250" height="230" rx="12" ry="12" class="ink"/>
+
+  <!-- Divider line between header and grid -->
+  <line x1="75" y1="145" x2="325" y2="145" class="ink"/>
+
+  <!--
+    Header content: normally there'd be a month name here, but brief says NO TEXT.
+    Instead, put two small tick marks in the header representing "M T W T F S S"
+    without letters — a row of 7 tiny dots. That reads as day-of-week headers.
+    Actually — a row of 7 dots in the header AND a grid below might read as
+    noise. Better: leave header empty (a solid pink strip = "this is a month").
+
+    Hmm, without any indication the header could look like a heavy shadow. Add
+    a single row of small dots INSIDE the header representing weekday markers.
+    Space: 250px wide - 20px padding each side = 210px / 7 = 30px per slot.
+    First dot at x = 75 + 25 + 15 = ~110, ending at ~290. Dots small, ink-hair.
+
+    Actually — day-of-week dots don't feel needed. Prefer a cleaner read: leave
+    header as a pink strip with just a small "◀ ▶" pagination? No — too
+    fiddly. Simplest: two small horizontal ticks near the left of the header,
+    stacked, representing a title bar. Even simpler: nothing. Just the pink
+    strip.
+
+    Go with nothing. The color separation is enough signal.
+  -->
+
+  <!--
+    Calendar grid: 5 columns × 4 rows = 20 cells. That reads as "a month" at
+    small size.
+
+    Grid area: x from 90 to 310 (width 220), y from 155 to 320 (height 165).
+    Column width: 220/5 = 44. Row height: 165/4 = 41.25.
+
+    Draw internal grid lines only (no outer rect — the page rect already frames
+    the grid area).
+
+    Vertical grid lines at x = 134, 178, 222, 266
+    Horizontal grid lines at y = 196.25, 237.5, 278.75
+
+    Use ink-hair (3px) so grid lines are lighter than main ink.
+  -->
+
+  <!-- Grid lines -->
+  <g class="ink-hair">
+    <line x1="134" y1="155" x2="134" y2="320"/>
+    <line x1="178" y1="155" x2="178" y2="320"/>
+    <line x1="222" y1="155" x2="222" y2="320"/>
+    <line x1="266" y1="155" x2="266" y2="320"/>
+    <line x1="90" y1="196.25" x2="310" y2="196.25"/>
+    <line x1="90" y1="237.5" x2="310" y2="237.5"/>
+    <line x1="90" y1="278.75" x2="310" y2="278.75"/>
+  </g>
+
+  <!--
+    Highlight one cell: the cell at column 3 (0-indexed 2), row 2 (0-indexed 1) —
+    center-ish. Cell bounds: x [178, 222], y [196.25, 237.5]. Center (200, 216.875).
+
+    Fill the highlighted cell with soft pink to draw the eye, then draw the mint
+    checkmark centered inside it.
+  -->
+  <rect x="180" y="198.25" width="40" height="37.25" rx="4" ry="4" class="fill-pink"/>
+
+  <!--
+    Mint checkmark inside the highlighted cell. Draw as two joined line segments
+    forming a ✓. Center approx (200, 217). Check shape:
+      Start (188, 217) -> down-right to (196, 226) -> up-right to (212, 208)
+    Stroke in mint color, thicker like the family ink.
+  -->
+  <path d="M 188 217 L 196 226 L 212 208"
+        fill="none" stroke="#007C59" stroke-width="6"
+        stroke-linejoin="round" stroke-linecap="round"/>
+
+</svg>

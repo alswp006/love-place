@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!--
+    SPOT 3 · TRIP
+    A small suitcase, closed, with a luggage tag hanging.
+    Mood: "no trip planned yet."
+
+    Lavender luggage tag = accented element.
+  -->
+
+  <defs>
+    <style>
+      .ink { fill: none; stroke: #30252C; stroke-width: 6; stroke-linejoin: round; stroke-linecap: round; }
+      .ink-thin { fill: none; stroke: #30252C; stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
+      .ink-hair { fill: none; stroke: #30252C; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+      .fill-paper { fill: #FEF8FB; }
+      .fill-pink { fill: #F9CED4; }
+      .fill-yellow { fill: #F2CD64; }
+      .fill-lav { fill: #6F57AB; }
+    </style>
+  </defs>
+
+  <!--
+    Composition:
+      A classic hard-shell suitcase, upright (wider than tall), sitting slightly
+      below-center of the canvas so the handle has room above.
+
+      Suitcase body: rounded rectangle, corners 14.
+        x = 90, y = 150, w = 220, h = 170.
+
+      Handle: an arch on top of the suitcase.
+        Handle uprights: two small vertical stems.
+        Handle top: a horizontal bar with rounded ends.
+        Positioned centered above the case, from about x=155 to x=245.
+
+      Wheels: two small rounded rectangles under the case.
+
+      Latch/lock detail: two small squares on top of the case for latches.
+
+      Center seam/handle band on the case: a horizontal line across the middle
+      that reads as "the two halves of the suitcase meet here" — thin line.
+
+      Luggage tag: hanging from the RIGHT side of the handle. A small rectangle
+      in lavender with a short string going up to the handle. Tag has a small
+      circle punched in the top for the string.
+  -->
+
+  <!-- Clip both the pink body and the yellow center band to the case's rounded
+       rectangle so the yellow doesn't bleed past the rounded corners. -->
+  <defs>
+    <clipPath id="caseClip">
+      <rect x="90" y="150" width="220" height="170" rx="14" ry="14"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#caseClip)">
+    <!-- Suitcase body fill (soft pink) -->
+    <rect x="90" y="150" width="220" height="170" class="fill-pink"/>
+    <!-- Center horizontal band (warm yellow) — clipped to case corners -->
+    <rect x="90" y="220" width="220" height="30" class="fill-yellow"/>
+  </g>
+
+  <!-- Case outline (on top of the clipped fills) -->
+  <rect x="90" y="150" width="220" height="170" rx="14" ry="14" class="ink"/>
+
+  <!-- Horizontal seam lines top and bottom of the yellow band -->
+  <line x1="90" y1="220" x2="310" y2="220" class="ink-thin"/>
+  <line x1="90" y1="250" x2="310" y2="250" class="ink-thin"/>
+
+  <!--
+    Latches on top of case (two small squares on the yellow band, symmetrical).
+    Each is 14×14, positioned at y = 228 (inside the band). Centers at x = 150
+    and x = 250.
+  -->
+  <rect x="143" y="228" width="14" height="14" rx="2" ry="2" class="fill-paper"/>
+  <rect x="243" y="228" width="14" height="14" rx="2" ry="2" class="fill-paper"/>
+  <rect x="143" y="228" width="14" height="14" rx="2" ry="2" class="ink-thin"/>
+  <rect x="243" y="228" width="14" height="14" rx="2" ry="2" class="ink-thin"/>
+
+  <!--
+    Handle: an arch above the case.
+      Uprights: two short vertical lines from case top (y=150) up to y=118.
+      Left upright at x=170, right at x=230.
+      Handle bar top: a rounded pill from (160, 108) to (240, 118), or draw as
+      a rounded rectangle 80 wide, 12 tall, rx=6, centered at (200, 113).
+  -->
+  <!-- Upright stems -->
+  <line x1="170" y1="150" x2="170" y2="122" class="ink"/>
+  <line x1="230" y1="150" x2="230" y2="122" class="ink"/>
+  <!-- Handle bar (paper fill + ink outline) -->
+  <rect x="158" y="108" width="84" height="18" rx="9" ry="9" class="fill-paper"/>
+  <rect x="158" y="108" width="84" height="18" rx="9" ry="9" class="ink"/>
+
+  <!--
+    Wheels: two small rounded rectangles under the case, one at each end.
+    Each 20 wide, 10 tall, positioned at y=320 (just below case bottom).
+  -->
+  <rect x="112" y="320" width="26" height="14" rx="7" ry="7" class="fill-paper"/>
+  <rect x="262" y="320" width="26" height="14" rx="7" ry="7" class="fill-paper"/>
+  <rect x="112" y="320" width="26" height="14" rx="7" ry="7" class="ink"/>
+  <rect x="262" y="320" width="26" height="14" rx="7" ry="7" class="ink"/>
+
+  <!--
+    Luggage tag: hanging from the RIGHT upright at (230, 122). String goes down
+    to a lavender tag rectangle. String is a short curve suggesting slack.
+
+    Tag shape: rectangle 44 wide × 56 tall with a small notched top (the classic
+    luggage-tag notch) and a hole punched at top-center for the string.
+    Position tag center-of-top-hole at (275, 175). Tag bounds:
+      hole center (275, 175)
+      tag body: x from 253 to 297, y from 178 to 234, rx 4.
+      The notched top: the tag top has a small triangular cut at the string
+      hole. Simpler: just a plain rounded rectangle with a hole punched at top.
+
+    String: from handle upright (230, 122) with a soft curve to hole (275, 175).
+  -->
+  <!-- String -->
+  <path d="M 230 122 Q 245 145 275 172" class="ink-thin"/>
+  <!-- Tag body -->
+  <rect x="253" y="182" width="44" height="56" rx="4" ry="4" class="fill-lav"/>
+  <rect x="253" y="182" width="44" height="56" rx="4" ry="4" class="ink-thin"/>
+  <!-- String hole (small circle at top of tag) -->
+  <circle cx="275" cy="175" r="6" class="fill-paper"/>
+  <circle cx="275" cy="175" r="6" class="ink-thin"/>
+
+</svg>

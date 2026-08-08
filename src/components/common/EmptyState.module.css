@@ -43,3 +43,16 @@
 .action {
   margin-top: var(--sp-3);
 }
+
+/* 일러스트 — 아이콘 자리를 대신한다. 글자가 커져도 같이 커지게 rem으로. */
+.art {
+  width: 9rem;
+  max-width: 60%;
+  margin: 0 auto;
+}
+
+.artImg {
+  display: block;
+  width: 100%;
+  height: auto;
+}

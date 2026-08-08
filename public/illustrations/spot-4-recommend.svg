@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!--
+    SPOT 4 · RECOMMEND
+    Three pins scattered on a plain surface, one slightly apart, with a faint
+    dotted line hinting they could connect.
+    Mood: "collect a few more and we'll draw you a route."
+
+    Warm yellow pin = the "outlier" that could connect.
+  -->
+
+  <defs>
+    <style>
+      .ink { fill: none; stroke: #30252C; stroke-width: 6; stroke-linejoin: round; stroke-linecap: round; }
+      .ink-thin { fill: none; stroke: #30252C; stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
+      .ink-hair { fill: none; stroke: #30252C; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+      .fill-paper { fill: #FEF8FB; }
+      .fill-pink { fill: #F9CED4; }
+      .fill-yellow { fill: #F2CD64; }
+      .fill-rose { fill: #B03D5B; }
+    </style>
+  </defs>
+
+  <!--
+    Composition:
+      Three pins on the surface. We show the pins in a "lying flat" perspective
+      so they look scattered on a plane rather than standing up. But drawing them
+      lying flat is a lot of foreshortening. Cleaner: show them upright but at
+      three different positions, with small ELLIPTICAL SHADOWS under each tip
+      (drawn as thin arcs like spot-1) to ground them on the surface.
+
+      Positions:
+        Pin A (rose, upright):  tip at (130, 220)
+        Pin B (soft-pink filled with rose outline, upright): tip at (200, 260)
+        Pin C (yellow, the "apart" one, upright): tip at (300, 175)
+
+      Faint dotted line hinting connection: a dashed path connecting the three
+      tips, ink-hair weight, low visual density (short dashes, wide gaps).
+      Actually — the brief says "one of them slightly apart" and "faint dotted
+      line hinting they could connect." I'll make the dotted line connect the
+      TWO close pins (A and B) to the apart pin (C), with the dashes especially
+      sparse for the segment reaching the outlier — that visual "trying to
+      reach" is the whole point of the scene.
+
+      Actually simplest and clearest: a dotted path that connects all three tips
+      in order. Dashes are uniform. This reads as "these three could be a route."
+
+    Pin geometry (same as spot 1):
+      r = 22, d = 62, tangent (±20.57, 7.80), tip at (0, 62)
+  -->
+
+  <!--
+    Draw the dotted route line FIRST so it sits underneath the pins.
+    Path connects the tips: A(130,220) → B(200,260) → C(300,175).
+    Dash pattern: 2px dash, 8px gap for a light, sparse feel.
+  -->
+  <path d="M 130 220 L 200 260 L 300 175"
+        fill="none" stroke="#30252C" stroke-width="3"
+        stroke-linecap="round"
+        stroke-dasharray="3 9"/>
+
+  <!--
+    Pin A (rose) — tip at (130, 220). Head center at (130, 158).
+    Local pin path uses relative coords: we translate to head center.
+  -->
+  <g transform="translate(130 158)">
+    <path d="M -20.57 7.80 A 22 22 0 1 1 20.57 7.80 L 0 62 Z" class="fill-rose"/>
+    <path d="M -20.57 7.80 A 22 22 0 1 1 20.57 7.80 L 0 62 Z" class="ink"/>
+    <circle cx="0" cy="0" r="6" class="fill-paper"/>
+    <circle cx="0" cy="0" r="6" fill="none" stroke="#30252C" stroke-width="3"/>
+  </g>
+  <!-- Contact shadow arc under pin A -->
+  <path d="M 120 224 Q 130 229 140 224" class="ink-hair"/>
+
+  <!--
+    Pin B (soft-pink fill) — tip at (200, 260). Head center at (200, 198).
+    Slightly smaller? No — keep all three pins identical size for family
+    consistency. What makes B feel "close to A" is proximity, not size.
+  -->
+  <g transform="translate(200 198)">
+    <path d="M -20.57 7.80 A 22 22 0 1 1 20.57 7.80 L 0 62 Z" class="fill-pink"/>
+    <path d="M -20.57 7.80 A 22 22 0 1 1 20.57 7.80 L 0 62 Z" class="ink"/>
+    <circle cx="0" cy="0" r="6" class="fill-paper"/>
+    <circle cx="0" cy="0" r="6" fill="none" stroke="#30252C" stroke-width="3"/>
+  </g>
+  <path d="M 190 264 Q 200 269 210 264" class="ink-hair"/>
+
+  <!--
+    Pin C (warm yellow, the "apart" one) — tip at (300, 175). Head center at
+    (300, 113).
+  -->
+  <g transform="translate(300 113)">
+    <path d="M -20.57 7.80 A 22 22 0 1 1 20.57 7.80 L 0 62 Z" class="fill-yellow"/>
+    <path d="M -20.57 7.80 A 22 22 0 1 1 20.57 7.80 L 0 62 Z" class="ink"/>
+    <circle cx="0" cy="0" r="6" class="fill-paper"/>
+    <circle cx="0" cy="0" r="6" fill="none" stroke="#30252C" stroke-width="3"/>
+  </g>
+  <path d="M 290 179 Q 300 184 310 179" class="ink-hair"/>
+
+</svg>

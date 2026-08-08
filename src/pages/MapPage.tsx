@@ -190,6 +190,7 @@ export default function MapPage() {
       ) : (
         <EmptyState
           icon="map"
+          art="map"
           title="지도 준비 중이에요"
           hint="네이버 지도 키를 설정하면 여기에 우리 장소가 마커로 떠요."
         />

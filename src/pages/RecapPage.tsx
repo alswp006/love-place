@@ -78,6 +78,7 @@ export default function RecapPage() {
         <div className={styles.body}>
           <EmptyState
             icon="compass"
+          art="trip"
             title="여행을 찾을 수 없어요"
             hint="추천 탭의 '지난 여행'에서 다시 골라주세요."
             action={

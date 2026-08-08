@@ -95,6 +95,7 @@ export default function TripDetailPage() {
       <section className={styles.wrap} aria-label="여행 상세" data-testid="page-trip-detail">
         <EmptyState
           icon="compass"
+          art="trip"
           title="여행을 찾을 수 없어요"
           hint="삭제됐거나 주소가 잘못된 것 같아요."
           action={<Button onClick={() => navigate('/trips')}>여행 목록으로</Button>}
