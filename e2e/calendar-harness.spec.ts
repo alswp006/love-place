@@ -296,7 +296,9 @@ test('별자리 스트립 — 기본은 한 줄, 펼치면 이번 달 별자리�
   // 진행도는 숫자로 읽힌다(§8) — 그림만으로 말하지 않는다.
   await expect(page.getByText(/\d+\/\d+ · \d+개 남음/)).toBeVisible()
   await expect(page.getByRole('img', { name: /이번 달 .*별 \d+개/ })).toBeVisible()
-  await expect(page.getByText('지난 달')).toBeVisible()
+  // 올해 열두 달이 전부 미니 별자리로 — 지나온 달만 두면 몇 개 남았는지가 안 보인다.
+  const yearRow = page.getByLabel('올해 열두 달')
+  await expect(yearRow.getByRole('img')).toHaveCount(12)
 
   // 접기는 우상단 — 하단 전폭 버튼이면 카드가 그만큼 길어진다. 터치 타깃은 44px 유지(ux §1).
   const card = page.getByRole('region', { name: '우리가 만든 별자리' })
@@ -307,7 +309,7 @@ test('별자리 스트립 — 기본은 한 줄, 펼치면 이번 달 별자리�
   expect(closeBox.x).toBeGreaterThan(cardBox.x + cardBox.width * 0.7)
   expect(closeBox.y).toBeLessThan(cardBox.y + 60)
   // 캘린더를 밀어내지 않게 카드 높이를 묶어둔다.
-  expect(cardBox.height).toBeLessThan(320)
+  expect(cardBox.height).toBeLessThan(360)
 
   await close.click()
   await expect(page.getByRole('region', { name: '우리가 만든 별자리' })).toHaveCount(0)

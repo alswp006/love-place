@@ -5,9 +5,8 @@ import { useEvents } from '@/hooks/useEvents'
 import { useEventCompletions } from '@/hooks/useEventCompletions'
 import {
   dailyDoneCounts,
-  recentMonths,
+  monthsOfYear,
   monthOf,
-  filledToday,
   type EventMeta,
 } from '@/lib/streak/garden'
 import { constellationOfMonth } from '@/lib/streak/constellations'
@@ -64,15 +63,12 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
     [completions, metaOf, myId, categoryId],
   )
 
-  const months = useMemo(() => recentMonths(counts, today), [counts, today])
-  const thisMonth = months[months.length - 1]!
-  const past = months.slice(0, -1)
+  // 올해 1~12월을 전부 보여준다 — 지나온 달만 두면 "앞으로 몇 개 남았나"가 안 보인다.
+  const months = useMemo(() => monthsOfYear(counts, today), [counts, today])
   const monthKey = monthOf(today)
+  const thisMonth = months.find((m) => m.monthKey === monthKey) ?? months[0]!
   const shape = constellationOfMonth(monthKey)
   const left = Math.max(0, thisMonth.needed - thisMonth.stars.length)
-  const doneMonths = past.filter((m) => m.complete).length
-  // 접힌 줄에서 "오늘 내 몫을 채웠나"만 쓴다 — 펼친 하늘에는 글자를 더 얹지 않는다.
-  const todayFilled = useMemo(() => filledToday(counts, today), [counts, today])
 
   if (!open) {
     return (
@@ -88,10 +84,6 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
         </span>
         <span className={styles.pillText}>
           {thisMonth.stars.length}/{thisMonth.needed}
-          {/* 오늘 내 몫을 채웠는지가 가장 궁금한 것 — 한 줄에서 바로 말한다. */}
-          <span className={styles.pillToday}>
-            {todayFilled.mine ? ' · 오늘 채움' : ' · 오늘 아직'}
-          </span>
         </span>
         <span className={styles.chevron} aria-hidden>
           ▾
@@ -139,22 +131,21 @@ export function JourneyStrip({ categoryId }: { categoryId?: string | null }) {
         </ul>
       </div>
 
-      <div className={styles.pastRow}>
-        <h3 className={styles.gridTitle}>
-          지난 달 <span className={styles.count}>{doneMonths}개 완성</span>
-        </h3>
-        <div className={styles.weeks}>
-        {past.map((m) => (
+      {/* 올해 열두 달 — 각 달의 별자리를 줄여 보여준다. 이번 달은 테두리로, 아직 안 온 달은 흐리게. */}
+      <div className={styles.months} aria-label="올해 열두 달">
+        {months.map((m) => (
           <MonthGlyph
             key={m.monthKey}
             monthKey={m.monthKey}
             filled={m.stars.length}
             needed={m.needed}
             complete={m.complete}
+            current={m.monthKey === monthKey}
+            future={m.monthKey > monthKey}
           />
-          ))}
-        </div>
+        ))}
       </div>
+
     </section>
   )
 }

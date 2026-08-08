@@ -11,8 +11,8 @@
   padding: 0 var(--sp-3);
   cursor: pointer;
   text-align: left;
-  /* 터치 타깃 ≥44px(HIG) */
-  min-height: 48px;
+  /* 별자리를 조금이라도 크게 보이려면 줄 자체가 높아야 한다(모양 비율 100:68). */
+  min-height: 60px;
 }
 
 .pillPath {
@@ -21,8 +21,8 @@
   display: flex;
   align-items: center;
   flex: 0 0 auto;
-  width: 76px;
-  padding: 3px 7px;
+  width: 108px;
+  padding: 3px 8px;
   border-radius: var(--r-pill);
   background: linear-gradient(180deg, #1d2140 0%, #12142a 100%);
 
@@ -190,12 +190,11 @@
   flex: 1;
 }
 
-/* 지난 달 — 제목과 글리프를 한 줄에. */
-.pastRow {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  flex-wrap: wrap;
+/* 올해 열두 달 — 6×2 격자. 한 줄 가로 스크롤이면 뒤쪽 달이 숨어 '몇 개 남았나'가 안 보인다. */
+.months {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
 }
 
 /* 오늘 각자 채웠는지 — 색·모양(⬤/○) + 글자로 이중화(§8). */

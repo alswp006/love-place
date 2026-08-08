@@ -133,7 +133,8 @@ export function constellationOfMonth(monthKey: string): ConstellationDef {
   const [y, m] = monthKey.split('-').map(Number)
   const month = m ?? 1
   const pool = BY_MONTH[month] ?? BY_MONTH[1]!
-  return byKey.get(pool[(y ?? 0) % pool.length]!)!
+  // 연도 + 월로 돌린다. 연도만 쓰면 같은 계절 세 달이 전부 같은 별자리라 열두 달이 심심해진다.
+  return byKey.get(pool[((y ?? 0) + month) % pool.length]!)!
 }
 
 export type Slot = { x: number; y: number; anchor: boolean }

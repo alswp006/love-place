@@ -4,7 +4,7 @@
   height: auto;
   overflow: visible;
   /* 하늘이되 화면을 다 먹지는 않게 */
-  max-height: 150px;
+  max-height: 132px;
 }
 
 .compact {
@@ -87,46 +87,56 @@
   50% { opacity: 0.72; }
 }
 
-/* 지난 주 글리프 — 채운 만큼의 호 + 완성이면 별. */
+/* 한 달 미니 별자리 — 진행 고리를 대신한다. */
 .glyph {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  width: 30px;
-  flex-shrink: 0;
+  gap: 1px;
+  padding: 3px 2px 2px;
+  border-radius: var(--r-xs);
+  border: 1px solid transparent;
+}
+
+/* 이번 달 — 지금 그리고 있는 것. 색이 아니라 테두리라는 모양으로도 구분된다(§8). */
+.glyphCurrent {
+  border-color: rgba(255, 233, 170, 0.55);
+  background: rgba(255, 233, 170, 0.07);
+}
+
+/* 아직 오지 않은 달 — 비어 있는 게 당연하다. */
+.glyphFuture {
+  opacity: 0.45;
 }
 
 .glyphSvg {
-  width: 24px;
-  height: 24px;
+  width: 100%;
+  height: auto;
+}
+
+.glyphEdge {
+  stroke: var(--sky-empty, rgba(205, 214, 255, 0.22));
+  stroke-width: 1.6;
+}
+
+.glyphEdgeOn {
+  stroke: var(--sky-arc, #ffd98a);
+  stroke-width: 2.4;
+}
+
+.glyphStar {
+  fill: var(--sky-empty, rgba(205, 214, 255, 0.3));
+}
+
+.glyphStarOn {
+  fill: #fff;
 }
 
 .glyphLabel {
   font-size: var(--fs-micro);
   color: var(--sky-label, #9aa2d8);
   font-variant-numeric: tabular-nums;
-}
-
-.glyphSvg {
-  transform: rotate(-90deg);
-}
-
-.glyphTrack {
-  fill: none;
-  stroke: var(--sky-empty, rgba(205, 214, 255, 0.28));
-  stroke-width: 2;
-}
-
-.glyphFill {
-  fill: none;
-  stroke: var(--sky-arc, #ffd98a);
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.glyphStar {
-  fill: #fff;
+  line-height: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

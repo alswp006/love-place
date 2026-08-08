@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 // 일정 완료 체크 — 회차 단위 기록(0021)이라는 계약을 페이지 배선까지 못박는다.
@@ -170,11 +170,19 @@ describe('별자리 스트립', () => {
     expect(screen.queryByText(/오늘 · 나/)).toBeNull()
   })
 
-  it('오늘 내 몫을 채웠는지는 접힌 줄에서만 말한다', () => {
+  it('접힌 줄은 진행도 숫자만 — 글자를 더 얹지 않고 별자리에 자리를 준다', () => {
     state.completions = [
       { id: 'c1', event_id: 'e1', occurrence_start: at('09:00'), done_at: at('09:30'), version: 1, created_by: 'u1' },
     ]
     renderPage()
-    expect(screen.getByText(/오늘 채움/)).toBeInTheDocument()
+    expect(screen.getByText(/^\d+\/\d+$/)).toBeInTheDocument()
+    expect(screen.queryByText(/오늘 채움/)).toBeNull()
+  })
+
+  it('올해 열두 달을 전부 보여준다 — 몇 개 남았는지가 보여야 한다', () => {
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: /별자리 펼치기/ }))
+    const year = screen.getByLabelText('올해 열두 달')
+    expect(within(year).getAllByRole('img')).toHaveLength(12)
   })
 })

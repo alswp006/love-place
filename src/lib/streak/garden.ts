@@ -145,6 +145,23 @@ export function recentMonths(
   return out
 }
 
+/**
+ * 올해 1~12월 전부 — 지나온 달만 보여주면 "앞으로 몇 개 남았나"가 안 보인다.
+ * 아직 오지 않은 달도 자리를 지킨다(비어 있는 게 당연하므로 화면에서 더 조용히 그린다).
+ */
+export function monthsOfYear(
+  counts: ReadonlyMap<string, DayCell>,
+  todayKey: string,
+): MonthSummary[] {
+  const year = todayKey.slice(0, 4)
+  return Array.from({ length: 12 }, (_, i) => {
+    const monthKey = `${year}-${pad2(i + 1)}`
+    const stars = monthStars(counts, monthKey)
+    const needed = starsNeededForMonth(monthKey)
+    return { monthKey, stars, needed, complete: stars.length >= needed }
+  })
+}
+
 /** 오늘 내가/상대가 이미 별을 채웠는지 — "오늘은 채웠어요"를 말해주기 위한 것. */
 export function filledToday(
   counts: ReadonlyMap<string, DayCell>,

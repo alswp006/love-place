@@ -155,41 +155,69 @@ export function Constellation({
   )
 }
 
-/** 지난 달 하나를 나타내는 작은 글리프 — 완성이면 채운 별, 아니면 채운 만큼의 고리. */
+/**
+ * 한 달을 나타내는 미니 별자리 — 진행 고리 대신 그 달의 별자리를 줄여 보여준다.
+ *
+ * 62개 자리를 이 크기(≈48px)에 다 찍으면 점이 픽셀 아래로 내려가 뭉갠다. 그래서 미니에서는
+ * **밝은 별만** 진행률만큼 켠다: 60%면 밝은 별의 60%가 켜지고, 양 끝이 다 켜진 변만 이어진다.
+ * 큰 별자리도 밝은 별부터 채우므로 같은 규칙이고, 작게 봐도 "얼마나 그렸나"가 읽힌다.
+ */
 export function MonthGlyph({
   monthKey,
   filled,
   needed,
   complete,
+  current = false,
+  future = false,
 }: {
   monthKey: string
   filled: number
   needed: number
   complete: boolean
+  /** 이번 달 — 지금 그리고 있는 것이라 테두리로 표시한다. */
+  current?: boolean
+  /** 아직 오지 않은 달 — 비어 있는 게 당연하므로 더 조용히. */
+  future?: boolean
 }) {
   const shape = constellationOfMonth(monthKey)
   const pct = Math.min(filled / Math.max(needed, 1), 1)
+  const lit = complete ? shape.points.length : Math.round(pct * shape.points.length)
+  const cls = [styles.glyph, current ? styles.glyphCurrent : '', future ? styles.glyphFuture : '']
+    .filter(Boolean)
+    .join(' ')
   return (
     <span
-      className={styles.glyph}
+      className={cls}
       title={`${monthKey} · ${shape.name} ${filled}/${needed}${complete ? ' 완성' : ''}`}
     >
-      <svg viewBox="0 0 24 24" aria-hidden className={styles.glyphSvg}>
-        <circle className={styles.glyphTrack} cx="12" cy="12" r="9" />
-        <circle
-          className={styles.glyphFill}
-          cx="12"
-          cy="12"
-          r="9"
-          pathLength={100}
-          strokeDasharray={`${pct * 100} 100`}
-        />
-        {complete ? (
-          <path className={styles.glyphStar} d={SPARKLE} transform="translate(12 12) rotate(90) scale(0.62)" />
-        ) : null}
+      <svg viewBox="0 0 100 68" className={styles.glyphSvg} role="img" aria-label={`${Number(monthKey.slice(5))}월 ${shape.name} ${filled}/${needed}`}>
+        {shape.edges.map(([a, b], i) => {
+          const p = shape.points[a]!
+          const q = shape.points[b]!
+          const on = a < lit && b < lit
+          return (
+            <line
+              key={i}
+              className={on ? `${styles.glyphEdge} ${styles.glyphEdgeOn}` : styles.glyphEdge}
+              x1={p[0]}
+              y1={p[1]}
+              x2={q[0]}
+              y2={q[1]}
+            />
+          )
+        })}
+        {shape.points.map(([x, y], i) => (
+          <circle
+            key={i}
+            className={i < lit ? `${styles.glyphStar} ${styles.glyphStarOn}` : styles.glyphStar}
+            cx={x}
+            cy={y}
+            r={i < lit ? 5 : 3}
+          />
+        ))}
       </svg>
-      {/* 월은 숫자로도 읽혀야 한다 — 고리 길이만으로는 어느 달인지 모른다(§8). */}
-      <span className={styles.glyphLabel}>{Number(monthKey.slice(5))}월</span>
+      {/* 월은 숫자로도 읽혀야 한다 — 모양만으로는 어느 달인지 모른다(§8). */}
+      <span className={styles.glyphLabel}>{Number(monthKey.slice(5))}</span>
     </span>
   )
 }
