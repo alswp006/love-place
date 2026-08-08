@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { dayKey } from '@/lib/calendar/eventDays'
@@ -39,10 +39,14 @@ export function useVisits(coupleId: string | null) {
     },
   })
 
+  // 같은 페이지에서 이 훅이 두 번 쓰이면 채널 토픽이 겹쳐
+  // 'cannot add postgres_changes callbacks ... after subscribe()'로 화면이 통째로 죽는다.
+  const channelKey = useId()
+
   useEffect(() => {
     if (!coupleId || !isSupabaseConfigured) return
     const channel = supabase
-      .channel(`visits:${coupleId}`)
+      .channel(`visits:${coupleId}:${channelKey}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'visits', filter: `couple_id=eq.${coupleId}` },
@@ -52,7 +56,7 @@ export function useVisits(coupleId: string | null) {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [coupleId, queryClient])
+  }, [coupleId, queryClient, channelKey])
 
   return query
 }

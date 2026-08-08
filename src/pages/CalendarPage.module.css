@@ -508,3 +508,57 @@
   box-shadow: var(--shadow-floating);
   z-index: 10;
 }
+
+/* 완료 체크 — 목록 각 줄 왼쪽(투두메이트 구조). 색이 아니라 ✓ 표시가 상태를 말한다(§8). */
+.doneBox {
+  /* ::before 원을 가운데 두려면 기준점이 필요하다. */
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  /* 터치 타깃 ≥44px(HIG) — 시각적 원은 22px, 나머지는 여백으로 확보 */
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.doneBox::before {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--c-border);
+  box-sizing: border-box;
+}
+
+.doneBoxOn::before {
+  border-color: var(--c-brand);
+  background: var(--c-brand);
+}
+
+.doneMark {
+  position: relative;
+  color: var(--c-cta-fg);
+  font-size: var(--fs-caption);
+  line-height: 1;
+  font-weight: 700;
+}
+
+.doneBox:focus-visible::before {
+  box-shadow: var(--focus-ring);
+}
+
+/* 끝난 일정은 조용해진다 — 지우지 않고 뒤로 물린다. */
+.eventItemDone .eventTitle {
+  text-decoration: line-through;
+  color: var(--c-text-weak);
+}
+
+.eventItemDone {
+  opacity: 0.7;
+}

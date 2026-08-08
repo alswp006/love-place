@@ -26,7 +26,7 @@ type LegacyTrashAlias = 'place' | 'event'
 export type OutboxKind =
   | 'wish.setPriority' | 'place.save'
   | 'visit.add' | 'visit.remove' | 'visit.review' | 'reaction.toggle' | 'wish.toggle'
-  | 'event.create' | 'event.update'
+  | 'event.create' | 'event.update' | 'event.done'
   | `${TrashTable}.delete` | `${TrashTable}.restore` // = 6×2(place/event/visit/photo/trip/itinerary delete·restore)
   | `${LegacyTrashAlias}.delete` | `${LegacyTrashAlias}.restore` // 레거시 단수(place/event) — 매핑 후 재생
 
@@ -43,6 +43,9 @@ type ReactionTogglePayload = { coupleId: string; placeId: string; myId: string }
 type WishTogglePayload = { coupleId: string; placeId: string; myId: string }
 type EventCreatePayload = { coupleId: string; myId: string; event: NewEvent }
 type EventUpdatePayload = { id: string; expectedVersion: number; patch: EventPatch; myId: string }
+type EventDonePayload = {
+  coupleId: string; eventId: string; occurrenceStart: string; myId: string
+}
 
 export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
   switch (entry.kind) {
@@ -105,6 +108,22 @@ export async function executeOutbox(entry: OutboxEntry): Promise<FlushOutcome> {
       const { error } = await supabase.from('visits').insert({
         couple_id: p.coupleId, place_id: p.placeId, trip_id: p.tripId, visit_date: p.visitDate,
         rating: p.rating, memo: p.memo, created_by: p.myId, updated_by: p.myId,
+      })
+      if (error) throw new Error(error.message)
+      return 'ok'
+    }
+    case 'event.done': {
+      // 재연결 시점의 실제 상태로 토글(방향을 큐에 고정하지 않음 — wish.toggle과 동형).
+      const p = entry.payload as EventDonePayload
+      const { data: live } = await supabase
+        .from('event_completions').select('id, version')
+        .eq('couple_id', p.coupleId).eq('event_id', p.eventId)
+        .eq('occurrence_start', p.occurrenceStart).is('deleted_at', null).limit(1)
+      const row = live?.[0] as { id: string; version: number } | undefined
+      if (row) return (await softDelete('event_completions', row.id, row.version, p.myId)).status
+      const { error } = await supabase.from('event_completions').insert({
+        couple_id: p.coupleId, event_id: p.eventId, occurrence_start: p.occurrenceStart,
+        created_by: p.myId, updated_by: p.myId,
       })
       if (error) throw new Error(error.message)
       return 'ok'

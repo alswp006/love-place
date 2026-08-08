@@ -7,6 +7,12 @@ import type { EventRow } from '@/hooks/useEvents'
 // Task 11(R2.3): 월 셀이 트랙 점만 보여주던 것 → 제목 칩 1-2개 + `+N`(overflow).
 // 칩은 색 단독 금지(§8) — 트랙 심볼(●/▲/■)을 텍스트로 동반. 셀 버튼 탭은 유지(칩은 비버튼 span).
 // 데이터 훅 mock 스타일은 calendarDeepLink.test.tsx와 동일.
+// 완료 체크(0021)는 오프라인 큐 프로바이더를 요구한다 — 페이지 테스트에서는 훅째로 목.
+vi.mock('@/hooks/useEventCompletions', () => ({
+  useEventCompletions: () => ({ data: [] }),
+  useToggleEventDone: () => ({ mutate: vi.fn(), isPending: false }),
+  occurrenceKey: (id: string, start: string) => `${id}@${start}`,
+}))
 vi.mock('@/state/auth', () => ({
   useAuth: () => ({ user: { id: 'u1' }, session: { user: { id: 'u1' } }, configured: true, initializing: false }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,

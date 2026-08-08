@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
@@ -44,10 +44,14 @@ export function useEvents(coupleId: string | null) {
   })
 
   // 상대가 일정을 바꾸면 즉시 반영(web-stack §4.3). 채널 cleanup으로 누수 방지.
+  // 같은 페이지에서 이 훅이 두 번 쓰이면 채널 토픽이 겹쳐
+  // 'cannot add postgres_changes callbacks ... after subscribe()'로 화면이 통째로 죽는다.
+  const channelKey = useId()
+
   useEffect(() => {
     if (!coupleId || !isSupabaseConfigured) return
     const channel = supabase
-      .channel(`events:${coupleId}`)
+      .channel(`events:${coupleId}:${channelKey}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'events', filter: `couple_id=eq.${coupleId}` },
@@ -57,7 +61,7 @@ export function useEvents(coupleId: string | null) {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [coupleId, queryClient])
+  }, [coupleId, queryClient, channelKey])
 
   return query
 }

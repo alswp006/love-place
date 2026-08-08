@@ -5,6 +5,8 @@ import { ScreenScaffold } from '@/components/common/ScreenScaffold'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Skeleton } from '@/components/common/Skeleton'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
+import { JourneyStrip } from '@/components/streak/JourneyStrip'
+import { useEventCompletions, useToggleEventDone, occurrenceKey } from '@/hooks/useEventCompletions'
 import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { EventSheet } from '@/components/calendar/EventSheet'
 import { ScopeSheet, type Scope } from '@/components/calendar/ScopeSheet'
@@ -52,6 +54,16 @@ export default function CalendarPage() {
   // 저장된 장소 목록 — Task 13: 아젠다 장소 칩(place_id→이름·지도 링크)에 id로 인덱싱해 쓴다.
   // (일정 폼은 '일정만' 관리 — 장소 연결 피커 제거. place_id는 추천 코스→일정·아젠다 칩에서만.)
   const { data: places } = usePlaces(coupleId)
+  // 완료 체크(0021) — 회차 단위 기록. 잔디·여정이 여기서 도출된다.
+  const { data: completions } = useEventCompletions(coupleId)
+  const toggleDone = useToggleEventDone(coupleId, myId)
+  const doneKeys = useMemo(
+    () => new Set((completions ?? []).map((c) => occurrenceKey(c.event_id, c.occurrence_start))),
+    [completions],
+  )
+  const onToggleDone = (eventId: string, occurrenceStart: string, done: boolean) =>
+    toggleDone.mutate({ eventId, occurrenceStart, done })
+
   const conflict = useConflict()
   // 권한거부(상대 PERSONAL 수정 시도) — 버전충돌과 분리해 별도 배너로 안내(Task 7). 시트는 유지.
   const permission = useConflict()
@@ -78,6 +90,9 @@ export default function CalendarPage() {
     return { year: Number(parts[0]), month0: Number(parts[1]) - 1 }
   })
   const [selected, setSelected] = useState(initialKey)
+  // 카테고리는 페이지가 들고 있다 — 목록 거르기와 잔디 거르기가 같은 축으로 움직여야 한다.
+  // (null = 전체. DayAgenda 안에 있던 상태를 여기로 올렸다.)
+  const [category, setCategory] = useState<string | null>(null)
   // 마운트 후 딥링크가 바뀌면(예: RecommendPage에서 추가 후 navigate) 선택일/뷰를 재시드.
   useEffect(() => {
     if (!(dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam))) return
@@ -355,6 +370,9 @@ export default function CalendarPage() {
   return (
     <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
       <div className={styles.container}>
+        {/* 여정·잔디 — 기본은 한 줄. 이 탭의 주인공은 캘린더라 접어 둔다. */}
+        <JourneyStrip categoryId={category === null ? undefined : category} />
+
         {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
         {permission.conflict ? (
           <ConflictBanner message="이 일정은 상대만 수정할 수 있어요." onDismiss={permission.clear} />
@@ -432,6 +450,10 @@ export default function CalendarPage() {
               placeById={placeById}
               categoryById={categoryById}
               readOnly={track === 'partner'}
+              category={category}
+              onCategoryChange={setCategory}
+              doneKeys={doneKeys}
+              onToggleDone={onToggleDone}
               // 지금 보고 있는 캘린더에 그대로 들어간다 — 함께 탭에서 적으면 함께 일정.
               quickAddVisibility={track === 'shared' ? 'SHARED' : 'PERSONAL'}
               onEdit={openEdit}
@@ -603,6 +625,10 @@ function DayAgenda({
   categoryById,
   readOnly,
   quickAddVisibility,
+  category,
+  onCategoryChange,
+  doneKeys,
+  onToggleDone,
   onEdit,
   onAdd,
   onDelete,
@@ -619,6 +645,12 @@ function DayAgenda({
   readOnly: boolean
   /** 한 줄 추가로 만들 일정의 트랙 — 지금 보고 있는 캘린더와 일치시킨다. */
   quickAddVisibility: 'SHARED' | 'PERSONAL'
+  /** 카테고리 선택(null = 전체) — 페이지가 들고 있다(잔디도 같은 축으로 걸러야 해서). */
+  category: string | null
+  onCategoryChange: (v: string | null) => void
+  /** 완료된 회차 키 집합(occurrenceKey). */
+  doneKeys: ReadonlySet<string>
+  onToggleDone: (eventId: string, occurrenceStart: string, done: boolean) => void
   onEdit: (ev: Occurrence<EventRow>) => void
   onAdd: () => void
   onDelete: (ev: Occurrence<EventRow>) => void
@@ -626,9 +658,6 @@ function DayAgenda({
 }) {
   // 목록 바로 삭제도 EventSheet와 같은 계약: 1탭은 지우지 않고 인라인 확인 먼저(실수 삭제 방지).
   const [confirmId, setConfirmId] = useState<string | null>(null)
-  // 카테고리 선택 하나가 '거르기'와 '붙이기'를 겸한다 — 지금 보고 있는 분류에 그대로 적힌다.
-  // null = 전체(거르지 않음 + 분류 없이 저장).
-  const [category, setCategory] = useState<string | null>(null)
   const shown = useMemo(
     () => (category === null ? events : events.filter((e) => e.category_id === category)),
     [events, category],
@@ -643,7 +672,7 @@ function DayAgenda({
         coupleId={coupleId}
         myId={myId}
         value={category}
-        onChange={setCategory}
+        onChange={onCategoryChange}
       />
 
       {/* 한 줄 추가 — 날짜 바로 아래(투두메이트 구조). 상대 캘린더는 보기 전용이라 렌더하지 않는다:
@@ -679,10 +708,34 @@ function DayAgenda({
             const place = ev.place_id ? placeById[ev.place_id] : undefined
             // 삭제된 카테고리를 가리키는 일정은 조용히 '분류 없음'으로 — 없는 이름을 지어내지 않는다.
             const category = ev.category_id ? categoryById[ev.category_id] : undefined
+            // 완료 체크는 회차 단위다 — 반복 일정의 오늘 회차만 끝난다(occurrence_start = ev.start).
+            const doneKey = occurrenceKey(ev.id, ev.start)
+            const isDone = doneKeys.has(doneKey)
+            // 상대의 개인 일정은 체크하지 않는다 — 남의 할 일을 대신 지우는 셈이다.
+            const canCheck = !readOnly && (ev.visibility === 'SHARED' || ev.owner_id === myId)
             return (
               <li key={ev.id}>
                 <div className={styles.eventRow}>
-                  <button type="button" className={styles.eventItem} onClick={() => onEdit(ev)}>
+                  {canCheck ? (
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={isDone}
+                      className={isDone ? `${styles.doneBox} ${styles.doneBoxOn}` : styles.doneBox}
+                      onClick={() => onToggleDone(ev.id, ev.start, !isDone)}
+                      aria-label={`${ev.title} ${isDone ? '완료 해제' : '완료'}`}
+                    >
+                      {/* 색만으로 상태를 말하지 않는다(§8) — 체크 표시 자체가 신호다. */}
+                      <span className={styles.doneMark} aria-hidden>
+                        {isDone ? '✓' : ''}
+                      </span>
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={isDone ? `${styles.eventItem} ${styles.eventItemDone}` : styles.eventItem}
+                    onClick={() => onEdit(ev)}
+                  >
                     <span className={styles.eventBar} style={{ background: meta.cssVar }} aria-hidden />
                     <span className={styles.eventTime}>{ev.is_all_day ? '종일' : formatTime(ev.start)}</span>
                     <span className={styles.eventTitle}>{ev.title}</span>

@@ -241,3 +241,57 @@ test('다가오는 일정 피드 카드 — 지도 화면에 승격', async ({ p
   await expect(page.getByRole('region', { name: '다가오는 일정' })).toBeVisible()
   await expect(page.getByText('다가오는 데이트')).toBeVisible()
 })
+
+test('완료 체크 — 회차 단위로 기록되고 여정이 한 걸음 나아간다', async ({ page }) => {
+  const D = '2030-03-15'
+  const ev = {
+    id: 'ed1', title: '아침 운동',
+    start: `${D}T07:00:00+09:00`, end: `${D}T08:00:00+09:00`,
+    is_all_day: false, time_zone: 'Asia/Seoul', visibility: 'SHARED', participants: 'BOTH',
+    owner_id: USER_A, place_id: null, memo: null, recurrence_rule: null, reminders: [], version: 1,
+    category_id: null,
+  }
+  await seedAuthedMap(page, { events: [ev] })
+  // 체크 POST 본문을 가로채 실제로 나가는 값을 본다(페이지→컴포넌트 배선 회귀).
+  const posted: Record<string, unknown>[] = []
+  await page.route('**/e2e.supabase.co/rest/v1/event_completions**', async (route) => {
+    if (route.request().method() === 'POST') {
+      posted.push(JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>)
+      return route.fulfill({ status: 201, contentType: 'application/json', body: '[]' })
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  })
+  await page.goto(`/calendar?date=${D}`)
+
+  const box = page.getByRole('checkbox', { name: /아침 운동 완료/ })
+  await expect(box).toHaveAttribute('aria-checked', 'false')
+  // 터치 타깃(ux §1).
+  expect((await box.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  await box.click()
+
+  await expect.poll(() => posted.length).toBe(1)
+  // occurrence_start는 그 회차의 시작이어야 한다 — 반복 일정에서 전체가 완료되는 것을 막는 핵심.
+  expect(posted[0]).toMatchObject({
+    event_id: 'ed1',
+    occurrence_start: `${D}T07:00:00+09:00`,
+    created_by: USER_A,
+  })
+})
+
+test('여정 스트립 — 기본은 한 줄, 펼치면 길과 12주 기록', async ({ page }) => {
+  await seedAuthedMap(page, { events: [] })
+  await page.goto('/calendar')
+
+  // 캘린더 자리를 뺏지 않게 접혀 있다(지도 알림과 같은 규약).
+  const pill = page.getByRole('button', { name: /잔디 펼치기/ })
+  await expect(pill).toBeVisible()
+  expect((await pill.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  await expect(page.getByRole('region', { name: '우리의 여정' })).toHaveCount(0)
+
+  await pill.click()
+  await expect(page.getByRole('region', { name: '우리의 여정' })).toBeVisible()
+  // 그림만으로 말하지 않는다(§8) — 걸음 수·범례가 글자로 함께 있다.
+  await expect(page.getByText('일정을 체크하면 한 걸음씩 나아가요')).toBeVisible()
+  await expect(page.getByRole('img', { name: /최근 12주 완료 기록/ })).toBeVisible()
+  await expect(page.getByText('함께', { exact: true }).last()).toBeVisible()
+})

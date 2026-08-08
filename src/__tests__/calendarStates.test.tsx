@@ -14,6 +14,12 @@ let coupleState: CoupleState = { status: 'ACTIVE' }
 let eventsState: { data: EventRow[]; isLoading: boolean } = { data: [], isLoading: false }
 let placesState: { data: PlaceRow[]; isLoading: boolean } = { data: [], isLoading: false }
 
+// 완료 체크(0021)는 오프라인 큐 프로바이더를 요구한다 — 페이지 테스트에서는 훅째로 목.
+vi.mock('@/hooks/useEventCompletions', () => ({
+  useEventCompletions: () => ({ data: [] }),
+  useToggleEventDone: () => ({ mutate: vi.fn(), isPending: false }),
+  occurrenceKey: (id: string, start: string) => `${id}@${start}`,
+}))
 vi.mock('@/state/auth', () => ({
   useAuth: () => ({ user: { id: 'u1' }, session: { user: { id: 'u1' } }, configured: true, initializing: false }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,

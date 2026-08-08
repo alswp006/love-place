@@ -1,0 +1,172 @@
+/* 접힌 줄 — 캘린더 위 한 줄. 이 탭의 주인공은 캘린더라서 기본은 여기까지만 보인다. */
+.pill {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-radius: var(--r-pill);
+  padding: 0 var(--sp-3);
+  cursor: pointer;
+  text-align: left;
+  /* 터치 타깃 ≥44px(HIG) */
+  min-height: 48px;
+}
+
+.pillPath {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  max-width: 180px;
+}
+
+.pillText {
+  flex-shrink: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  font-variant-numeric: tabular-nums;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--c-text-weak);
+  font-size: var(--fs-caption);
+}
+
+.open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+}
+
+.lead {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.gridTitle {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+  font-weight: 600;
+}
+
+.gridWrap {
+  display: flex;
+  gap: var(--sp-2);
+  /* 12주가 좁은 화면에서 넘치면 가로로만 스크롤한다(본문은 절대 가로 스크롤하지 않는다). */
+  overflow-x: auto;
+}
+
+.dow {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+  font-size: var(--fs-micro);
+  color: var(--c-text-weak);
+  flex-shrink: 0;
+}
+
+.dow li {
+  display: flex;
+  align-items: center;
+  height: 12px;
+}
+
+.grid {
+  display: flex;
+  gap: 3px;
+}
+
+.col {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+}
+
+/* 칸 — 색만으로 말하지 않는다(§8). 단계는 '크기'로도 드러나고 0칸은 점선 테두리다. */
+.cell {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--c-surface-2);
+  flex-shrink: 0;
+}
+
+.lv0 {
+  background: transparent;
+  border: 1px dashed var(--c-border);
+}
+
+.lv1 {
+  transform: scale(0.55);
+}
+
+.lv2 {
+  transform: scale(0.78);
+}
+
+.lv3 {
+  transform: scale(1);
+}
+
+.lv4 {
+  transform: scale(1);
+  box-shadow: 0 0 0 2px var(--c-brand-weak);
+}
+
+.mine {
+  background: var(--c-track-mine);
+}
+
+.partner {
+  background: var(--c-track-partner);
+}
+
+.shared {
+  background: var(--c-track-shared);
+}
+
+.none {
+  background: transparent;
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  font-size: var(--fs-micro);
+  color: var(--c-text-weak);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.collapse {
+  align-self: center;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-weak);
+  border-radius: var(--r-pill);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  min-height: 44px;
+}

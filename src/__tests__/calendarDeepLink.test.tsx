@@ -5,6 +5,12 @@ import { MemoryRouter } from 'react-router-dom'
 
 // CalendarPage의 데이터 훅을 mock(placeSheet/usPageTrash 테스트와 동일 스타일).
 // 커플 ACTIVE + 이벤트 빈 상태로 두고 ?date= 딥링크가 선택일/월 그리드를 시드하는지만 검증.
+// 완료 체크(0021)는 오프라인 큐 프로바이더를 요구한다 — 페이지 테스트에서는 훅째로 목.
+vi.mock('@/hooks/useEventCompletions', () => ({
+  useEventCompletions: () => ({ data: [] }),
+  useToggleEventDone: () => ({ mutate: vi.fn(), isPending: false }),
+  occurrenceKey: (id: string, start: string) => `${id}@${start}`,
+}))
 vi.mock('@/state/auth', () => ({
   useAuth: () => ({ user: { id: 'u1' }, session: { user: { id: 'u1' } }, configured: true, initializing: false }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,

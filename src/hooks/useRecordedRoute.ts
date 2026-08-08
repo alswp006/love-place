@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useId } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { parseRoutePoints, type RoutePoint } from '@/lib/journey/types'
@@ -31,10 +31,14 @@ export function useRecordedRoute(
     },
   })
 
+  // 같은 페이지에서 이 훅이 두 번 쓰이면 채널 토픽이 겹쳐
+  // 'cannot add postgres_changes callbacks ... after subscribe()'로 화면이 통째로 죽는다.
+  const channelKey = useId()
+
   useEffect(() => {
     if (!coupleId || !sessionId || !isSupabaseConfigured) return
     const ch = supabase
-      .channel(`trip_sessions:${sessionId}`)
+      .channel(`trip_sessions:${sessionId}:${channelKey}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'trip_sessions', filter: `id=eq.${sessionId}` },
@@ -46,7 +50,7 @@ export function useRecordedRoute(
     return () => {
       void supabase.removeChannel(ch)
     }
-  }, [coupleId, sessionId, qc])
+  }, [coupleId, sessionId, qc, channelKey])
 
   const points = q.data ?? []
   const polyline = useMemo(() => simplifyPath(points), [points])

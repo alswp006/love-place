@@ -11,6 +11,7 @@ export type SeedTables = {
   visits?: unknown[]
   reactions?: unknown[]
   profiles?: unknown[]
+  eventCompletions?: unknown[]
   events?: unknown[]
   eventCategories?: unknown[]
   trips?: unknown[]
@@ -85,6 +86,11 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
   // 캘린더(§5.1) — events REST. 미시드 시 빈 배열(연결됨-빈 CTA 경로). Realtime은 abort로 폴백.
   await page.route('**/e2e.supabase.co/rest/v1/events**', jsonRoute(tables.events ?? []))
   // 일정 카테고리(0020) — 미시드면 빈 목록. 라우팅을 빼두면 쿼리가 끝나지 않아 '불러오는 중'에 갇힌다.
+  // 일정 완료 기록(0021) — 미시드면 빈 목록(잔디 0칸).
+  await page.route(
+    '**/e2e.supabase.co/rest/v1/event_completions**',
+    jsonRoute(tables.eventCompletions ?? []),
+  )
   await page.route(
     '**/e2e.supabase.co/rest/v1/event_categories**',
     jsonRoute(tables.eventCategories ?? []),

@@ -1,0 +1,94 @@
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* 접힌 줄에서는 낮게 — 한 줄 안에 들어가야 한다. */
+.compact {
+  max-height: 44px;
+}
+
+/* 남은 길 = 점선, 걸어온 길 = 실선. 색이 아니라 선 모양으로 구분한다(§8). */
+.roadRest {
+  fill: none;
+  stroke: var(--c-border);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 3 5;
+}
+
+.roadDone {
+  fill: none;
+  stroke: var(--c-brand);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+.station {
+  font-size: 15px;
+}
+
+/* 아직 못 간 정거장 — 흐리게. 도착하면 또렷해진다(색 변화 + 크기 팝). */
+.stationNext {
+  opacity: 0.45;
+}
+
+.stationPop {
+  animation: pop var(--motion-base) var(--ease);
+  transform-origin: center;
+}
+
+.stationLabel {
+  font-size: 9px;
+  fill: var(--c-text-weak);
+}
+
+.walker {
+  transition: transform var(--motion-base) var(--ease);
+}
+
+.hands {
+  stroke: var(--c-text-weak);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.me,
+.you {
+  stroke: var(--c-surface);
+  stroke-width: 1.5;
+}
+
+.confetti circle {
+  fill: var(--c-brand);
+  animation: rise 700ms var(--ease) forwards;
+}
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  55% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+
+@keyframes rise {
+  0% { opacity: 0; transform: translateY(6px); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+
+/* 장식 모션은 Reduce Motion에서 생략한다(ux §5) — 최종 상태만 즉시 보인다. */
+@media (prefers-reduced-motion: reduce) {
+  .walker {
+    transition: none;
+  }
+
+  .stationPop {
+    animation: none;
+  }
+
+  .confetti {
+    display: none;
+  }
+}
