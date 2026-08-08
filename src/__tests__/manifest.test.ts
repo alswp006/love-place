@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
+import { parseColor } from '@/lib/a11y/contrast'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -12,6 +13,13 @@ type Manifest = {
   display?: string
   theme_color?: string
   icons?: Array<{ sizes: string; purpose: string }>
+}
+
+/** OKLCH 토큰 → #rrggbb. manifest.theme_color는 hex만 받는다. */
+function toHex(color: string): string {
+  const { r, g, b } = parseColor(color)
+  const c = (v: number) => Math.round(v * 255).toString(16).padStart(2, '0')
+  return `#${c(r)}${c(g)}${c(b)}`
 }
 
 describe('PWA manifest', () => {
@@ -50,7 +58,11 @@ describe('PWA manifest', () => {
       if (!raw) return undefined
       const ref = raw.match(/var\((--[\w-]+)\)/)
       if (ref) return resolveVar(ref[1]!, depth + 1)
-      return raw.match(/#[0-9a-fA-F]{6}/)?.[0]?.toLowerCase()
+      // 토큰은 OKLCH로 authoring한다 — manifest는 hex만 받으므로 여기서 변환해 비교한다.
+      const hex = raw.match(/#[0-9a-fA-F]{6}/)?.[0]?.toLowerCase()
+      if (hex) return hex
+      const ok = raw.match(/oklch\([^)]+\)/)?.[0]
+      return ok ? toHex(ok) : undefined
     }
     const brand = resolveVar('--c-brand')
     expect(brand).toBeTruthy()

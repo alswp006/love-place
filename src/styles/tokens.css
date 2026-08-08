@@ -1,55 +1,77 @@
 /*
- * 디자인 토큰 — 마시멜로 디자인 시스템(docs/superpowers/specs/2026-06-21-marshmallow-design-adoption.md)
- * - 핑크크림+옐로 2색(표면/버튼) + 시맨틱 + 아바타페어(트랙/프로필). 그라데이션·검정 그림자 금지.
- * - 색은 전부 CSS 변수 → 다크 모드(prefers-color-scheme) 대응(잠정 다크값, 진짜 다크는 후속 라운드).
- * - 트랙/상태는 색만으로 구분하지 않는다(색 + 패턴/라벨, 색각 이상 대응).
- * - 마시멜로 1급 토큰 + 호환 별칭(--c-*) 레이어(R7에서 별칭 삭제).
+ * 디자인 토큰 — OKLCH 기반 팔레트(2026-08 리셋)
+ *
+ * 왜 다시 세웠나: 이전 '마시멜로' 팔레트(docs/superpowers/specs/2026-06-21-marshmallow-design-adoption.md)는
+ *   **배경까지 핑크**(#fff1f4)라 화면 전체가 한 색조였다. 그러면 표면 위계가 안 생기고
+ *   카드가 떠 보이지 않아, 예쁘긴 해도 제품으로는 안 읽힌다.
+ *   → 배경·표면·잉크는 **중성(아주 옅은 웜 그레이)**, 핑크는 **액션·강조에만**. 그 결정만 바뀌었고
+ *     "색 단독 금지·검정 그림자 지양·변수 이름" 같은 나머지 계약은 그대로다.
+ *
+ * 왜 OKLCH인가: W3C Design Tokens 스펙 v1(2025-10)이 색 토큰 표준으로 지정했고, 밝기(L)가
+ *   지각적으로 균일하다 — L만 맞추면 색조가 달라도 대비가 같다. 트랙 3색(민트/핑크/라벤더)을
+ *   전부 L≈52%로 놓아 **어느 트랙이든 대비가 동일**하게 만든 게 그 효과다.
+ *   다크도 hex를 손으로 두 벌 쓰지 않고 L만 뒤집어 파생한다.
+ *   채도는 0.15 이하로 묶는다(그 위는 P3 전용이라 sRGB 화면에서 잘린다).
+ *
+ * hex 폴백을 두지 않는 이유: oklch()는 Safari 15.4+/Chrome 111+에서 지원되고, 이 앱의 하한선
+ *   (PWA 웹푸시 iOS 16.4+, Capacitor WKWebView)이 이미 그보다 높다. 폴백을 두면 두 벌 관리가
+ *   되살아나 OKLCH로 옮긴 이유가 사라진다.
  */
 
 :root {
   color-scheme: light dark;
 
-  /* ── 마시멜로 1급 토큰(정본) ── */
-  /* 표면 */
-  --bg: #fff1f4;
-  --surface: #ffffff;
-  --surface-soft: #fff7f3;
-  /* 잉크(검정 금지·자두). ink-muted=대비 보정값, ink-faint=텍스트 금지(구분선/장식만) */
-  --ink: #6b4a52;
-  --ink-muted: #8e6b74;
-  --ink-faint: #c9b2b8;
-  /* 라인 */
-  --line: #fad9e0;
-  --line-strong: #f3c4d0;
-  /* 핑크(브랜드) */
-  --pink-100: #ffe0e8;
-  --pink-200: #ffc9d6;
-  --pink-400: #ff93ac;
-  --pink-600: #e2638a;
-  --pink-ink: #b23a60;
-  /* 옐로(액센트) */
-  --yellow-100: #fff0c2;
-  --yellow-300: #ffd86b;
-  --yellow-ink: #9a7a1e;
-  /* 아바타페어(트랙·프로필 4색의 채도 버전) */
-  --mint: #dcf1ea;
-  --mint-ink: #2f7d62; /* ok 민트(#4fb58a)와 명도 분리 — 더 진하게 */
-  --lavender: #ece4fb;
-  --lavender-ink: #6e5aa8;
+  /* ── 표면 ── 중성(웜 뉴트럴). 핑크 색조를 아주 희미하게만 남겨 브랜드 온기를 유지한다. */
+  --bg: oklch(98.5% 0.006 350);
+  --surface: oklch(100% 0 0);
+  --surface-soft: oklch(97% 0.008 350);
+
+  /* ── 잉크 ── 검정 대신 깊은 자두. ink-faint는 텍스트 금지(구분선·장식만). */
+  --ink: oklch(28% 0.02 340); /* on --bg 14.1:1 */
+  --ink-muted: oklch(46% 0.02 340); /* on --bg 6.9:1 — 본문 AA 통과 */
+  --ink-faint: oklch(72% 0.015 340);
+
+  /* ── 라인 ── */
+  --line: oklch(92% 0.008 350);
+  --line-strong: oklch(86% 0.012 350);
+
+  /* ── 핑크(브랜드) ── 이제 배경이 아니라 액션·강조 전용.
+     pink-600을 L53%로 낮춰 흰 글자와 5.7:1 — 이전 팔레트(3.29:1)에서 '큰 버튼 전용'이던 제약이 풀렸다.
+     채도는 0.15로 묶는다(그 위는 P3 전용이라 sRGB 화면에서 잘린다 — ok-ink·yellow-ink가 실제로 잘려 내렸다). */
+  --pink-100: oklch(95.5% 0.02 8);
+  --pink-200: oklch(89% 0.05 8);
+  --pink-400: oklch(74% 0.13 8);
+  --pink-600: oklch(53% 0.15 8);
+  --pink-ink: oklch(43% 0.14 8);
+
+  /* ── 옐로(액센트) ── */
+  --yellow-100: oklch(96% 0.05 90);
+  --yellow-300: oklch(86% 0.13 90);
+  --yellow-ink: oklch(52% 0.09 85);
+
+  /* ── 트랙/프로필 ── 셋 다 L≈52~53%: 색조만 다르고 대비는 같다(5.0~5.5:1). OKLCH를 쓰는 이유다. */
+  --mint: oklch(95% 0.03 165);
+  --mint-ink: oklch(52% 0.11 165);
+  --lavender: oklch(95% 0.022 295);
+  --lavender-ink: oklch(52% 0.13 295);
+
   /* 좋아요(텍스트 색 금지 — 형태 이중화 전용) */
-  --like: #ff7c97;
-  /* 시맨틱(소프트 + ink) */
-  --ok: #4fb58a;
-  --ok-soft: #def3ea;
-  --ok-ink: #2e7a5c;
-  --danger: #e06b6b;
-  --danger-soft: #fbe4e2;
-  --danger-ink: #b23a3a;
-  /* 그림자(핑크틴트 3단계 — 회색/검정 금지) */
-  --shadow-raised: 0 2px 10px rgba(255, 150, 180, 0.1);
-  --shadow-floating: 0 10px 28px rgba(255, 150, 180, 0.18);
-  --focus-ring: 0 0 0 3px rgba(255, 150, 180, 0.28);
-  /* 반경 6단계(마시멜로 --r-* — 기존 --radius/--radius-sm와 충돌 없음) */
+  --like: oklch(65% 0.15 10);
+
+  /* ── 시맨틱 ── */
+  --ok: oklch(60% 0.13 160);
+  --ok-soft: oklch(95% 0.03 160);
+  --ok-ink: oklch(45% 0.10 160);
+  --danger: oklch(58% 0.15 25);
+  --danger-soft: oklch(95% 0.022 25);
+  --danger-ink: oklch(46% 0.15 25);
+
+  /* ── 그림자 ── 핑크 틴트를 걷고 중성 자두 알파로. 두 겹(접촉 그림자 + 확산)이라야 떠 보인다. */
+  --shadow-raised: 0 1px 2px oklch(28% 0.02 340 / 0.07), 0 4px 14px oklch(28% 0.02 340 / 0.08);
+  --shadow-floating: 0 2px 6px oklch(28% 0.02 340 / 0.08), 0 10px 28px oklch(28% 0.02 340 / 0.14);
+  --focus-ring: 0 0 0 3px oklch(53% 0.15 8 / 0.32);
+
+  /* 반경 6단계 */
   --r-xs: 8px;
   --r-sm: 12px;
   --r-md: 14px;
@@ -57,14 +79,14 @@
   --r-xl: 28px;
   --r-pill: 999px;
 
-  /* ── 호환 별칭(마이그레이션 동안만 — R7에서 삭제) ── */
+  /* ── 별칭(컴포넌트가 쓰는 이름 — 이름은 유지, 값만 위에서 바뀐다) ── */
   --c-brand: var(--pink-600);
   --c-brand-weak: var(--pink-200);
-  --c-cta-bg: var(--pink-600); /* pink-600+흰글자=3.29:1 → 큰 CTA 버튼 전용(spec §5) */
-  --c-cta-fg: #ffffff;
-  --c-track-mine: var(--mint-ink); /* 나 = 민트 */
-  --c-track-partner: var(--pink-600); /* 상대 = 핑크 */
-  --c-track-shared: var(--lavender-ink); /* 함께 = 라벤더 */
+  --c-cta-bg: var(--pink-600);
+  --c-cta-fg: oklch(100% 0 0);
+  --c-track-mine: var(--mint-ink);
+  --c-track-partner: var(--pink-600);
+  --c-track-shared: var(--lavender-ink);
   --c-bg: var(--bg);
   --c-surface: var(--surface);
   --c-surface-2: var(--surface-soft);
@@ -73,30 +95,26 @@
   --c-border: var(--line);
   --c-danger: var(--danger);
   --c-success: var(--ok);
-  --c-accent: var(--pink-600); /* 미정의였던 accent(포커스 아웃라인/선택) → 핑크로 정의(R6에서 정리) */
+  --c-accent: var(--pink-600);
 
-  /* 타이포 — 본문 Pretendard / 제목 Jua. 둘 다 npm self-host(main.tsx에서 CSS import).
-     이전 디스플레이 폰트는 Quicksand였는데 라틴 전용이라 한글 제목이 전부 Pretendard로
-     폴백됐다 = 제목과 본문이 같은 폰트. 한글 글리프가 있는 Jua로 바꿔 실제로 갈리게 한다.
-     상대단위만 쓴다(Dynamic Type 존중 §4). */
+  /* 타이포 — 본문 Pretendard / 제목 Jua. 상대단위만 쓴다(Dynamic Type 존중 §4). */
   --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-display: 'Jua', 'Pretendard', -apple-system, sans-serif;
-  --fs-h1: 1.75rem; /* 페이지 라지 타이틀 상향 */
+  --fs-h1: 1.75rem;
   --fs-title: 1.5rem;
-  --fs-h2: 1.125rem; /* 섹션 <h2> */
+  --fs-h2: 1.125rem;
   --fs-body: 1rem;
-  --fs-label: 0.875rem; /* 칩/배지/라벨 */
+  --fs-label: 0.875rem;
   --fs-caption: 0.8125rem;
-  --fs-micro: 0.7rem; /* 초소형 배지 */
+  --fs-micro: 0.7rem;
 
   /* 간격/모서리 */
   --sp-1: 0.25rem;
   --sp-2: 0.5rem;
   --sp-3: 0.75rem;
   --sp-4: 1rem;
-  --sp-5: 1.25rem; /* 4→6 갭(타입스케일 램프 게이트가 보장) */
+  --sp-5: 1.25rem;
   --sp-6: 1.5rem;
-  /* 반경 별칭(시각 무회귀): --radius=14=r-md, --radius-sm=8=r-xs. 신규 프리미티브는 --r-* 사용. */
   --radius: var(--r-md);
   --radius-sm: var(--r-xs);
 
@@ -104,16 +122,10 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
-  /* 레이아웃 상수 — 중복 매직넘버 단일화(research 01 §9·§10·§15).
-     --tabbar-h: 하단 탭바 실효 높이(앱 전역에서 72px로 박혀 있던 값).
-     --sheet-peek-h: 드래그 시트 peek 밴드 높이(콘텐츠 기반 고정 px — 아래 인라인 주석 참고).
-       peek 밴드는 viewport 진짜 하단(bottom:0)에서 측정되며 시트가 하단 safe-area를 자체 흡수하므로,
-       지도 인셋에 --safe-bottom을 추가로 더하지 않는다(이중 가산 금지). */
+  /* 레이아웃 상수 — 중복 매직넘버 단일화. peek 밴드는 시트가 하단 safe-area를 자체 흡수하므로
+     지도 인셋에 --safe-bottom을 추가로 더하지 않는다(이중 가산 금지). */
   --tabbar-h: 72px;
-  /* peek 밴드 = 콘텐츠 기반 고정 px(핸들+요약+필터 칩 높이 근사). 비율(dvh) 대신 고정 px로
-     JS innerHeight와 어긋나지 않게 한다(research 01 §15.4). half/full만 비율(sheetSnap). */
   --sheet-peek-h: calc(112px + var(--safe-bottom));
-  /* --app-vh: JS가 측정한 뷰포트 높이(px). 미설정 초기값은 100dvh로 폴백(setAppVh가 곧 덮어씀). */
   --app-vh: 100dvh;
 
   /* 모션 토큰(§5 Reduce Motion에서 0으로 덮어씀) */
@@ -124,42 +136,51 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* 마시멜로 잠정 다크(어두운 자두/로즈 — 라이트 단순반전 금지, 진짜 팔레트는 후속 라운드).
-       1급 토큰을 override → 호환 별칭(--c-*)이 자동 추종. 다크=라이트 평탄화 금지(스냅샷 게이트). */
-    --bg: #241016;
-    --surface: #2e1820;
-    --surface-soft: #3a2129;
-    --ink: #ffe3ea;
-    --ink-muted: #d7a9b4;
-    --ink-faint: #9c7782;
-    --line: #4a2c36;
-    --line-strong: #5e3b46;
-    --pink-100: #4a2230;
-    --pink-200: #5e2c3d;
-    --pink-400: #ff9db4;
-    --pink-600: #ff9db4;
-    --pink-ink: #ffc2d2;
-    --yellow-300: #ffd86b;
-    --yellow-ink: #ffe6a6;
-    --mint-ink: #7fd3b3;
-    --lavender-ink: #c3aef0;
-    --like: #ff8fa6;
-    --ok: #6fb98a;
-    /* soft(칩 배경)도 반드시 다크값을 준다 — ink만 밝게 바꾸고 soft를 라이트값(#def3ea)으로 두면
-       밝은 잉크가 밝은 배경에 얹혀 대비 1.23:1로 글자가 사라진다('여행 중' 상태 칩). */
-    --ok-soft: #1f3a31;
-    --ok-ink: #a8e6c6;
-    --danger: #e87a6d;
-    --danger-soft: #4a2523;
-    --danger-ink: #ffb3aa;
-    /* 다크 그림자는 어두운 표면 위 깊이 표현용으로 검정 알파 허용(라이트 '검정 금지'는 밝은 표면 전용). */
-    --shadow-raised: 0 2px 10px rgba(0, 0, 0, 0.4);
-    --shadow-floating: 0 10px 28px rgba(0, 0, 0, 0.55);
-    --c-cta-fg: #2e1820; /* 다크: 밝은 핑크 위 어두운 글자 */
+    /* 다크는 라이트의 단순 반전이 아니라 **같은 색조에서 L만 뒤집은 것**이다.
+       OKLCH라 L만 맞추면 색조가 달라도 대비가 같으므로, 라이트에서 잡은 위계가 그대로 산다. */
+    --bg: oklch(16% 0.012 340);
+    --surface: oklch(21% 0.014 340);
+    --surface-soft: oklch(25% 0.016 340);
+    --ink: oklch(96% 0.012 340);
+    --ink-muted: oklch(74% 0.02 340); /* on --bg 8.4:1 */
+    --ink-faint: oklch(52% 0.02 340);
+    --line: oklch(30% 0.018 340);
+    --line-strong: oklch(38% 0.02 340);
+
+    /* 밝은 표면 위에서 쓰던 진한 핑크를 그대로 두면 어두운 배경에서 묻힌다 — L을 올린다. */
+    --pink-100: oklch(28% 0.06 8);
+    --pink-200: oklch(35% 0.08 8);
+    --pink-400: oklch(72% 0.14 8);
+    --pink-600: oklch(78% 0.13 8);
+    --pink-ink: oklch(86% 0.06 8);
+
+    --yellow-100: oklch(30% 0.06 90);
+    --yellow-300: oklch(86% 0.13 90);
+    --yellow-ink: oklch(88% 0.09 90);
+
+    --mint: oklch(28% 0.05 165);
+    --mint-ink: oklch(78% 0.11 165);
+    --lavender: oklch(28% 0.05 295);
+    --lavender-ink: oklch(78% 0.11 295);
+    --like: oklch(72% 0.14 10);
+
+    /* soft(칩 배경)도 반드시 다크값을 준다 — ink만 밝게 바꾸고 soft를 라이트값으로 두면
+       밝은 잉크가 밝은 배경에 얹혀 글자가 사라진다('여행 중' 상태 칩에서 실제로 났던 버그). */
+    --ok: oklch(72% 0.12 160);
+    --ok-soft: oklch(28% 0.05 160);
+    --ok-ink: oklch(84% 0.1 160);
+    --danger: oklch(70% 0.14 25);
+    --danger-soft: oklch(28% 0.06 25);
+    --danger-ink: oklch(84% 0.07 25);
+
+    /* 다크에서는 검정 알파 그림자가 맞다(밝은 표면 전용 규칙의 예외). */
+    --shadow-raised: 0 1px 2px oklch(0% 0 0 / 0.3), 0 4px 12px oklch(0% 0 0 / 0.35);
+    --shadow-floating: 0 2px 6px oklch(0% 0 0 / 0.4), 0 10px 28px oklch(0% 0 0 / 0.5);
+
+    --c-cta-fg: oklch(18% 0.014 340); /* 밝은 핑크 위 어두운 글자 */
   }
 }
 
-/* Reduce Motion — 장식 모션 제거(§5) */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-fast: 0ms;
