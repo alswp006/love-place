@@ -1,0 +1,44 @@
+/* 전국 지도 카드 — 여행 목록 위. 목록을 밀어내지 않게 세로를 아낀다. */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap; /* 글자 200%에서 겹치지 않게(§4) */
+  justify-content: center;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  color: var(--c-text);
+}
+
+.meta {
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+/* 지도만 그린 캔버스. 비율은 한국 실루엣 그대로 — 늘리면 한국이 아니게 된다.
+   높이를 제한해 목록을 밀어내지 않게 한다(이 탭의 주인공은 여전히 여행 목록이다). */
+.canvas {
+  width: auto;
+  height: auto;
+  max-height: 34vh;
+  max-width: 100%;
+  aspect-ratio: 560 / 1020;
+}
+
+.share {
+  width: 100%;
+}

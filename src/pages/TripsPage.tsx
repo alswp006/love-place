@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Chip } from '@/components/ui/Chip'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
+import { YearMapCard } from '@/components/recap/YearMapCard'
 import { useTrips, useCreateTrip, useDeleteTrip } from '@/hooks/useTrips'
 import { useEvents } from '@/hooks/useEvents'
 import { useVisits } from '@/hooks/useVisits'
@@ -184,6 +185,9 @@ export default function TripsPage() {
         />
       ) : (
         <>
+          {/* 전국 지도 — 여행이 쌓일수록 채워지는 그림. 목록보다 위에 둔다:
+              이 탭에 들어오는 이유가 '어디 갈까'만이 아니라 '우리 얼마나 다녔지'이기도 하다. */}
+          <YearMapCard coupleId={coupleId} />
           <div className={styles.viewToggle} role="group" aria-label="보기 전환">
             <button
               type="button"

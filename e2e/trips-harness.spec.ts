@@ -178,6 +178,43 @@ test('목록 — 만들기 FAB + 지난 여행 섹션', async ({ page }) => {
   await expect(page.getByText(/일 전$/)).toBeVisible()
 })
 
+// ── 전국 지도(우리가 다닌 N년) ──
+// 오래 쓸수록 채워지는 그림 = 자랑 아티팩트이자 계속 쓸 이유. 목록보다 위에 있어야 한다.
+test('목록 — 전국 지도 카드가 목록 위에 있고 그림·글자로 함께 말한다', async ({ page }) => {
+  const year = new Date().getFullYear()
+  await seedAuthedMap(page, {
+    trips: TRIPS,
+    events: EVENTS,
+    places: [
+      { id: 'p1', name: '속초 칠성조선소', address: '강원 속초시', region_label: '속초',
+        lat: 38.2, lng: 128.59, category: '카페', kakao_place_id: 'k1',
+        added_by: '00000000-0000-4000-8000-000000000a01', version: 1 },
+      { id: 'p2', name: '부산 흰여울', address: '부산', region_label: '부산',
+        lat: 35.09, lng: 129.03, category: '관광', kakao_place_id: 'k2',
+        added_by: '00000000-0000-4000-8000-000000000a01', version: 1 },
+    ],
+    visits: [
+      { id: 'v1', place_id: 'p1', trip_id: null, visit_date: `${year}-03-01`, rating: null,
+        memo: null, version: 1, created_by: '00000000-0000-4000-8000-000000000a01' },
+      { id: 'v2', place_id: 'p2', trip_id: null, visit_date: `${year}-05-02`, rating: null,
+        memo: null, version: 1, created_by: '00000000-0000-4000-8000-000000000a01' },
+    ],
+  })
+  await page.goto('/trips')
+
+  const card = page.getByRole('region', { name: new RegExp(`우리가 다닌 ${year} 지도`) })
+  await expect(card).toBeVisible()
+  // 그림만으로 말하지 않는다(§8) — 캔버스에 접근 이름이 있고, 같은 내용이 글자로도 있다.
+  await expect(card.getByRole('img', { name: /2개 지역 2곳/ })).toBeVisible()
+  await expect(card.getByText('2개 지역 · 2곳')).toBeVisible()
+  await expect(card.getByRole('button', { name: '지도 공유하기' })).toBeVisible()
+
+  // 목록보다 위 — 이 탭에 들어오는 이유가 '얼마나 다녔지'이기도 하다.
+  const mapY = (await card.boundingBox())!.y
+  const listY = (await page.getByRole('heading', { name: '지난 여행' }).boundingBox())!.y
+  expect(mapY).toBeLessThan(listY)
+})
+
 test('상세 — 스톱이 세로 레일 위에 놓이고 구간 칩이 레일에 걸친다', async ({ page }) => {
   await seedAuthedMap(page, {
     trips: TRIPS,
