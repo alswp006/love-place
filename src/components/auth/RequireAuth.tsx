@@ -1,16 +1,26 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/state/auth'
 import { useCouple } from '@/hooks/useCouple'
+import { useEnsureCouple } from '@/hooks/useEnsureCouple'
 import { RouteFallback } from '@/components/common/RouteFallback'
 import { ToastProvider } from '@/components/common/ToastProvider'
 
-// 보호 라우트 가드(web-stack.md §4.2) — 비로그인 → /auth, 미연결 → /onboarding(연결).
-// 연결=공유 기본값(§1)이므로 사전 동의 게이트는 없다. ACTIVE 커플은 앱으로 직행.
+// 보호 라우트 가드(web-stack.md §4.2) — 비로그인 → /auth.
+//
+// 연결은 더 이상 관문이 아니다(0024). 한 사람이 먼저 쓰기 시작하는 경우가 흔한데, 예전에는
+// 로그인하자마자 연결 화면에 갇혀 아무것도 못 봤다. 이제 로그인하면 '혼자짜리 커플'이 보장되고
+// 곧바로 앱으로 들어간다. 연결은 우리 탭에서 원할 때 한다.
+//
+// /onboarding(연결)은 이제 **자발적으로 찾아가는 화면**이다. 이미 상대가 있으면 앱으로 돌린다.
 export function RequireAuth() {
   const { initializing, session } = useAuth()
   const { data: couple, isLoading: coupleLoading } = useCouple()
   const location = useLocation()
   const active = couple?.status === 'ACTIVE'
+  const hasPartner = Boolean(couple?.partner)
+
+  // ACTIVE가 없으면 솔로 커플을 깔아 준다(트리거·백필이 빗나간 계정의 마지막 방어선).
+  const ensure = useEnsureCouple({ needed: Boolean(session) && !coupleLoading && !active })
 
   if (initializing) return <RouteFallback />
   if (!session) return <Navigate to="/auth" replace state={{ from: location.pathname }} />
@@ -21,15 +31,17 @@ export function RequireAuth() {
   const onboarding = location.pathname === '/onboarding'
 
   // 토스트는 보호 셸 전역(온보딩 포함)에서 제공 — ConnectPage 등 AppLayout 밖 화면도 useToast 사용.
-  // AppLayout은 더는 ToastProvider를 직접 두지 않는다(중첩 방지, 단일 출처).
   const guarded = (node: React.ReactElement) => <ToastProvider>{node}</ToastProvider>
 
-  // 미연결 → 연결(①). 연결되면 곧바로 앱(공유 기본값) — 동의 위저드 없음.
   if (!active) {
+    // 솔로 커플을 만드는 중 — 잠깐 기다린다.
+    if (ensure.state === 'idle' || ensure.state === 'running') return <RouteFallback />
+    // 끝내 못 만들었다면(권한·네트워크) 연결 화면이 유일하게 의미 있는 화면이다.
     return onboarding ? guarded(<Outlet />) : <Navigate to="/onboarding" replace />
   }
-  // ACTIVE인데 온보딩(연결)에 있으면 → 앱으로.
-  if (onboarding) return <Navigate to="/" replace />
+
+  // 이미 상대가 있는데 연결 화면에 있으면 → 앱으로. (혼자면 연결하러 온 것이니 통과시킨다.)
+  if (onboarding && hasPartner) return <Navigate to="/" replace />
 
   return guarded(<Outlet />)
 }

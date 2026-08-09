@@ -4,9 +4,19 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 
 // --- 모킹: 인증/커플 상태/초대 훅/라우터 네비게이트 ---
-let coupleData: { coupleId: string | null; status: 'PENDING' | 'ACTIVE' | 'DISCONNECTED' | null } = {
+type CoupleStub = {
+  coupleId: string | null
+  status: 'PENDING' | 'ACTIVE' | 'DISCONNECTED' | null
+  partner: { id: string } | null
+  isSolo: boolean
+  inviteCode: string | null
+}
+let coupleData: CoupleStub = {
   coupleId: null,
   status: null,
+  partner: null,
+  isSolo: false,
+  inviteCode: null,
 }
 
 vi.mock('@/state/auth', () => ({
@@ -57,7 +67,7 @@ function renderConnect() {
 
 describe('ConnectPage 재수화/토스트/자동추출/에러분리 (R3 T4)', () => {
   beforeEach(() => {
-    coupleData = { coupleId: null, status: null }
+    coupleData = { coupleId: 'c1', status: 'ACTIVE', partner: null, isSolo: true, inviteCode: null }
     createMutate.mockReset()
     acceptMutate.mockReset()
     createPending = false
@@ -67,17 +77,27 @@ describe('ConnectPage 재수화/토스트/자동추출/에러분리 (R3 T4)', ()
     vi.restoreAllMocks()
   })
 
-  it('(a) PENDING이면 마운트 시 create_invite를 1회 호출하고 반환 코드를 렌더한다', async () => {
-    coupleData = { coupleId: 'c1', status: 'PENDING' }
-    // mutate가 onSuccess 콜백으로 코드를 돌려주도록 시뮬레이션.
-    createMutate.mockImplementation(
-      (_vars: undefined, opts?: { onSuccess?: (r: { ok: true; code: string; expires_at: string }) => void }) => {
-        opts?.onSuccess?.({ ok: true, code: 'ABCD2345', expires_at: '2099-01-01T00:00:00Z' })
-      },
-    )
+  // ⚠️ 계약 변경(0024): 예전엔 PENDING이면 **마운트 시 create_invite를 자동 호출**했다.
+  // 연결이 관문이던 시절엔 그 화면에 온 것 자체가 "코드를 만들겠다"는 뜻이었기 때문이다.
+  // 이제는 우리 탭에서 구경하러 들를 수도 있으므로, 화면을 여는 것만으로 코드가 발급되면 안 된다.
+  // 이미 있는 코드는 useCouple이 조회해 주고, 없으면 사용자가 버튼을 눌러야 만들어진다.
+  it('(a) 이미 발급된 코드가 있으면 새로 만들지 않고 그대로 보여준다', async () => {
+    coupleData = { ...coupleData, inviteCode: 'ABCD2345' }
     renderConnect()
-    expect(createMutate).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('ABCD-2345')).toBeInTheDocument()
+    expect(createMutate).not.toHaveBeenCalled()
+  })
+
+  it('(a2) 코드가 없으면 화면을 여는 것만으로 발급되지 않는다(부작용 금지)', () => {
+    renderConnect()
+    expect(createMutate).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: '초대 코드 만들기' })).toBeInTheDocument()
+  })
+
+  it('(a3) 혼자면 되돌아갈 길이 있다 — 연결은 선택이지 통과 조건이 아니다', () => {
+    renderConnect()
+    fireEvent.click(screen.getByRole('button', { name: '나중에 할게요' }))
+    expect(navigateSpy).toHaveBeenCalledWith('/')
   })
 
   it('(b) 앱 공유 문구(inviteShareText) 전체를 붙여넣으면 ABCD-2345로 자동 채움 + 자동 제출(accept 호출)', async () => {
@@ -115,12 +135,7 @@ describe('ConnectPage 재수화/토스트/자동추출/에러분리 (R3 T4)', ()
   })
 
   it('(d) navigator.share 미지원이면 alert가 아니라 toast.show로 안내한다', async () => {
-    coupleData = { coupleId: 'c1', status: 'PENDING' }
-    createMutate.mockImplementation(
-      (_vars: undefined, opts?: { onSuccess?: (r: { ok: true; code: string; expires_at: string }) => void }) => {
-        opts?.onSuccess?.({ ok: true, code: 'ABCD2345', expires_at: '2099-01-01T00:00:00Z' })
-      },
-    )
+    coupleData = { ...coupleData, inviteCode: 'ABCD2345' }
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
     const writeText = vi.fn().mockResolvedValue(undefined)
     // navigator.share 미지원 + clipboard.writeText 제공.

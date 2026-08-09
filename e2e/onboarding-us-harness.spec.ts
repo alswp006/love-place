@@ -19,24 +19,12 @@ function shot(name: string) {
   return { skip: !process.env.SEED_SNAPSHOT && !existsSync(baseline), file: `${name}.png` }
 }
 
-// ── ConnectPage(/onboarding) — 미연결 상태에서 가치 미리보기 + ① 코드 만들기 / ② 코드 입력 ──
-// couples 행을 PENDING으로 시드해 가드가 /onboarding에 머물게 한다(ACTIVE면 steps로 보냄).
-async function seedPending(page: import('@playwright/test').Page) {
-  await seedAuthedMap(page)
-  await page.route('**/e2e.supabase.co/rest/v1/couples**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: 'c1',
-        status: 'PENDING',
-        user_a: '00000000-0000-4000-8000-000000000a01',
-        user_b: null,
-        connected_at: null,
-      }),
-    }),
-  )
-  // PENDING create_invite RPC(코드 재표시) — idempotent 활성 코드 응답.
+// ── ConnectPage(/onboarding) — 혼자 쓰는 중에 '상대 연결하기'로 들어온 화면 ──
+// 0024 전에는 미연결(PENDING) 사용자가 가드에 갇혀 도달하는 화면이었다. 이제는 ACTIVE·상대 없음
+// (혼자)에서 자발적으로 찾아온다 — seedAuthedMap({ solo: true })가 그 상태다.
+async function seedSolo(page: import('@playwright/test').Page) {
+  await seedAuthedMap(page, { solo: true })
+  // 코드 만들기 RPC — idempotent 활성 코드 응답.
   await page.route('**/e2e.supabase.co/rest/v1/rpc/create_invite**', (route) =>
     route.fulfill({
       status: 200,
@@ -47,15 +35,59 @@ async function seedPending(page: import('@playwright/test').Page) {
 }
 
 test('연결(/onboarding) — 가치 미리보기 + 코드 만들기/입력', async ({ page }) => {
-  await seedPending(page)
+  await seedSolo(page)
   await page.goto('/onboarding')
-  // 둘이 쓰면 가능한 것(ValuePreview) + 코드 입력 섹션이 보인다(미연결 온보딩, spec R3 §51).
+  // 둘이 쓰면 가능한 것(ValuePreview) + 코드 입력 섹션이 보인다(spec R3 §51).
   await expect(page.getByRole('heading', { name: '둘이 연결해요' })).toBeVisible()
   await expect(page.getByText('둘이 쓰면 이런 게 가능해요')).toBeVisible()
   await expect(page.getByRole('region', { name: '상대 코드 입력' })).toBeVisible()
+  // 혼자 쓰는 사람이 이 화면에 갇히지 않는다(0024).
+  await expect(page.getByRole('button', { name: '나중에 할게요' })).toBeVisible()
   const s = shot('connect')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
+})
+
+// ── 혼자 쓰기(0024) ──
+// 예전에는 연결 전이면 어떤 탭도 못 봤다. 이제 로그인만으로 앱이 열리고, 연결은 우리 탭에서 한다.
+test('혼자여도 지도 탭이 열린다 — 연결은 관문이 아니다', async ({ page }) => {
+  await seedAuthedMap(page, {
+    solo: true,
+    places: [
+      { id: 'p1', name: '속초 칠성조선소', address: '강원 속초시', region_label: '속초',
+        lat: 38.2, lng: 128.59, category: '카페', kakao_place_id: 'k1',
+        added_by: '00000000-0000-4000-8000-000000000a01', version: 1 },
+    ],
+  })
+  await page.goto('/')
+  await expect(page.getByText('속초 칠성조선소')).toBeVisible()
+  // 연결 화면으로 튕기지 않는다.
+  expect(new URL(page.url()).pathname).toBe('/')
+})
+
+test('우리(/us) — 혼자면 연결 안내 + 상대 연결하기', async ({ page }) => {
+  await seedAuthedMap(page, { solo: true })
+  await page.goto('/us')
+  const card = page.getByRole('region', { name: '상대와 연결' })
+  await expect(card).toBeVisible()
+  await expect(card.getByText('아직 혼자 쓰는 중이에요')).toBeVisible()
+  // 지금까지 담아둔 게 유지된다는 것을 말해준다 — 연결을 망설이게 하는 가장 큰 걱정이다.
+  await expect(card.getByText(/그대로 둘의 것이 돼요/)).toBeVisible()
+  const cta = card.getByRole('link', { name: '상대 연결하기' })
+  await expect(cta).toBeVisible()
+  // 터치 타깃 44px(§1).
+  expect((await cta.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+  await cta.click()
+  await expect(page.getByRole('heading', { name: '둘이 연결해요' })).toBeVisible()
+})
+
+test('우리(/us) — 상대가 있으면 연결 안내는 없다', async ({ page }) => {
+  await seedAuthedMap(page) // 기본 시드 = user_b가 있는 커플
+  await page.goto('/us')
+  await expect(page.getByRole('region', { name: '상대와 연결' })).toHaveCount(0)
+  // (상대 프로필 카드까지는 확인하지 않는다 — 하베스의 profiles 스텁이 self 행만 답하므로
+  //  useCouple의 partner 조회가 null이 된다. 여기서 중요한 건 '혼자' 안내가 안 뜨는 것이다.)
+  await expect(page.getByText('표시 이름')).toBeVisible()
 })
 
 // ── UsPage(/us) — 내 계정(프로필 편집)·내보내기·휴지통·연결 해제 ──

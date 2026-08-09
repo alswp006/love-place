@@ -19,7 +19,10 @@ import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import styles from './ConnectPage.module.css'
 
-// 💑 커플 연결(온보딩) — 내 코드 만들기/공유 + 상대 코드 입력. 둘 다 미연결(가드) 상태에서만 도달.
+// 💑 커플 연결 — 내 코드 만들기/공유 + 상대 코드 입력.
+//
+// 더 이상 로그인 직후의 관문이 아니다(0024). 혼자 쓰다가 우리 탭에서 '상대 연결하기'로 온다.
+// 그래서 **되돌아갈 길**이 반드시 있어야 한다 — 연결은 선택이지 통과 조건이 아니다.
 export default function ConnectPage() {
   const navigate = useNavigate()
   const toast = useToast()
@@ -32,16 +35,12 @@ export default function ConnectPage() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [acceptError, setAcceptError] = useState<string | null>(null)
 
-  // PENDING이면 마운트 시 idempotent create_invite로 활성 코드 재표시(로컬 state 유실 복구, dossier 01 §1).
+  // 이미 발급해 둔 코드가 있으면 그대로 보여준다(로컬 state 유실 복구).
+  // 예전엔 여기서 create_invite를 **자동 호출**했는데, 연결이 관문이 아니게 된 지금은
+  // 화면을 열기만 해도 코드가 발급되는 셈이라 부작용이다. 조회한 값을 쓴다.
   useEffect(() => {
-    if (couple?.status === 'PENDING' && !myCode && !createInvite.isPending) {
-      createInvite.mutate(undefined, {
-        onSuccess: (r) => {
-          if (r.ok) setMyCode(r.code)
-        },
-      })
-    }
-  }, [couple?.status, myCode, createInvite])
+    if (couple?.inviteCode && !myCode) setMyCode(couple.inviteCode)
+  }, [couple?.inviteCode, myCode])
 
   if (isLoading) return <RouteFallback />
 
@@ -91,9 +90,12 @@ export default function ConnectPage() {
         </div>
         <h1 className={styles.title}>둘이 연결해요</h1>
         <p className={styles.subtitle}>한 명이 코드를 만들어 보내고, 다른 한 명이 입력하면 끝.</p>
+        <p className={styles.subtitle}>
+          지금까지 혼자 담아둔 장소·일정은 연결하면 그대로 둘의 것이 돼요.
+        </p>
 
-        {/* 브랜드뉴/PENDING(미연결) 사용자에게 둘이 쓰는 가치 미리보기(spec R3 line 51). ACTIVE면 가드가 앱(/)으로 보냄 → 숨김. */}
-        {couple?.status !== 'ACTIVE' && <ValuePreview />}
+        {/* 아직 상대가 없을 때만 '둘이 쓰면 이렇게' 미리보기(spec R3). 연결되면 가드가 앱으로 보낸다. */}
+        {!couple?.partner && <ValuePreview />}
 
         {/* A. 내 코드 만들기 / 공유 */}
         <section className={styles.section} aria-label="내 초대 코드">
@@ -168,8 +170,15 @@ export default function ConnectPage() {
           </Button>
         </section>
 
-        {couple?.status === 'PENDING' ? (
+        {myCode ? (
           <p className={styles.waiting}>상대가 코드를 입력하면 자동으로 연결돼요.</p>
+        ) : null}
+
+        {/* 되돌아갈 길 — 연결은 선택이다. 이게 없으면 혼자 쓰는 사람이 이 화면에 갇힌다. */}
+        {couple?.isSolo ? (
+          <Button variant="ghost" className={styles.laterBtn} onClick={() => navigate('/')}>
+            나중에 할게요
+          </Button>
         ) : null}
       </div>
     </main>

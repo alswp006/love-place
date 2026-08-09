@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { daysTogether, partnerLabel } from '@/lib/partner'
 import { getNickname, setNickname } from '@/state/nickname'
 import { ScreenScaffold } from '@/components/common/ScreenScaffold'
@@ -143,6 +144,27 @@ export default function UsPage() {
   return (
     <ScreenScaffold title={tab.title} testId={tab.testId} headerHidden>
       <div className={styles.container}>
+        {/* 아직 혼자 — 연결은 관문이 아니라 여기서 원할 때 하는 일이다(0024).
+            혼자서도 앱은 전부 돌아가고, 연결하면 지금까지 담아둔 게 그대로 둘의 것이 된다. */}
+        {couple?.isSolo ? (
+          <section className={styles.card} aria-label="상대와 연결">
+            <div className={styles.soloRow}>
+              <div className={styles.soloAvatar} aria-hidden>
+                💌
+              </div>
+              <div className={styles.partnerInfo}>
+                <span className={styles.partnerName}>아직 혼자 쓰는 중이에요</span>
+                <span className={styles.partnerMeta}>
+                  연결하면 지금까지 담아둔 장소·일정이 그대로 둘의 것이 돼요.
+                </span>
+              </div>
+            </div>
+            <Link className={styles.connectBtn} to="/onboarding">
+              상대 연결하기
+            </Link>
+          </section>
+        ) : null}
+
         {/* 연결된 상대 */}
         {partner ? (
           <section className={styles.card} aria-label="연결된 상대">

@@ -18,6 +18,8 @@ export type SeedTables = {
   trips?: unknown[]
   /** directions 프록시 leg 결과. 미시드면 프록시를 실패시켜 '미배포' 폴백 경로를 재현한다. */
   directionLegs?: { polyline: { lat: number; lng: number }[] | null; distanceMeters: number | null; degraded: boolean }[]
+  /** true면 상대 없는 '혼자 쓰는 중' 커플(0024). 기본은 연결된 둘. */
+  solo?: boolean
 }
 
 function jsonRoute(body: unknown) {
@@ -46,9 +48,20 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
     route.fulfill({ status: 200, contentType: 'application/javascript', body: NAVER_STUB_JS }),
   )
   await page.route('**/e2e.supabase.co/auth/v1/token**', jsonRoute(session))
-  await page.route('**/e2e.supabase.co/rest/v1/couples**', jsonRoute({
-    id: 'c1', status: 'ACTIVE', user_a: USER_A, user_b: '00000000-0000-4000-8000-000000000a02', connected_at: '2020-01-01T00:00:00Z',
-  }))
+  // couples는 **배열**로 답한다 — useCouple이 maybeSingle을 버리고 목록에서 ACTIVE를 고르기
+  // 때문이다(0024: 옛 PENDING이 남은 계정에서 여러 행이 나올 수 있다).
+  // solo:true면 상대 없는 '혼자 쓰는 중' 상태(연결 CTA 경로).
+  await page.route('**/e2e.supabase.co/rest/v1/couples**', jsonRoute([
+    {
+      id: 'c1',
+      status: 'ACTIVE',
+      user_a: USER_A,
+      user_b: tables.solo ? null : '00000000-0000-4000-8000-000000000a02',
+      connected_at: tables.solo ? null : '2020-01-01T00:00:00Z',
+      invite_code: null,
+      invite_expires_at: null,
+    },
+  ]))
   // profiles: 동의 게이트는 제거됐다(연결=공유 기본값 §1). self 프로필 쿼리(useMyProfile)는
   //   이름·색·version을 담은 행으로 응답한다. 0014 동의 컬럼은 무해하게 잔존(채워둠).
   await page.route('**/e2e.supabase.co/rest/v1/profiles**', (route) => {
