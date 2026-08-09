@@ -36,6 +36,8 @@ const recorded = vi.hoisted(() => ({
   isLoading: false,
 }))
 vi.mock('@/hooks/useTripRecordedRoute', () => ({ useTripRecordedRoute: () => recorded }))
+// 공유 카드의 '함께 걸어온 거리' — 실제 쿼리 대신 고정값(카드 계약은 sharePath/shareCard 테스트가 본다).
+vi.mock('@/hooks/useCoupleTotals', () => ({ useCoupleTotalKm: () => ({ data: 312.4 }) }))
 
 import RecapPage from '@/pages/RecapPage'
 

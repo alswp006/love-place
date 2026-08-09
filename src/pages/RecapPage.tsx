@@ -19,6 +19,8 @@ import { Icon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Skeleton } from '@/components/common/Skeleton'
 import { RecapShareButton } from '@/components/recap/RecapShareButton'
+import { useCoupleTotalKm } from '@/hooks/useCoupleTotals'
+import { daysTogether } from '@/lib/partner'
 import styles from './RecapPage.module.css'
 
 // 여행 리캡(R5 P-B) — 방문 장소를 시간순으로 이은 측지선 동선 + 3-스탯 + 정거장 목록 + 기기 내 공유.
@@ -30,6 +32,9 @@ export default function RecapPage() {
   const myId = user?.id ?? null
   const { data: couple } = useCouple()
   const coupleId = couple?.coupleId ?? null
+  // 공유 카드의 '못 꾸며내는 숫자' — 함께한 날수와 함께 걸어온 누적 거리.
+  const { data: totalKm } = useCoupleTotalKm(coupleId)
+  const days = daysTogether(couple?.connectedAt ?? null)
   const { trip, vertices, stats, isLoading } = useTripRecap(coupleId, tripId)
   const { data: allPlaces } = usePlaces(coupleId)
   // 리캡의 사진 — 지금까지 이 화면은 동선과 숫자뿐이라 '경로 요약'이었지 추억이 아니었다.
@@ -78,7 +83,15 @@ export default function RecapPage() {
           {period ? <p className={styles.period}>{period}</p> : null}
         </div>
         {trip && vertices.length > 0 ? (
-          <RecapShareButton title={trip.title} stats={stats} vertices={vertices} />
+          <RecapShareButton
+            title={trip.title}
+            stats={stats}
+            recordedPath={hasRecorded ? recorded.polyline : []}
+            placePath={geodesic}
+            daysTogether={days}
+            totalKm={totalKm}
+            dateLabel={period || trip.start_date}
+          />
         ) : (
           <span className={styles.headerSpacer} aria-hidden />
         )}
