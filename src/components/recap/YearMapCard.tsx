@@ -4,7 +4,8 @@ import { usePlaces } from '@/hooks/usePlaces'
 import { useVisits } from '@/hooks/useVisits'
 import { useTrips } from '@/hooks/useTrips'
 import { useCoupleTotalKm } from '@/hooks/useCoupleTotals'
-import { buildYearMap, type YearStop } from '@/lib/recap/yearMap'
+import { useCoupleRoutes } from '@/hooks/useCoupleRoutes'
+import { buildYearMap, boundsOf, type YearStop } from '@/lib/recap/yearMap'
 import { buildTripStops, tripAtPoint } from '@/lib/recap/tripStops'
 import { drawKoreaMap, drawYearCard, projectForHitTest } from '@/lib/recap/yearCard'
 import { KOREA_BOUNDS } from '@/lib/recap/koreaOutline'
@@ -23,15 +24,19 @@ import styles from './YearMapCard.module.css'
 const CARD_W = 1080
 const CARD_H = 1920
 // 화면용 미리보기 — 지도만 그린다(제목·숫자·브랜딩은 아래 DOM이 맡는다).
-// 한국 실루엣의 가로:세로가 약 0.55라 그 비율로 잡아야 좌우 여백이 안 생긴다.
+// 전국 보기는 한국 실루엣 비율(가로:세로 ≈ 0.55). 여행 보기는 **그 동선의 비율**을 따른다 —
+// 세로로 고정하면 가로로 뻗은 드라이브가 캔버스 절반만 쓰고 나머지는 빈 분홍이 된다.
 const MAP_W = 560
 const MAP_H = 1020
+const TRIP_MAP_H = 820
 
 export function YearMapCard({ coupleId }: { coupleId: string | null }) {
   const { data: places } = usePlaces(coupleId)
   const { data: visits } = useVisits(coupleId)
   const { data: trips } = useTrips(coupleId)
   const { data: totalKm } = useCoupleTotalKm(coupleId)
+  // 실측 궤적 — 걸어간 길·차로 간 길. 지도의 주인공이다(0025 일괄 조회).
+  const { data: routes } = useCoupleRoutes(coupleId)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [busy, setBusy] = useState(false)
   // 고른 여행 — null이면 전국. 지도의 두 층(어디에 갔나 / 그날 어떻게 다녔나)을 오간다.
@@ -60,6 +65,15 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
   const tripStops = useMemo(() => buildTripStops(trips ?? [], stops), [trips, stops])
   const selected = tripStops.find((t) => t.tripId === tripId) ?? null
 
+  // 여행 보기는 그 여행에 묶인 궤적만. 전국 보기는 전부.
+  const traces = useMemo(
+    () =>
+      (routes ?? [])
+        .filter((r) => (selected ? r.tripId === selected.tripId : true))
+        .map((r) => r.points),
+    [routes, selected],
+  )
+
   // 전국 보기는 모든 방문, 여행 보기는 그 여행의 스톱만. 같은 buildYearMap을 쓴다.
   const map = useMemo(
     () =>
@@ -72,11 +86,19 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
               date: `${selected.startDate}T${String(i).padStart(2, '0')}`,
               regionLabel: null,
             })),
+            traces,
           )
-        : buildYearMap(stops),
-    [selected, stops],
+        : buildYearMap(stops, traces),
+    [selected, stops, traces],
   )
-  const bounds = selected ? selected.bounds : KOREA_BOUNDS
+  // 줌인 경계는 궤적까지 담아야 한다 — 스톱만 보면 차로 돌아온 길이 화면 밖으로 잘린다.
+  const bounds = useMemo(
+    () =>
+      selected
+        ? boundsOf([...selected.stops, ...traces.flat()])
+        : KOREA_BOUNDS,
+    [selected, traces],
+  )
   const tripCount = trips?.length ?? 0
 
   const data = useMemo(
@@ -100,6 +122,16 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
     [selected, year, map, totalKm, tripCount, bounds],
   )
 
+  // 여행 보기 캔버스 크기 — 경계 비율에 맞춘다(위도에 따른 경도 압축 보정 포함).
+  const canvasSize = useMemo(() => {
+    if (!selected) return { w: MAP_W, h: MAP_H }
+    const cos = Math.cos((((bounds.minLat + bounds.maxLat) / 2) * Math.PI) / 180)
+    const aspect = ((bounds.maxLng - bounds.minLng) * cos) / Math.max(bounds.maxLat - bounds.minLat, 1e-9)
+    // 극단적 비율은 조인다 — 한 방향으로만 간 여행이 실오라기나 띠가 되지 않게.
+    const w = Math.round(Math.min(940, Math.max(420, TRIP_MAP_H * aspect)))
+    return { w, h: TRIP_MAP_H }
+  }, [selected, bounds])
+
   // 화면 미리보기 — **지도만**. 공유본과 같은 drawKoreaMap을 쓰므로 보이는 그림과
   // 올라가는 그림이 같다(다르면 공유 버튼을 누르는 순간 배신이다).
   useEffect(() => {
@@ -108,8 +140,8 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    drawKoreaMap(ctx, map, { x: 0, y: 0, w: MAP_W, h: MAP_H }, 'transparent', bounds)
-  }, [map, bounds])
+    drawKoreaMap(ctx, map, { x: 0, y: 0, w: canvasSize.w, h: canvasSize.h }, 'transparent', bounds)
+  }, [map, bounds, canvasSize])
 
   // 캔버스 탭 → 그 자리의 여행. 전국 보기에서만 의미가 있다(이미 들어와 있으면 되돌아갈 뿐).
   const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -123,6 +155,7 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
     const hit = tripAtPoint(tripStops, { x, y }, (p) =>
       projectForHitTest(p, { x: 0, y: 0, w: MAP_W, h: MAP_H }, KOREA_BOUNDS),
     )
+    // (전국 보기에서만 도달하므로 여기서는 항상 MAP_W/H가 맞다 — 위 early return 참조)
     if (hit) setTripId(hit.tripId)
   }
 
@@ -160,8 +193,8 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
       <canvas
         ref={canvasRef}
         className={selected ? styles.canvas : `${styles.canvas} ${styles.clickable}`}
-        width={MAP_W}
-        height={MAP_H}
+        width={canvasSize.w}
+        height={canvasSize.h}
         onClick={onCanvasClick}
         role="img"
         aria-label={

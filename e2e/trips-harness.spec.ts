@@ -215,6 +215,42 @@ test('목록 — 전국 지도 카드가 목록 위에 있고 그림·글자로 
   expect(mapY).toBeLessThan(listY)
 })
 
+// 실측 궤적이 지도의 주인공이다(0025) — 걸어간 길·차로 간 길. 서울→속초 드라이브는
+// 200km짜리 선이라 전국 축척에서도 보인다. 궤적이 있으면 '점을 이은 직선'은 그리지 않는다.
+test('전국 지도 — 실측 궤적이 있으면 그것을 그린다(여행별로 갈린다)', async ({ page }) => {
+  const year = new Date().getFullYear()
+  const drive = Array.from({ length: 12 }, (_, i) => ({
+    session_id: 's1',
+    trip_id: 't1',
+    started_at: `${year}-03-01T09:00:00Z`,
+    seq: i + 1,
+    lat: 37.5665 + (38.207 - 37.5665) * (i / 11),
+    lng: 126.978 + (128.5918 - 126.978) * (i / 11),
+  }))
+  await seedAuthedMap(page, {
+    trips: [
+      { id: 't1', title: '속초 드라이브', start_date: `${year}-03-01`, end_date: `${year}-03-02`, region_code: null, version: 1 },
+    ],
+    places: [
+      { id: 'p1', name: '칠성조선소', address: '강원', region_label: '속초', lat: 38.207, lng: 128.5918,
+        category: '카페', kakao_place_id: 'k1', added_by: USER_A, version: 1 },
+    ],
+    visits: [
+      { id: 'v1', place_id: 'p1', trip_id: 't1', visit_date: `${year}-03-01`, rating: null, memo: null, version: 1, created_by: USER_A },
+    ],
+    routePoints: drive,
+  })
+  await page.goto('/trips')
+
+  // 궤적이 있어도 지도는 여전히 글자로 함께 말한다(§8).
+  await expect(page.getByRole('region', { name: new RegExp(`우리가 다닌 ${year} 지도`) })).toBeVisible()
+  // 그 여행으로 내려가도 궤적이 따라온다 — 여행 칩이 뜨는 것으로 배선을 확인한다.
+  const picker = page.getByRole('group', { name: '지도에서 볼 여행 고르기' })
+  await picker.getByRole('button', { name: '속초 드라이브' }).click()
+  await expect(page.getByText(`${year}-03-01 ~ ${year}-03-02 · 1곳`)).toBeVisible()
+  await expect(page.getByRole('button', { name: '이 여행 공유하기' })).toBeVisible()
+})
+
 test('전국 지도 — 여행을 고르면 그 여행 동선으로 내려간다(칩은 캔버스 탭의 대체 경로)', async ({
   page,
 }) => {

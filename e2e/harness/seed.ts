@@ -22,6 +22,8 @@ export type SeedTables = {
   solo?: boolean
   /** true면 위치 동선 수집·이용 동의를 켠 상태로 시드(동선 기록 경로 테스트용). */
   locationConsent?: boolean
+  /** get_couple_route_polylines 응답 행(session_id·trip_id·started_at·seq·lat·lng). */
+  routePoints?: unknown[]
 }
 
 function jsonRoute(body: unknown) {
@@ -124,6 +126,12 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
     }
     return jsonRoute([])(route)
   })
+
+  // 실측 궤적 일괄 조회(0025). 미시드면 빈 배열 — 라우팅을 빼두면 지도가 로딩에 갇힌다.
+  await page.route(
+    '**/e2e.supabase.co/rest/v1/rpc/get_couple_route_polylines**',
+    jsonRoute(tables.routePoints ?? []),
+  )
 
   await page.route('**/e2e.supabase.co/rest/v1/places**', jsonRoute(tables.places ?? []))
   await page.route('**/e2e.supabase.co/rest/v1/wishes**', jsonRoute(tables.wishes ?? []))

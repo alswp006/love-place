@@ -75,7 +75,7 @@ describe('buildYearMap', () => {
   })
 
   it('빈 입력도 안전하다(첫 사용자 화면)', () => {
-    expect(buildYearMap([])).toEqual({ thread: [], dots: [], regionCount: 0, stopCount: 0 })
+    expect(buildYearMap([])).toEqual({ traces: [], thread: [], dots: [], regionCount: 0, stopCount: 0 })
   })
 })
 
@@ -135,5 +135,37 @@ describe('koreaOutline — 생성물이 실제로 한국이다', () => {
       return Math.max(...lats) - Math.min(...lats)
     }
     expect(span(KOREA_RINGS[0]!)).toBeGreaterThan(span(KOREA_RINGS[1]!))
+  })
+})
+
+describe('buildYearMap — 실측 궤적이 주인공', () => {
+  const trace = [
+    { lat: 37.5, lng: 127.0 },
+    { lat: 37.8, lng: 127.5 },
+    { lat: 38.2, lng: 128.59 },
+  ]
+
+  it('궤적을 그대로 담는다 — 차로 간 200km도 전국 축척에서 보인다', () => {
+    const m = buildYearMap([stop()], [trace])
+    expect(m.traces).toHaveLength(1)
+    expect(m.traces[0]).toHaveLength(3)
+  })
+
+  it('점 하나짜리 궤적은 선이 못 되므로 뺀다', () => {
+    const m = buildYearMap([stop()], [[{ lat: 37, lng: 127 }], trace])
+    expect(m.traces).toHaveLength(1)
+  })
+
+  it('궤적을 줘도 방문 점·지역 수는 그대로 — 두 층이 서로를 지우지 않는다', () => {
+    const m = buildYearMap([stop({ placeId: 'a' }), stop({ placeId: 'b', lat: 35.1, lng: 129 })], [trace])
+    expect(m.dots).toHaveLength(2)
+    expect(m.traces).toHaveLength(1)
+  })
+
+  it('궤적 배열을 복사한다 — 호출부가 나중에 건드려도 지도가 안 바뀐다', () => {
+    const src = [{ lat: 37, lng: 127 }, { lat: 38, lng: 128 }]
+    const m = buildYearMap([], [src])
+    src.push({ lat: 39, lng: 129 })
+    expect(m.traces[0]).toHaveLength(2)
   })
 })

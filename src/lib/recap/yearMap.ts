@@ -20,7 +20,15 @@ export type YearStop = {
 }
 
 export type YearMapData = {
-  /** 시간순으로 이을 점들(날짜 있는 방문만). */
+  /**
+   * 실측 궤적들 — 걸어간 길, 차로 간 길. **이게 주인공이다.**
+   * 러닝 앱이 파는 게 바로 이 선이고, 차로 서울→속초를 가면 전국 축척에서도 제대로 보인다.
+   */
+  traces: LatLng[][]
+  /**
+   * 방문 장소를 시간순으로 이은 실 — 궤적이 **없는** 구간의 폴백.
+   * 기록 없이 다녀온 곳들이 허공에 뜬 점으로만 남지 않게 순서를 암시한다.
+   */
   thread: LatLng[]
   /** 지도에 찍을 모든 방문 장소(중복 제거). */
   dots: LatLng[]
@@ -35,7 +43,10 @@ export type YearMapData = {
  * 같은 장소를 여러 번 갔어도 점은 하나다(중복 방문이 지도를 더 채우면 거짓말이 된다).
  * 실은 날짜순이고, 같은 날 여러 곳이면 원래 순서를 유지한다(안정 정렬).
  */
-export function buildYearMap(stops: readonly YearStop[]): YearMapData {
+export function buildYearMap(
+  stops: readonly YearStop[],
+  traces: readonly (readonly LatLng[])[] = [],
+): YearMapData {
   const inKorea = stops.filter(
     (s) =>
       Number.isFinite(s.lat) &&
@@ -70,7 +81,13 @@ export function buildYearMap(stops: readonly YearStop[]): YearMapData {
     if (!last || last.lat !== p.lat || last.lng !== p.lng) thread.push(p)
   }
 
-  return { thread, dots, regionCount: regions.size, stopCount: dots.length }
+  return {
+    traces: traces.filter((t) => t.length >= 2).map((t) => [...t]),
+    thread,
+    dots,
+    regionCount: regions.size,
+    stopCount: dots.length,
+  }
 }
 
 export type Bounds = { minLng: number; maxLng: number; minLat: number; maxLat: number }

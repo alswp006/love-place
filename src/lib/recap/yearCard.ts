@@ -81,16 +81,33 @@ export function drawKoreaMap(
     ctx.stroke()
   }
 
-  if (map.thread.length >= 2) {
+  // ── 실측 궤적 — 걸어간 길, 차로 간 길. 지도의 주인공이다. ──
+  if (map.traces.length > 0) {
+    ctx.strokeStyle = THREAD
+    ctx.lineWidth = Math.max(2, (zoomed ? 9 : 5) * scale)
+    ctx.globalAlpha = 0.9
+    for (const trace of map.traces) {
+      const pts = trace.map(project)
+      ctx.beginPath()
+      pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
+      ctx.stroke()
+    }
+    ctx.globalAlpha = 1
+  }
+
+  // ── 방문을 이은 실 — 궤적이 **없을 때만**. ──
+  // 기록 없이 다녀온 곳들이 허공에 뜬 점으로만 남지 않게 순서를 암시하는 정도다.
+  // 궤적과 같이 그리면 '실제로 간 길'과 '점을 이은 직선'이 한 그림에 섞여 거짓이 된다.
+  if (map.traces.length === 0 && map.thread.length >= 2) {
     const pts = map.thread.map(project)
     ctx.strokeStyle = THREAD
-    // 줌인하면 이 선이 그 여행의 동선이라 주인공이다. 전국 보기에서는 크게 물러난다 —
-    // 전국을 가로지르는 선이 진하면 거미줄이 되어 '어디에 갔는가'를 덮는다.
-    ctx.lineWidth = Math.max(2, (zoomed ? 9 : 5) * scale)
-    ctx.globalAlpha = zoomed ? 0.9 : 0.3
+    ctx.lineWidth = Math.max(2, (zoomed ? 6 : 4) * scale)
+    ctx.globalAlpha = zoomed ? 0.55 : 0.25
+    ctx.setLineDash([Math.max(6, 14 * scale), Math.max(6, 12 * scale)]) // 점선 = 추정선
     ctx.beginPath()
     pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
     ctx.stroke()
+    ctx.setLineDash([])
     ctx.globalAlpha = 1
   }
 
