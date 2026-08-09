@@ -79,6 +79,29 @@ npm run release:ios -- --fast # 게이트 생략(직전에 통과했을 때만)
 
 **빌드는 90일 뒤 만료**된다 — 그때 같은 명령을 다시 돌리면 된다.
 
+#### 막히는 자리: "무료(개인) 팀으로 서명되고 있습니다"
+
+가입비를 냈는데도 Xcode가 무료 팀으로 서명하는 일이 흔하다(가입 처리에 24~48시간).
+증상은 export 단계의 이 에러인데, 원인이 서명 설정처럼 보여서 한참 헤매게 된다:
+
+```
+No signing certificate "iOS Distribution" found
+Team "..." does not have permission to create "iOS App Store" provisioning profiles.
+```
+
+**결정적 판별법: 프로비저닝 프로파일 유효기간.** 무료 팀은 **7일**, 유료는 1년이다.
+
+```bash
+cd ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/
+security cms -D -i *.mobileprovision | plutil -p - | grep -E 'Name|ExpirationDate|CreationDate'
+```
+
+`release-ios.mjs`의 사전 점검이 이걸 자동으로 보고 아카이브 전에 멈춘다.
+
+확인 순서: ① developer.apple.com/account → Membership이 Active인지 ② "Welcome to the
+Apple Developer Program" 메일이 왔는지 ③ 동의 대기 중인 License Agreement가 있는지
+④ 결제한 Apple ID와 Xcode 로그인 Apple ID가 같은지.
+
 ## 5. 법무 (영리 출시)
 - **개인정보처리방침** `docs/legal/privacy-policy.md` → 공개 URL 호스팅 → 스토어 등록.
 - **위치기반서비스사업 신고**(동선 기록/R6 시): [emsit.go.kr](https://www.emsit.go.kr/cp/cv/Cp1440000_0182_01Reg.do), 소상공인 간이신고 가능. **위치정보처리방침** `docs/legal/location-policy.md` 게시 + 위치정보관리책임자 지정.

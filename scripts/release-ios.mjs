@@ -71,6 +71,48 @@ if (/0 valid identities found/.test(ids)) {
 }
 ok(`코드서명 인증서 ${(ids.match(/^\s+\d\)/gm) ?? []).length}개`)
 
+// 배포 인증서 — 업로드에는 개발용이 아니라 **배포용**이 필요하다.
+// 유료 멤버십이 활성이면 아카이브 중 -allowProvisioningUpdates가 만들어 주므로 여기서 죽이지 않는다.
+// 다만 무료(개인) 팀이면 export 단계에서 "No signing certificate iOS Distribution found"로
+// 죽는데, 그때는 원인이 서명 설정처럼 보여서 한참 헤맨다. 미리 신호를 준다.
+//
+// 무료 팀의 결정적 표식: 프로비저닝 프로파일 유효기간이 **7일**이다(유료는 1년).
+if (!/Apple Distribution|iPhone Distribution/.test(ids)) {
+  const profDir = join(homedir(), 'Library/Developer/Xcode/UserData/Provisioning Profiles')
+  let personal = false
+  if (existsSync(profDir)) {
+    for (const f of readdirSync(profDir).filter((n) => n.endsWith('.mobileprovision'))) {
+      const xml = capture('security', ['cms', '-D', '-i', join(profDir, f)]).stdout ?? ''
+      const cre = /<key>CreationDate<\/key>\s*<date>([^<]+)</.exec(xml)?.[1]
+      const exp = /<key>ExpirationDate<\/key>\s*<date>([^<]+)</.exec(xml)?.[1]
+      if (cre && exp) {
+        const days = (Date.parse(exp) - Date.parse(cre)) / 86400000
+        if (days <= 10) personal = true
+      }
+    }
+  }
+  if (personal) {
+    die(
+      '무료(개인) 팀으로 서명되고 있습니다 — TestFlight 업로드가 불가능합니다.',
+      [
+        '프로비저닝 프로파일 유효기간이 7일입니다. 유료 멤버십은 1년짜리를 받습니다.',
+        '',
+        '확인 순서:',
+        '  1) developer.apple.com/account → Membership — 상태가 Active인지, Team ID가 무엇인지',
+        '     (지금 프로젝트가 쓰는 Team ID는 DEVELOPMENT_TEAM 설정값입니다)',
+        '  2) 가입 직후면 아직 처리 중일 수 있습니다(보통 24~48시간).',
+        '     "Welcome to the Apple Developer Program" 메일이 오면 완료된 것입니다.',
+        '  3) developer.apple.com/account에 동의 대기 중인 계약(License Agreement)이 있으면 수락.',
+        '  4) 결제한 Apple ID와 Xcode에 로그인한 Apple ID가 같은지 확인.',
+        '',
+        '활성화된 뒤: Xcode → Signing & Capabilities에서 Team을 유료 팀으로 다시 고르고',
+        'npm run release:ios 를 다시 돌리면 됩니다.',
+      ].join('\n'),
+    )
+  }
+  console.log('  · 배포 인증서 없음 → 아카이브 중 자동 생성을 시도합니다')
+}
+
 // App Store Connect API 키 — 없으면 업로드 단계에서만 막는다(아카이브까지는 유용하므로).
 const envFile = join(ROOT, '.env.release')
 if (existsSync(envFile)) {
@@ -134,6 +176,8 @@ run(
     // 시뮬레이터 destination으로는 Archive가 안 된다 — 이걸 몰라 Archive 메뉴가 비활성인 줄 아는 경우가 많다.
     '-destination', 'generic/platform=iOS',
     '-archivePath', archive,
+    // 배포 인증서·프로파일이 아직 없으면 여기서 만들어 준다(첫 아카이브에 반드시 필요).
+    '-allowProvisioningUpdates',
   ],
   { cwd: IOS },
 )
