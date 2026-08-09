@@ -1,5 +1,5 @@
-import { KOREA_RINGS } from './koreaOutline'
-import { projectKorea, type YearMapData } from './yearMap'
+import { KOREA_BOUNDS, KOREA_RINGS } from './koreaOutline'
+import { projectWith, type Bounds, type YearMapData } from './yearMap'
 import { formatTotalKm } from './sharePath'
 
 // 전국 지도 카드 — "우리가 다닌 한 해".
@@ -30,6 +30,10 @@ export type YearCardData = {
   totalKm?: number | null
   /** 여행 횟수 — 지역 수만으로는 '몇 번 나갔는지'가 안 보인다. */
   tripCount?: number | null
+  /** 지도 경계. 여행 하나를 골라 공유하면 그 여행으로 확대된다. */
+  bounds?: Bounds
+  /** 부제(여행 기간 등). 없으면 지역·곳 수를 쓴다. */
+  subtitle?: string | null
 }
 
 /**
@@ -43,14 +47,29 @@ export function drawKoreaMap(
   map: YearMapData,
   box: { x: number; y: number; w: number; h: number },
   bg = BG,
+  bounds: Bounds = KOREA_BOUNDS,
 ): void {
+  const zoomed = bounds !== KOREA_BOUNDS
+  const project = (p: { lat: number; lng: number }) => projectWith(p, bounds, box)
+
+  // 줌인하면 실루엣 대부분이 상자 밖으로 나간다 — 잘라내지 않으면 카드 전체를 덮는다.
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(box.x, box.y, box.w, box.h)
+  ctx.clip()
+
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
   const scale = Math.min(box.w / 900, 1) // 작게 그릴 땐 선·점도 같이 줄어야 한다
-  for (const ring of KOREA_RINGS) {
+
+  // 여행 하나로 줌인하면 실루엣을 그리지 않는다.
+  // 전국 216점짜리 외곽선은 속초 근처에 점이 두세 개뿐이라, 그 축척에서는 해안선이 아니라
+  // 뭉툭한 분홍 쐐기로 보인다. 지리 정보를 주지도 못하면서 동선을 가린다.
+  // 그 축척의 주인공은 동선 자체다(여행 공유 카드가 배경 없이 선만 그리는 것과 같은 이유).
+  for (const ring of zoomed ? [] : KOREA_RINGS) {
     ctx.beginPath()
     ring.forEach(([lng, lat], i) => {
-      const p = projectKorea({ lat, lng }, box)
+      const p = project({ lat, lng })
       if (i === 0) ctx.moveTo(p.x, p.y)
       else ctx.lineTo(p.x, p.y)
     })
@@ -63,11 +82,12 @@ export function drawKoreaMap(
   }
 
   if (map.thread.length >= 2) {
-    const pts = map.thread.map((p) => projectKorea(p, box))
+    const pts = map.thread.map(project)
     ctx.strokeStyle = THREAD
-    ctx.lineWidth = Math.max(2, 5 * scale)
-    // 실은 크게 물러난다. 전국을 가로지르는 선이 진하면 거미줄이 되어 '어디에 갔는가'를 덮는다.
-    ctx.globalAlpha = 0.3
+    // 줌인하면 이 선이 그 여행의 동선이라 주인공이다. 전국 보기에서는 크게 물러난다 —
+    // 전국을 가로지르는 선이 진하면 거미줄이 되어 '어디에 갔는가'를 덮는다.
+    ctx.lineWidth = Math.max(2, (zoomed ? 9 : 5) * scale)
+    ctx.globalAlpha = zoomed ? 0.9 : 0.3
     ctx.beginPath()
     pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
     ctx.stroke()
@@ -75,19 +95,29 @@ export function drawKoreaMap(
   }
 
   for (const d of map.dots) {
-    const p = projectKorea(d, box)
+    const p = project(d)
     ctx.beginPath()
-    ctx.arc(p.x, p.y, Math.max(5, 13 * scale), 0, Math.PI * 2)
+    ctx.arc(p.x, p.y, Math.max(5, (zoomed ? 16 : 13) * scale), 0, Math.PI * 2)
     ctx.fillStyle = DOT
     ctx.fill()
     ctx.lineWidth = Math.max(2, 6 * scale)
     ctx.strokeStyle = bg // 배경색 테두리 — 점이 겹쳐도 개수가 세어진다
     ctx.stroke()
   }
+  ctx.restore()
+}
+
+/** 점 하나가 상자 안 어디에 찍히는지 — 캔버스 탭을 장소로 되돌릴 때 쓴다. */
+export function projectForHitTest(
+  p: { lat: number; lng: number },
+  box: { x: number; y: number; w: number; h: number },
+  bounds: Bounds = KOREA_BOUNDS,
+): { x: number; y: number } {
+  return projectWith(p, bounds, box)
 }
 
 export function drawYearCard(ctx: CanvasRenderingContext2D, data: YearCardData, w = W, h = H): void {
-  const { periodLabel, map, totalKm, tripCount } = data
+  const { periodLabel, map, totalKm, tripCount, bounds = KOREA_BOUNDS, subtitle } = data
 
   ctx.fillStyle = BG
   ctx.fillRect(0, 0, w, h)
@@ -95,19 +125,20 @@ export function drawYearCard(ctx: CanvasRenderingContext2D, data: YearCardData, 
   ctx.textAlign = 'center'
   ctx.fillStyle = INK
   ctx.font = '700 88px sans-serif'
-  ctx.fillText(`우리가 다닌 ${periodLabel}`, w / 2, 190)
+  ctx.fillText(periodLabel, w / 2, 190)
 
   ctx.fillStyle = INK_SOFT
   ctx.font = '500 44px sans-serif'
   ctx.fillText(
-    map.stopCount > 0 ? `${map.regionCount}개 지역 · ${map.stopCount}곳` : '아직 지도가 비어 있어요',
+    subtitle ||
+      (map.stopCount > 0 ? `${map.regionCount}개 지역 · ${map.stopCount}곳` : '아직 지도가 비어 있어요'),
     w / 2,
     258,
   )
 
   // ── 지도 ──
   const box = { x: 90, y: 330, w: w - 180, h: 1080 }
-  drawKoreaMap(ctx, map, box)
+  drawKoreaMap(ctx, map, box, BG, bounds)
 
   // ── 숫자 ──
   const statY = box.y + box.h + 130

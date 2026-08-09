@@ -5,7 +5,9 @@ import { useVisits } from '@/hooks/useVisits'
 import { useTrips } from '@/hooks/useTrips'
 import { useCoupleTotalKm } from '@/hooks/useCoupleTotals'
 import { buildYearMap, type YearStop } from '@/lib/recap/yearMap'
-import { drawKoreaMap, drawYearCard } from '@/lib/recap/yearCard'
+import { buildTripStops, tripAtPoint } from '@/lib/recap/tripStops'
+import { drawKoreaMap, drawYearCard, projectForHitTest } from '@/lib/recap/yearCard'
+import { KOREA_BOUNDS } from '@/lib/recap/koreaOutline'
 import { shareRecapBlob } from '@/lib/recap/shareCard'
 import { haptic } from '@/lib/haptics'
 import styles from './YearMapCard.module.css'
@@ -32,10 +34,12 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
   const { data: totalKm } = useCoupleTotalKm(coupleId)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [busy, setBusy] = useState(false)
+  // 고른 여행 — null이면 전국. 지도의 두 층(어디에 갔나 / 그날 어떻게 다녔나)을 오간다.
+  const [tripId, setTripId] = useState<string | null>(null)
 
   const year = String(new Date().getFullYear())
 
-  const stops: YearStop[] = useMemo(() => {
+  const stops = useMemo(() => {
     const byId = new Map((places ?? []).map((p) => [p.id, p]))
     return (visits ?? [])
       .map((v) => {
@@ -47,17 +51,53 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
           lng: p.lng,
           date: v.visit_date,
           regionLabel: p.region_label,
-        } satisfies YearStop
+          tripId: v.trip_id,
+        }
       })
-      .filter((s): s is YearStop => s !== null)
+      .filter((s): s is YearStop & { tripId: string | null } => s !== null)
   }, [places, visits])
 
-  const map = useMemo(() => buildYearMap(stops), [stops])
+  const tripStops = useMemo(() => buildTripStops(trips ?? [], stops), [trips, stops])
+  const selected = tripStops.find((t) => t.tripId === tripId) ?? null
+
+  // 전국 보기는 모든 방문, 여행 보기는 그 여행의 스톱만. 같은 buildYearMap을 쓴다.
+  const map = useMemo(
+    () =>
+      selected
+        ? buildYearMap(
+            selected.stops.map((p, i) => ({
+              placeId: `${selected.tripId}:${i}`,
+              lat: p.lat,
+              lng: p.lng,
+              date: `${selected.startDate}T${String(i).padStart(2, '0')}`,
+              regionLabel: null,
+            })),
+          )
+        : buildYearMap(stops),
+    [selected, stops],
+  )
+  const bounds = selected ? selected.bounds : KOREA_BOUNDS
   const tripCount = trips?.length ?? 0
 
   const data = useMemo(
-    () => ({ periodLabel: year, map, totalKm: totalKm ?? null, tripCount }),
-    [year, map, totalKm, tripCount],
+    () =>
+      selected
+        ? {
+            periodLabel: selected.title,
+            subtitle: `${selected.startDate} ~ ${selected.endDate} · ${selected.stopCount}곳`,
+            map,
+            totalKm: null,
+            tripCount: null,
+            bounds,
+          }
+        : {
+            periodLabel: `우리가 다닌 ${year}`,
+            map,
+            totalKm: totalKm ?? null,
+            tripCount,
+            bounds,
+          },
+    [selected, year, map, totalKm, tripCount, bounds],
   )
 
   // 화면 미리보기 — **지도만**. 공유본과 같은 drawKoreaMap을 쓰므로 보이는 그림과
@@ -68,8 +108,23 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    drawKoreaMap(ctx, map, { x: 0, y: 0, w: MAP_W, h: MAP_H }, 'transparent')
-  }, [map])
+    drawKoreaMap(ctx, map, { x: 0, y: 0, w: MAP_W, h: MAP_H }, 'transparent', bounds)
+  }, [map, bounds])
+
+  // 캔버스 탭 → 그 자리의 여행. 전국 보기에서만 의미가 있다(이미 들어와 있으면 되돌아갈 뿐).
+  const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (selected) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const r = canvas.getBoundingClientRect()
+    // CSS로 축소돼 있으므로 화면 좌표를 캔버스 좌표로 되돌린다.
+    const x = ((e.clientX - r.left) / r.width) * MAP_W
+    const y = ((e.clientY - r.top) / r.height) * MAP_H
+    const hit = tripAtPoint(tripStops, { x, y }, (p) =>
+      projectForHitTest(p, { x: 0, y: 0, w: MAP_W, h: MAP_H }, KOREA_BOUNDS),
+    )
+    if (hit) setTripId(hit.tripId)
+  }
 
   const onShare = async () => {
     setBusy(true)
@@ -82,7 +137,7 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
       drawYearCard(ctx, data, CARD_W, CARD_H)
       const blob = await new Promise<Blob | null>((r) => c.toBlob((b) => r(b), 'image/png'))
       if (!blob) return
-      await shareRecapBlob(blob, `우리가-다닌-${year}.png`)
+      await shareRecapBlob(blob, `${selected ? selected.title : `우리가-다닌-${year}`}.png`)
       haptic()
     } finally {
       setBusy(false)
@@ -93,18 +148,21 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
     <section className={styles.wrap} aria-label={`우리가 다닌 ${year} 지도`}>
       {/* 그림만으로 말하지 않는다(§8) — 같은 내용을 글자로도 둔다. */}
       <div className={styles.head}>
-        <span className={styles.title}>우리가 다닌 {year}</span>
+        <span className={styles.title}>{selected ? selected.title : `우리가 다닌 ${year}`}</span>
         <span className={styles.meta}>
-          {map.stopCount > 0
-            ? `${map.regionCount}개 지역 · ${map.stopCount}곳`
-            : '아직 지도가 비어 있어요'}
+          {selected
+            ? `${selected.startDate} ~ ${selected.endDate} · ${selected.stopCount}곳`
+            : map.stopCount > 0
+              ? `${map.regionCount}개 지역 · ${map.stopCount}곳`
+              : '아직 지도가 비어 있어요'}
         </span>
       </div>
       <canvas
         ref={canvasRef}
-        className={styles.canvas}
+        className={selected ? styles.canvas : `${styles.canvas} ${styles.clickable}`}
         width={MAP_W}
         height={MAP_H}
+        onClick={onCanvasClick}
         role="img"
         aria-label={
           map.stopCount > 0
@@ -112,8 +170,34 @@ export function YearMapCard({ coupleId }: { coupleId: string | null }) {
             : `${year}년 전국 지도 — 아직 다녀온 곳이 없어요`
         }
       />
+      {/* 여행 고르기 — 캔버스 탭은 발견성이 낮고 키보드로 못 쓴다. 칩이 그 대체 경로다(ux §1).
+          스톱이 없는 여행은 애초에 목록에 없다(눌러도 빈 지도가 나오는 항목은 잡음이다). */}
+      {tripStops.length > 0 ? (
+        <div className={styles.chips} role="group" aria-label="지도에서 볼 여행 고르기">
+          <button
+            type="button"
+            className={`${styles.chip} ${selected ? '' : styles.chipOn}`}
+            aria-pressed={!selected}
+            onClick={() => setTripId(null)}
+          >
+            전국
+          </button>
+          {tripStops.map((t) => (
+            <button
+              key={t.tripId}
+              type="button"
+              className={`${styles.chip} ${selected?.tripId === t.tripId ? styles.chipOn : ''}`}
+              aria-pressed={selected?.tripId === t.tripId}
+              onClick={() => setTripId(t.tripId)}
+            >
+              {t.title}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <Button variant="ghost" onClick={() => void onShare()} disabled={busy} className={styles.share}>
-        {busy ? '준비 중…' : '지도 공유하기'}
+        {busy ? '준비 중…' : selected ? '이 여행 공유하기' : '지도 공유하기'}
       </Button>
     </section>
   )

@@ -73,22 +73,25 @@ export function buildYearMap(stops: readonly YearStop[]): YearMapData {
   return { thread, dots, regionCount: regions.size, stopCount: dots.length }
 }
 
+export type Bounds = { minLng: number; maxLng: number; minLat: number; maxLat: number }
+
 /**
- * 위경도 → 카드 좌표. **한국 전체 경계 고정**이다.
+ * 위경도 → 카드 좌표(비율 유지). 경계를 인자로 받는다.
  *
- * 방문 지점에 맞춰 확대하지 않는 게 핵심이다: 서울만 다닌 해에도 전국 지도가 나와야
- * "아직 여기밖에 못 갔네"가 보이고, 그게 다음 여행의 동기가 된다. 매번 꽉 차게 잡으면
- * 한 곳을 갔든 스무 곳을 갔든 같은 그림이 나온다.
+ * 전국 보기는 **한국 전체 경계 고정**이다: 방문 지점에 맞춰 확대하면 한 곳을 갔든 스무 곳을
+ * 갔든 같은 그림이 나와서 '얼마나 다녔는지'가 사라진다. 반대로 여행 하나를 골라 볼 때는
+ * 그 여행 경계로 확대해야 동선이 보인다 — 그래서 경계가 인자다.
  */
-export function projectKorea(
+export function projectWith(
   p: LatLng,
+  bounds: Bounds,
   box: { x: number; y: number; w: number; h: number },
 ): { x: number; y: number } {
-  const { minLng, maxLng, minLat, maxLat } = KOREA_BOUNDS
-  // 위도에 따라 경도 간격이 좁아진다 — 보정하지 않으면 한국이 옆으로 퍼진다.
+  const { minLng, maxLng, minLat, maxLat } = bounds
+  // 위도에 따라 경도 간격이 좁아진다 — 보정하지 않으면 지도가 옆으로 퍼진다.
   const cos = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180)
-  const spanX = (maxLng - minLng) * cos
-  const spanY = maxLat - minLat
+  const spanX = Math.max((maxLng - minLng) * cos, 1e-9)
+  const spanY = Math.max(maxLat - minLat, 1e-9)
   const k = Math.min(box.w / spanX, box.h / spanY)
   const drawW = spanX * k
   const drawH = spanY * k
@@ -98,4 +101,37 @@ export function projectKorea(
     x: ox + (p.lng - minLng) * cos * k,
     y: oy + drawH - (p.lat - minLat) * k,
   }
+}
+
+/** 전국 보기 — 경계 고정. */
+export function projectKorea(
+  p: LatLng,
+  box: { x: number; y: number; w: number; h: number },
+): { x: number; y: number } {
+  return projectWith(p, KOREA_BOUNDS, box)
+}
+
+/**
+ * 점들을 담는 경계 + 여백. 여행 하나로 줌인할 때 쓴다.
+ *
+ * 최소 폭은 **0으로 나누는 것만 막을 만큼**으로 작게 둔다(약 450m).
+ * 처음에 5km로 뒀더니 하루 동안 1~2km를 다닌 여행이 억지로 넓게 잡혀 동선이 화면 가운데
+ * 작은 점선이 됐다 — 줌인의 목적은 그 동선을 크게 보는 것인데 정반대가 된다.
+ */
+export function boundsOf(points: readonly LatLng[], padRatio = 0.25, minSpanDeg = 0.004): Bounds {
+  if (points.length === 0) return KOREA_BOUNDS
+  const lats = points.map((p) => p.lat)
+  const lngs = points.map((p) => p.lng)
+  let minLat = Math.min(...lats)
+  let maxLat = Math.max(...lats)
+  let minLng = Math.min(...lngs)
+  let maxLng = Math.max(...lngs)
+
+  const padLat = Math.max((maxLat - minLat) * padRatio, minSpanDeg / 2)
+  const padLng = Math.max((maxLng - minLng) * padRatio, minSpanDeg / 2)
+  minLat -= padLat
+  maxLat += padLat
+  minLng -= padLng
+  maxLng += padLng
+  return { minLng, maxLng, minLat, maxLat }
 }

@@ -42,3 +42,41 @@
 .share {
   width: 100%;
 }
+
+/* 여행 고르기 칩 — 캔버스 탭의 대체 경로(ux §1). 가로 스크롤, 44px 터치 타깃. */
+.chips {
+  display: flex;
+  gap: var(--sp-2);
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-weak);
+  font-size: var(--fs-label);
+  cursor: pointer;
+  white-space: nowrap; /* 칩 안에서 줄바꿈되면 높이가 들쭉날쭉해진다 */
+}
+
+/* 선택은 색만으로 말하지 않는다(§8) — aria-pressed + 굵기 + 테두리로도 드러난다. */
+.chipOn {
+  border-color: var(--c-brand);
+  color: var(--c-brand);
+  font-weight: 700;
+}
+
+.clickable {
+  cursor: pointer;
+}

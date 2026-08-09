@@ -215,6 +215,47 @@ test('목록 — 전국 지도 카드가 목록 위에 있고 그림·글자로 
   expect(mapY).toBeLessThan(listY)
 })
 
+test('전국 지도 — 여행을 고르면 그 여행 동선으로 내려간다(칩은 캔버스 탭의 대체 경로)', async ({
+  page,
+}) => {
+  const year = new Date().getFullYear()
+  await seedAuthedMap(page, {
+    trips: [
+      { id: 't1', title: '속초 1박 2일', start_date: `${year}-03-01`, end_date: `${year}-03-02`, region_code: null, version: 1 },
+      { id: 't2', title: '부산 여행', start_date: `${year}-05-01`, end_date: `${year}-05-03`, region_code: null, version: 1 },
+    ],
+    places: [
+      { id: 'p1', name: '속초 칠성조선소', address: '강원', region_label: '속초', lat: 38.2, lng: 128.59,
+        category: '카페', kakao_place_id: 'k1', added_by: USER_A, version: 1 },
+      { id: 'p2', name: '부산 흰여울', address: '부산', region_label: '부산', lat: 35.09, lng: 129.03,
+        category: '관광', kakao_place_id: 'k2', added_by: USER_A, version: 1 },
+    ],
+    visits: [
+      { id: 'v1', place_id: 'p1', trip_id: 't1', visit_date: `${year}-03-01`, rating: null, memo: null, version: 1, created_by: USER_A },
+      { id: 'v2', place_id: 'p2', trip_id: 't2', visit_date: `${year}-05-02`, rating: null, memo: null, version: 1, created_by: USER_A },
+    ],
+  })
+  await page.goto('/trips')
+
+  const picker = page.getByRole('group', { name: '지도에서 볼 여행 고르기' })
+  await expect(picker).toBeVisible()
+  // 칩은 44px 터치 타깃(§1) — 캔버스 탭만 두면 키보드로 못 쓰고 발견성도 낮다(ux §1).
+  const chip = picker.getByRole('button', { name: '속초 1박 2일' })
+  expect((await chip.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+
+  await chip.click()
+  // 제목·부제가 그 여행으로 바뀌고, 선택은 색이 아니라 aria-pressed로도 말한다(§8).
+  await expect(chip).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('region', { name: /속초 1박 2일 지도|우리가 다닌/ })).toBeVisible()
+  await expect(page.getByText(`${year}-03-01 ~ ${year}-03-02 · 1곳`)).toBeVisible()
+  await expect(page.getByRole('button', { name: '이 여행 공유하기' })).toBeVisible()
+
+  // 전국으로 되돌아갈 수 있다 — 들어갔다 못 나오면 갇힌다.
+  await picker.getByRole('button', { name: '전국' }).click()
+  await expect(page.getByText('2개 지역 · 2곳')).toBeVisible()
+  await expect(page.getByRole('button', { name: '지도 공유하기' })).toBeVisible()
+})
+
 test('상세 — 스톱이 세로 레일 위에 놓이고 구간 칩이 레일에 걸친다', async ({ page }) => {
   await seedAuthedMap(page, {
     trips: TRIPS,
