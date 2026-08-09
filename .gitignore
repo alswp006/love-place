@@ -42,3 +42,7 @@ pnpm-debug.log*
 
 # Claude에게 보여주려고 두는 참고 이미지(다른 앱 스크린샷 등) — 개인정보가 섞이므로 커밋하지 않는다.
 /claude-image/
+
+# TestFlight 아카이브(용량 큼)와 API 키 설정 — 커밋 금지
+.release/
+.env.release

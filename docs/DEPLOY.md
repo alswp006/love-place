@@ -38,6 +38,47 @@ npm run cap:ios          # Xcode 실행
 - iOS URL scheme/Associated Domains 등록(OAuth/매직링크 앱 복귀용; OTP 코드만으로도 로그인 가능).
 - Cafe24 Ssurround woff2 → `public/fonts/Cafe24Ssurround.woff2`(없으면 Quicksand/Pretendard 폴백).
 
+### 4.1 TestFlight (iOS 실기기 배포)
+
+유료 Apple Developer Program이 전제다($99/년). 무료 계정으로는 TestFlight를 못 쓴다.
+
+**사람이 한 번만 (약 20분)**
+
+| # | 할 일 | 어디서 | 놓치기 쉬운 것 |
+|---|---|---|---|
+| 1 | Apple ID 추가 | Xcode → Settings → Accounts | — |
+| 2 | 서명 켜기 | `npm run cap:ios` → App 타깃 → Signing & Capabilities → Team + **Automatically manage signing** | 인증서·프로파일이 **이때** 생긴다. 번들 ID `app.loveplace`도 자동 등록 |
+| 3 | 앱 레코드 생성 | appstoreconnect.apple.com → 앱 → `+` | 앱 **이름은 전역 고유** — 겹치면 다른 이름을 써야 한다 |
+| 4 | 계약 확인 | App Store Connect → 비즈니스 | 무료 앱 계약이 '활성'이어야 빌드가 뜬다 |
+| 5 | API 키 발급 | 사용자 및 액세스 → 통합 → App Store Connect API | 역할 **App Manager**. `.p8`는 **한 번만** 받을 수 있다 |
+
+5번 뒤:
+```bash
+mkdir -p ~/.appstoreconnect/private_keys
+mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/
+cp .env.release.example .env.release   # ASC_KEY_ID / ASC_ISSUER_ID 채우기
+```
+
+**그 다음부터는 한 명령**
+
+```bash
+npm run release:ios          # 게이트 → 빌드번호 증가 → build:native → 아카이브 → 업로드
+npm run release:ios -- --dry # 업로드 직전까지만
+npm run release:ios -- --fast # 게이트 생략(직전에 통과했을 때만)
+```
+
+스크립트가 대신 기억하는 것 — 이 셋은 **조용히** 틀린다:
+- `build:native`를 빼먹으면 **옛 웹 번들**이 그대로 올라간다(빌드는 성공한다).
+  특히 `npm run e2e`가 `dist`를 e2e 빌드로 덮으므로, 게이트 **뒤에** 다시 빌드해야 한다.
+- 빌드 번호를 안 올리면 업로드가 거부된다(같은 번호 재업로드 금지).
+- 시뮬레이터 destination으로는 Archive가 안 된다 → `generic/platform=iOS`.
+
+**테스터 초대**: TestFlight → 내부 테스팅 그룹(최대 100명)에 추가. **베타 심사 없음** —
+업로드 후 처리(5~30분)만 끝나면 바로 설치된다. 외부 테스터는 첫 빌드에 심사(1~2일)가 붙으니
+둘이 쓸 거면 반드시 내부로.
+
+**빌드는 90일 뒤 만료**된다 — 그때 같은 명령을 다시 돌리면 된다.
+
 ## 5. 법무 (영리 출시)
 - **개인정보처리방침** `docs/legal/privacy-policy.md` → 공개 URL 호스팅 → 스토어 등록.
 - **위치기반서비스사업 신고**(동선 기록/R6 시): [emsit.go.kr](https://www.emsit.go.kr/cp/cv/Cp1440000_0182_01Reg.do), 소상공인 간이신고 가능. **위치정보처리방침** `docs/legal/location-policy.md` 게시 + 위치정보관리책임자 지정.

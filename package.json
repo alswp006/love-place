@@ -28,6 +28,7 @@
     "cap:sync": "cap sync",
     "cap:ios": "cap open ios",
     "cap:android": "cap open android",
+    "release:ios": "node scripts/release-ios.mjs",
     "build:native": "vite build && cap sync",
     "generate:assets": "capacitor-assets generate"
   },

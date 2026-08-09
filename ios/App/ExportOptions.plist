@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  아카이브 → App Store Connect 업로드 옵션. scripts/release-ios.mjs가 쓴다.
+
+  destination=upload : 로컬에 .ipa를 만들지 않고 곧바로 올린다. Organizer를 손으로 여는 단계가 사라진다.
+  signingStyle=automatic : Xcode가 관리하는 프로파일을 쓴다(수동 프로파일 파일을 저장소에 두지 않는다).
+  uploadSymbols=true : 크래시 로그가 해독 가능해진다(어차피 우리 둘이 쓰는 앱이라 특히 유용).
+-->
+<plist version="1.0">
+<dict>
+  <key>method</key>
+  <string>app-store-connect</string>
+  <key>destination</key>
+  <string>upload</string>
+  <key>signingStyle</key>
+  <string>automatic</string>
+  <key>uploadSymbols</key>
+  <true/>
+  <!-- TestFlight 빌드는 우리 둘만 쓴다. 비트코드는 폐기됐으므로 명시하지 않는다. -->
+  <key>manageAppVersionAndBuildNumber</key>
+  <false/>
+</dict>
+</plist>
