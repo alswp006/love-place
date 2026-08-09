@@ -157,7 +157,7 @@ export default function MapPage() {
           {/* R6 동선 기록(A안) — 화면 한가운데 위를 막던 것을 '내 위치' 버튼 위 우하단 레일로 옮겼다.
               엄지 도달 영역이고, 지도를 가리지 않으며, 기록 중 배지도 같은 자리에서 커진다. */}
           {coupleActive ? (
-            <div className={styles.journeyRail}>
+            <div className={styles.journeyRail} data-hidden={snap !== 'peek' ? 'true' : undefined}>
               <JourneyRecordControl coupleId={coupleId} userId={myId} />
             </div>
           ) : null}

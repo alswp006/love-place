@@ -1,7 +1,10 @@
 import { isNativePlatform } from '@/lib/platform'
+import { createWebRecorder } from './webRecorder'
 import type { PendingPoint } from './types'
 
-// R6 네이티브 동선 recorder — transistorsoft 백그라운드 위치 래퍼. 웹/미설치는 no-op(호출측 fallback).
+// R6 동선 recorder — 네이티브는 transistorsoft 백그라운드 위치 래퍼.
+// 웹은 webRecorder(watchPosition)로 떨어진다. **no-op이 아니다** — 예전엔 웹에서 아무것도 안 하면서
+// UI만 '기록 중'을 켜서 성공한 척하는 실패였다(점 0개·거리 0m를 여행이 끝나고서야 알게 됨).
 // 설계 §6: iOS WhenInUse(Always 회피), Android foreground-service. 업로드는 큐(pointQueue) → record_points.
 // [네이티브] `npm i @transistorsoft/capacitor-background-geolocation` + cap add 후 동작(라이선스는 Android release만).
 
@@ -139,6 +142,21 @@ export async function loadBgGeo(): Promise<BgGeoLike | null> {
   }
 }
 
+/**
+ * 이 환경에 맞는 recorder.
+ *
+ * 네이티브 플러그인이 있으면 그것(백그라운드 포함). 없으면 웹 폴백(화면 켜 둔 동안만).
+ * 폴백조차 못 하는 환경(geolocation 없음)이면 webRecorder가 ensureReady에서 사람 말로 거절한다 —
+ * 조용히 no-op으로 성공하는 경로는 이제 없다.
+ */
 export async function getJourneyRecorder(): Promise<JourneyRecorder> {
-  return createJourneyRecorder(await loadBgGeo())
+  const plugin = await loadBgGeo()
+  if (plugin) return createJourneyRecorder(plugin)
+  const geo = typeof navigator !== 'undefined' ? (navigator.geolocation ?? null) : null
+  return createWebRecorder(geo)
+}
+
+/** 지금 recorder가 웹 폴백인가 — UI가 '화면을 켜 둔 동안만'이라는 한계를 말해야 하는지 판단한다. */
+export function isWebFallbackRecording(): boolean {
+  return !isNativePlatform()
 }

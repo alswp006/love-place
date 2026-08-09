@@ -58,3 +58,12 @@
 .stop {
   min-height: 44px;
 }
+
+/* 웹 폴백 한계 — 라벨 아래 한 줄. 색만으로 말하지 않게 글자로 둔다(§8). */
+.caveat {
+  display: block;
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  color: var(--c-text-weak);
+  line-height: 1.3;
+}

@@ -30,3 +30,11 @@
   text-decoration: none;
   box-shadow: var(--shadow-floating);
 }
+
+/* 웹 폴백 한계 — 시작 버튼 아래. 누르기 전에 무엇이 기록되는지 알아야 한다. */
+.caveat {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-micro);
+  color: var(--c-text-weak);
+  text-align: center;
+}

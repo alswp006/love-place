@@ -47,11 +47,22 @@
   position: absolute;
   left: var(--sp-3);
   right: var(--sp-3);
-  bottom: var(--sp-3);
+  /* ⚠️ 이 레일의 기준 상자는 **화면 전체**다(지도 요소가 아니다). 그래서 bottom: sp-3으로 두면
+     화면 맨 아래 = 장소 시트(z45) 뒤로 들어가 **버튼이 통째로 사라진다**.
+     실제로 그 상태였다 — 동선 기록 기능 전체가 지도에서 도달 불가였다.
+     시트 peek 밴드 + 탭바 높이만큼 띄워 '내 위치' 버튼과 같은 줄에 올린다(원래 의도). */
+  bottom: calc(var(--sheet-peek-h) + var(--sp-3));
   display: flex;
   justify-content: flex-start;
   z-index: 41;
   pointer-events: none;
+}
+
+/* 시트가 peek보다 커지면 어차피 지도를 덮는다 — 내 위치 버튼과 같은 규칙으로 함께 숨는다(spec §3.1). */
+.journeyRail[data-hidden='true'] {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .journeyRail > * {

@@ -20,6 +20,8 @@ export type SeedTables = {
   directionLegs?: { polyline: { lat: number; lng: number }[] | null; distanceMeters: number | null; degraded: boolean }[]
   /** true면 상대 없는 '혼자 쓰는 중' 커플(0024). 기본은 연결된 둘. */
   solo?: boolean
+  /** true면 위치 동선 수집·이용 동의를 켠 상태로 시드(동선 기록 경로 테스트용). */
+  locationConsent?: boolean
 }
 
 function jsonRoute(body: unknown) {
@@ -94,6 +96,35 @@ export async function seedAuthedMap(page: Page, tables: SeedTables = {}): Promis
     }
     return jsonRoute(tables.profiles ?? [])(route)
   })
+  // 동선 기록(R6) — 동의·세션·점 전송. 미시드면 동의 없음(=시작 버튼 대신 동의 유도)이 기본.
+  await page.route('**/e2e.supabase.co/rest/v1/consent_log**', (route) => {
+    if (route.request().method() === 'POST') return jsonRoute([])(route)
+    return jsonRoute(
+      tables.locationConsent
+        ? [
+            {
+              consent_type: 'COLLECT_USE',
+              scope: 'RECAP',
+              granted: true,
+              notify_mode: null,
+              created_at: '2020-01-01T00:00:00Z',
+            },
+          ]
+        : [],
+    )(route)
+  })
+  await page.route('**/e2e.supabase.co/rest/v1/trip_sessions**', (route) => {
+    // 세션 생성은 .select('id').single() → 단일 객체로 답한다.
+    if (route.request().method() === 'POST') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'sess-1' }),
+      })
+    }
+    return jsonRoute([])(route)
+  })
+
   await page.route('**/e2e.supabase.co/rest/v1/places**', jsonRoute(tables.places ?? []))
   await page.route('**/e2e.supabase.co/rest/v1/wishes**', jsonRoute(tables.wishes ?? []))
   await page.route('**/e2e.supabase.co/rest/v1/visits**', jsonRoute(tables.visits ?? []))

@@ -5,6 +5,8 @@ import { useJourneyRecording } from '@/hooks/useJourneyRecording'
 import { useLinkSessionToTrip } from '@/hooks/useOrphanSessions'
 import { soleTripCovering, localDayKey, findTripsCoveringDay } from '@/lib/journey/autoLink'
 import { useToast } from '@/components/common/ToastProvider'
+import { isWebFallbackRecording } from '@/lib/journey/recorder'
+import { WEB_RECORDING_CAVEAT } from '@/lib/journey/webRecorder'
 import { Button } from '@/components/ui/Button'
 import { RecordingBadge } from './RecordingBadge'
 import { ConsentSheet } from './ConsentSheet'
@@ -22,6 +24,9 @@ export function JourneyRecordControl({ coupleId, userId }: Props) {
   const toast = useToast()
   const linker = useLinkSessionToTrip(coupleId, userId)
   const [consentOpen, setConsentOpen] = useState(false)
+  // 웹에서는 화면을 켜 둔 동안만 기록된다(iOS Safari가 백그라운드 JS를 정지시킨다).
+  // 이 한계를 시작 전·기록 중 **양쪽에서** 말한다 — 여행이 끝난 뒤에 알게 되면 이미 늦다.
+  const webOnly = isWebFallbackRecording()
 
   if (!coupleId) return null
 
@@ -64,6 +69,7 @@ export function JourneyRecordControl({ coupleId, userId }: Props) {
           onPause={() => void rec.pause()}
           onResume={() => void rec.resume()}
           onStop={() => void onEnd()}
+          caveat={webOnly ? WEB_RECORDING_CAVEAT : null}
         />
       </div>
     )
@@ -94,6 +100,7 @@ export function JourneyRecordControl({ coupleId, userId }: Props) {
       <Button variant="primary" className={styles.startBtn} onClick={() => void onStart()}>
         ● 동선 시작
       </Button>
+      {webOnly ? <p className={styles.caveat}>{WEB_RECORDING_CAVEAT}</p> : null}
     </div>
   )
 }
