@@ -28,31 +28,39 @@ export function TrackBadge({
 }) {
   const meta = TRACK_META[track]
   const partnerId = Object.keys(profiles).find((id) => id !== myId) ?? null
-  const ids: (string | null)[] =
+  // 상대가 없으면(혼자 쓰는 중) '함께'가 유령 아바타 하나를 더 그렸다 — 프로필이 없어
+  // '상대'라는 글자만 뜬 회색 원. 없는 사람을 그리지 않는다(0024).
+  //
+  // 단 **라벨은 절대 지우지 않는다.** 아바타는 장식이고 이름이 본체다. 아바타 유무로 배지를
+  // 통째로 없앴더니, profiles가 아직 안 온 순간에 트랙 전환 버튼이 빈 칸이 됐다(§8 색+라벨).
+  const ids: string[] = (
     track === 'shared' ? [myId, partnerId] : track === 'mine' ? [myId] : [partnerId]
+  ).filter((id): id is string => Boolean(id))
 
   const cls = [styles.badge, compact ? styles.compact : '', className].filter(Boolean).join(' ')
   return (
     <span className={cls} aria-label={compact ? meta.label : undefined}>
-      <span className={styles.faces} aria-hidden>
-        {ids.map((id, i) => {
-          const p = id ? profiles[id] : undefined
-          const name = p?.displayName?.trim() || (i === 0 && track !== 'partner' ? '나' : '상대')
-          return (
-            <span
-              key={`${id ?? 'x'}-${i}`}
-              className={styles.face}
-              style={{ backgroundColor: p?.color ?? meta.cssVar }}
-            >
-              {p?.avatarUrl ? (
-                <img src={p.avatarUrl} alt="" className={styles.img} />
-              ) : (
-                name.slice(0, 1).toUpperCase()
-              )}
-            </span>
-          )
-        })}
-      </span>
+      {ids.length > 0 ? (
+        <span className={styles.faces} aria-hidden>
+          {ids.map((id, i) => {
+            const p = id ? profiles[id] : undefined
+            const name = p?.displayName?.trim() || (id === myId ? '나' : '상대')
+            return (
+              <span
+                key={`${id ?? 'x'}-${i}`}
+                className={styles.face}
+                style={{ backgroundColor: p?.color ?? meta.cssVar }}
+              >
+                {p?.avatarUrl ? (
+                  <img src={p.avatarUrl} alt="" className={styles.img} />
+                ) : (
+                  name.slice(0, 1).toUpperCase()
+                )}
+              </span>
+            )
+          })}
+        </span>
+      ) : null}
       {compact ? null : <span className={styles.label}>{meta.label}</span>}
     </span>
   )

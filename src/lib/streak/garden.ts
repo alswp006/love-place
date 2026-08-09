@@ -134,12 +134,13 @@ export type MonthSummary = {
 export function monthsOfYear(
   counts: ReadonlyMap<string, DayCell>,
   todayKey: string,
+  members: 1 | 2 = 2,
 ): MonthSummary[] {
   const year = todayKey.slice(0, 4)
   return Array.from({ length: 12 }, (_, i) => {
     const monthKey = `${year}-${pad2(i + 1)}`
     const stars = monthStars(counts, monthKey)
-    const needed = starsNeededForMonth(monthKey)
+    const needed = starsNeededForMonth(monthKey, members)
     return { monthKey, stars, needed, complete: stars.length >= needed }
   })
 }

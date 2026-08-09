@@ -146,6 +146,9 @@ export default function CalendarPage() {
   // 트랙은 필터가 아니라 '어느 캘린더를 볼지'다 — 셋을 겹쳐 도형으로 구분하지 않고 하나씩 분리해 본다.
   // 기본은 함께(공유가 이 앱의 기본값 §1).
   const [track, setTrack] = useState<Track>('shared')
+  // 혼자면 트랙 개념 자체가 없다 — 전환기를 숨기고 항상 '함께'(= 내 전부)를 본다(0024).
+  const isSolo = couple?.isSolo ?? false
+  const effectiveTrack: Track = isSolo ? 'shared' : track
   // 편집 시트는 시리즈 행(editing)을 보여주되, 클릭한 occurrence의 시작 ISO/dayKey도 함께 보존한다
   // (조사 01 §3 — 현재는 시리즈로 덮어써 occurrence가 소실 → 범위 분기에 occurrence 시각이 필요).
   const [sheet, setSheet] = useState<{
@@ -157,9 +160,11 @@ export default function CalendarPage() {
   // 반복 occurrence 편집/삭제 시 범위 선택 시트(이 일정만/이후/전체). pending에 분기 컨텍스트 보존.
   const [scope, setScope] = useState<{ mode: 'edit' | 'delete'; series: EventRow; occStartIso: string; occDayKey: string; patch: EventPatch | null } | null>(null)
 
+  // 혼자면 거르지 않는다 — 트랙은 '누구 것인지'를 나누는 축인데 나눌 상대가 없다.
+  // 여기서 shared만 보여주면 예전에 PERSONAL로 만든 일정이 화면에서 사라진다(데이터는 있는데 안 보임).
   const visibleEvents = useMemo(
-    () => (events ?? []).filter((e) => deriveTrack(e, myId) === track),
-    [events, track, myId],
+    () => (isSolo ? (events ?? []) : (events ?? []).filter((e) => deriveTrack(e, myId) === track)),
+    [events, track, myId, isSolo],
   )
   const cells = useMemo(() => monthMatrix(view.year, view.month0), [view])
   // 반복 일정을 보이는 달 윈도우로 회차 전개(비반복은 그대로). 편집은 시리즈 기준(_seriesStart).
@@ -427,7 +432,13 @@ export default function CalendarPage() {
         </div>
 
         {/* 트랙 = 어느 캘린더를 볼지(단일 선택). 범례는 지웠다 — 선택지 자체가 색·심볼·이름을 다 보여준다. */}
-        <TrackSwitch track={track} onChange={setTrack} profiles={profiles ?? {}} myId={myId} />
+        <TrackSwitch
+          track={track}
+          onChange={setTrack}
+          profiles={profiles ?? {}}
+          myId={myId}
+          solo={isSolo}
+        />
 
         {mode === 'day' ? (
           <DayTimeline
@@ -468,14 +479,14 @@ export default function CalendarPage() {
               profiles={profiles ?? {}}
               placeById={placeById}
               categoryById={categoryById}
-              readOnly={track === 'partner'}
+              readOnly={effectiveTrack === 'partner'}
               category={category}
               onCategoryChange={setCategory}
               doneKeys={doneKeys}
               partnerId={partnerId}
               onToggleDone={onToggleDone}
               // 지금 보고 있는 캘린더에 그대로 들어간다 — 함께 탭에서 적으면 함께 일정.
-              quickAddVisibility={track === 'shared' ? 'SHARED' : 'PERSONAL'}
+              quickAddVisibility={effectiveTrack === 'shared' ? 'SHARED' : 'PERSONAL'}
               onEdit={openEdit}
               onDelete={quickDelete}
               onQuickAdd={onQuickAdd}
@@ -544,17 +555,23 @@ function ViewSegment({
 
 // 트랙 전환 — 셋 중 하나만 본다(투두메이트의 사람 전환과 같은 모델).
 // 색 + 심볼 + 라벨 이중화는 유지(§8): 선택은 색뿐 아니라 aria-pressed·굵기·테두리로도 드러난다.
+//
+// 혼자면 전환기 자체를 그리지 않는다(0024): '상대'는 눌러도 영원히 빈 캘린더이고,
+// '함께'와 '나'는 혼자일 때 같은 것을 가리킨다. 고를 것이 없는 선택지는 UI가 아니라 잡음이다.
 function TrackSwitch({
   track,
   onChange,
   profiles,
   myId,
+  solo = false,
 }: {
   track: Track
   onChange: (t: Track) => void
   profiles: ProfileMap
   myId: string | null
+  solo?: boolean
 }) {
+  if (solo) return null
   return (
     <div className={styles.chips} role="group" aria-label="어느 캘린더를 볼지">
       {ALL_TRACKS.map((t) => {

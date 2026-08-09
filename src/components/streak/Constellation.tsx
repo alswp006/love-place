@@ -56,6 +56,7 @@ export function Constellation({
   labelOf,
   compact = false,
   targetId,
+  members = 2,
 }: {
   monthKey: string
   stars: readonly StarEntry[]
@@ -65,9 +66,11 @@ export function Constellation({
   compact?: boolean
   /** 완료 시 별이 날아와 박힐 지점(펼침 버전에만 준다). */
   targetId?: string
+  /** 커플 인원(1=혼자). 분모가 날 수 × 이 값이다 — 혼자일 때 절반에서 멈추지 않게. */
+  members?: 1 | 2
 }) {
   const shape: ConstellationDef = constellationOfMonth(monthKey)
-  const need = starsNeededForMonth(monthKey)
+  const need = starsNeededForMonth(monthKey, members)
   const slots = useMemo(() => starSlots(shape, need), [shape, need])
   const filled = Math.min(stars.length, slots.length)
   const complete = filled >= slots.length

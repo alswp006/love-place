@@ -211,6 +211,46 @@ test('상대 캘린더는 보기 전용 — 추가 경로가 아예 없다', asy
   await expect(page.getByRole('form', { name: '빠른 일정 추가' })).toBeVisible()
 })
 
+// ── 혼자 쓰기(0024) — '상대'가 없을 때 죽은 UI를 남기지 않는다 ──
+test('혼자면 트랙 전환기가 없다 — 고를 것이 없는 선택지는 잡음이다', async ({ page }) => {
+  await seedAuthedMap(page, { solo: true, events: EVENTS })
+  await page.goto(`/calendar?date=${D}`)
+  await expect(page.getByRole('group', { name: '어느 캘린더를 볼지' })).toHaveCount(0)
+  // 그래도 일정은 다 보인다 — 거르지 않는다(트랙은 '누구 것'인데 나눌 상대가 없다).
+  await expect(page.getByText('함께 점심').first()).toBeVisible()
+  await expect(page.getByText('내 운동').first()).toBeVisible()
+  // 추가 경로는 살아 있다(보기 전용이 아니다).
+  await expect(page.getByRole('form', { name: '빠른 일정 추가' })).toBeVisible()
+})
+
+test('혼자면 별자리 분모가 절반 — 다 채워도 미완성이 되지 않는다', async ({ page }) => {
+  await seedAuthedMap(page, { solo: true, events: [] })
+  await page.goto('/calendar')
+  await page.getByRole('button', { name: /별자리 펼치기/ }).click()
+  const region = page.getByRole('region', { name: '우리가 만든 별자리' })
+  await expect(region).toBeVisible()
+
+  // 분모 = 그 달의 날 수 × 1. 둘일 때는 × 2다(아래 케이스와 대조).
+  const progress = await page.getByText(/\d+\/\d+ · \d+개 남음/).textContent()
+  const need = Number(/\d+\/(\d+)/.exec(progress ?? '')?.[1])
+  const days = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()
+  expect(need).toBe(days)
+
+  // 범례의 '상대' 점은 혼자일 때 영원히 안 채워지는 빈 약속이라 뺀다.
+  await expect(region.getByText('상대', { exact: true })).toHaveCount(0)
+})
+
+test('둘이면 별자리 분모가 날 수 × 2 — 같이 하니 더 채운다', async ({ page }) => {
+  await seedAuthedMap(page, { events: [] })
+  await page.goto('/calendar')
+  await page.getByRole('button', { name: /별자리 펼치기/ }).click()
+  const progress = await page.getByText(/\d+\/\d+ · \d+개 남음/).textContent()
+  const need = Number(/\d+\/(\d+)/.exec(progress ?? '')?.[1])
+  const days = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()
+  expect(need).toBe(days * 2)
+  await expect(page.getByRole('region', { name: '우리가 만든 별자리' }).getByText('상대', { exact: true })).toBeVisible()
+})
+
 test('다크 모드 — 월 뷰', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await seedAuthedMap(page, { events: EVENTS })

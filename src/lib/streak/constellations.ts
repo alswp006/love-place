@@ -218,13 +218,19 @@ export function starSlots(def: ConstellationDef, count: number): Slot[] {
   return [...anchors, ...fills]
 }
 
-/** 그 달의 날 수 — 채워야 할 별은 이 값 × 2(둘이 하루에 하나씩)다. */
+/** 그 달의 날 수. 채워야 할 별은 이 값 × 사람 수(하루에 한 사람이 하나)다. */
 export function daysInMonth(monthKey: string): number {
   const [y, m] = monthKey.split('-').map(Number)
   return new Date(Date.UTC(y ?? 1970, m ?? 1, 0)).getUTCDate()
 }
 
-/** 한 달을 다 채우는 데 필요한 별 수 = 날 수 × 2명. */
-export function starsNeededForMonth(monthKey: string): number {
-  return daysInMonth(monthKey) * 2
+/**
+ * 한 달을 다 채우는 데 필요한 별 수 = 날 수 × 사람 수.
+ *
+ * 혼자 쓰는 동안 2로 고정하면 **한 달을 다 채워도 절반**이라 별자리가 영원히 완성되지 않는다.
+ * 목표가 달성 불가면 그건 게이미피케이션이 아니라 그냥 실패 표시다(0024 솔로 모드).
+ * 연결하면 분모가 2로 늘어난다 — 같이 하니 더 채워야 하는 게 자연스럽다.
+ */
+export function starsNeededForMonth(monthKey: string, members: 1 | 2 = 2): number {
+  return daysInMonth(monthKey) * members
 }

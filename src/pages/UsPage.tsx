@@ -273,8 +273,8 @@ export default function UsPage() {
           </section>
         ) : null}
 
-        {/* 연결 해제 */}
-        {couple?.status === 'ACTIVE' ? (
+        {/* 연결 해제 — 혼자면 해제할 상대가 없다. 눌러도 할 일이 없는 위험 버튼을 두지 않는다(0024). */}
+        {couple?.status === 'ACTIVE' && !couple.isSolo ? (
           <section className={styles.card} aria-label="연결 관리">
             <Button variant="danger" type="button" onClick={() => setConfirming(true)}>
               연결 해제
