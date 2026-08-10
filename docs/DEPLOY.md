@@ -86,6 +86,21 @@ npm run release:ios -- --fast # 게이트 생략(직전에 통과했을 때만)
 
 **빌드는 90일 뒤 만료**된다 — 그때 같은 명령을 다시 돌리면 된다.
 
+### 심사 메타데이터는 손으로 넣지 않는다
+
+방침 URL·베타 설명·심사 노트는 값의 출처가 저장소 안에 있다(방침 URL은 `.env`의
+`VITE_PUBLIC_SITE_URL`, 백그라운드 위치 사유는 Info.plist가 선언하는 것). 손으로 옮기면
+어긋나고, 어긋나면 심사에서 걸린다. App Store Connect API로 밀어 넣는다:
+
+```bash
+node scripts/asc-api.mjs whoami              # 인증 확인 + 앱 ID 조회
+node scripts/asc-api.mjs show <appId>        # 현재 값 읽기
+node scripts/asc-api.mjs set-review <appId>  # 방침 URL·베타 설명·심사 노트 쓰기
+```
+
+`.env.release`에 연락처 4종과 데모 계정을 채워야 심사 상세까지 들어간다(Apple이 전부 필수로
+요구한다). 없으면 스크립트가 무엇이 없는지 말하고 거기까지만 반영한다.
+
 #### 막히는 자리: "무료(개인) 팀으로 서명되고 있습니다"
 
 가입비를 냈는데도 Xcode가 무료 팀으로 서명하는 일이 흔하다(가입 처리에 24~48시간).
