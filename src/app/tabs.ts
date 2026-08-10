@@ -1,6 +1,6 @@
 import type { IconName } from '@/components/ui/Icon'
 import type { EmptyArt } from '@/components/common/EmptyState'
-import { MapPin, CalendarDays, Suitcase, Sparkles, Users, type IconComponent } from '@/components/nav/icons'
+import { MapPin, CalendarDays, Suitcase, Bookmark, Users, type IconComponent } from '@/components/nav/icons'
 
 // 5탭 IA의 단일 출처(설계서 §3 — 장소 탭은 지도에 통합, 여행 탭은 '우리'에서 승격). TabBar·router·페이지 셸·테스트가
 // 모두 여기서 도출 — 한 곳만 고치면 라우팅·네비·테스트가 동기화된다(메타 중복으로 인한 무성 회귀 방지).
@@ -68,17 +68,22 @@ export const TABS: TabDef[] = [
     },
   },
   {
-    path: '/discover',
-    label: '추천',
-    testId: 'page-discover',
-    title: '추천',
-    subtitle: '모이면 코스를 짜드려요',
-    Icon: Sparkles,
+    // 2026-08: '추천' → '장소'. 추천 탭은 여행지를 발굴하는 곳처럼 이름 지어졌지만, 실제로 하던 일은
+    // **담은 장소를 지역으로 묶어 코스를 짜는 것**이었다(설계서 §5.6의 AI 경로도 원래 그 뜻이다).
+    // 한편 담은 장소를 보는 유일한 UI가 지도 위 드래그 시트뿐이라, 장소가 쌓이면 '다시 찾기'가
+    // 무너졌다(이름으로 검색할 수단이 앱 전체에 없었다). 두 문제의 답이 같은 화면이라 합쳤다:
+    // 목록·검색·관리를 여기로 옮기고, 지역이 3곳 이상 모이면 그 자리에서 코스를 짠다.
+    path: '/places',
+    label: '장소',
+    testId: 'page-places',
+    title: '장소',
+    subtitle: '담은 곳 · 지역별로 모아보기',
+    Icon: Bookmark,
     empty: {
       icon: 'sparkles',
       art: 'recommend',
-      title: '같은 지역 가고싶은 곳이 모이면 추천이 시작돼요',
-      hint: '한 지역에 3~5곳이 쌓이면 AI가 일자별 코스를 제안해요.',
+      title: '아직 담은 장소가 없어요',
+      hint: '지도에서 가고싶은 곳을 담으면 여기 지역별로 모여요. 한 지역에 3곳이 쌓이면 코스를 짜드려요.',
       action: { label: '가고싶은 곳 추가하기', to: '/' },
     },
   },

@@ -92,11 +92,20 @@ describe('5탭 라우팅 (설계서 §3 IA — 장소는 지도에 통합, 여�
     },
   )
 
-  it('추천 탭 빈 상태는 "장소 모으기"로 가는 행동 유도 링크를 준다(§5.6 콜드스타트 — 죽은 탭 금지)', async () => {
-    renderAt('/discover')
-    await screen.findByTestId('page-discover')
+  it('장소 탭 빈 상태는 "장소 모으기"로 가는 행동 유도 링크를 준다(§5.6 콜드스타트 — 죽은 탭 금지)', async () => {
+    // 2026-08: '/discover'(추천) → '/places'(장소). 탭이 하는 일이 '여행지 발굴'이 아니라
+    // '담은 장소를 모아 보고 지역별로 코스를 짜는 것'이라 이름과 경로를 실제에 맞췄다.
+    renderAt('/places')
+    await screen.findByTestId('page-places')
     const cta = screen.getByRole('link', { name: '가고싶은 곳 추가하기' })
     expect(cta).toHaveAttribute('href', '/')
+  })
+
+  it('옛 /discover는 이제 없는 경로 — 지도로 떨어진다(북마크가 죽은 화면에 갇히지 않게)', async () => {
+    // router의 `{ path: '*' }` 폴백이 받는다. 명시적 리다이렉트를 따로 두지 않은 이유는
+    // 추천 탭이 외부에 공유될 만한 URL이 아니었기 때문이다(딥링크 대상은 place/trip/event).
+    renderAt('/discover')
+    await screen.findByTestId('page-map')
   })
 
   it('하단 탭바에 4개 탭이 라벨과 함께 노출된다(색만 의존 금지)', async () => {

@@ -107,9 +107,9 @@ export default function RecapPage() {
             icon="compass"
           art="trip"
             title="여행을 찾을 수 없어요"
-            hint="추천 탭의 '지난 여행'에서 다시 골라주세요."
+            hint="'여행' 탭에서 다시 골라주세요."
             action={
-              <Button variant="primary" onClick={() => navigate('/discover')}>
+              <Button variant="primary" onClick={() => navigate('/trips')}>
                 추천으로 가기
               </Button>
             }

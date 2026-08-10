@@ -1,0 +1,136 @@
+/* 장소 탭 — 담은 곳을 지역별로 모아 보고 찾고 관리하는 화면.
+   지도 시트와 달리 드래그가 없는 평범한 스크롤 페이지다(관리는 안정된 표면에서 해야 한다). */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-3) var(--sp-6);
+}
+
+/* ── 검색 ─────────────────────────────────────────────── */
+
+.searchRow {
+  position: sticky;
+  /* 스크롤해도 검색창은 남는다 — 장소가 많을수록 이게 이 탭의 주 도구다. */
+  top: 0;
+  z-index: 2;
+  padding-block: var(--sp-2);
+  background: var(--c-bg);
+}
+
+/* 시각적으로는 placeholder로 충분하지만 라벨이 없으면 스크린리더에서 정체불명이 된다(§8). */
+.searchLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.search {
+  width: 100%;
+  /* 고정 높이가 아니라 min-height — 글자를 키워도 안 잘린다(Dynamic Type, §8). */
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-body);
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+}
+
+.search::placeholder {
+  color: var(--c-text-weak);
+}
+
+.search:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+}
+
+/* ── 필터 ─────────────────────────────────────────────── */
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.count {
+  margin-left: auto;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+/* ── 지역 그룹 ────────────────────────────────────────── */
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.groupHead {
+  display: flex;
+  flex-wrap: wrap; /* 글자가 커지면 CTA가 아래로 내려간다(고정 높이 금지) */
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: var(--fs-title-s);
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.groupCount {
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--c-text-weak);
+}
+
+.courseBtn {
+  margin-left: auto;
+  min-height: 44px; /* 터치 타깃(HIG) */
+}
+
+.building {
+  margin: 0 0 0 auto;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.seedTitle {
+  margin: var(--sp-4) 0 var(--sp-2);
+  font-size: var(--fs-title-s);
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+/* 필터 칩 — 시트의 칩과 같은 결(같은 앱에서 두 가지 칩이 보이면 안 된다). 색만이 아니라
+   aria-pressed + 굵기·테두리로도 선택을 말한다(§8 색 단독 구분 금지). */
+.filterChip {
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-weak);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: var(--fs-caption);
+  font-family: inherit;
+  cursor: pointer;
+  min-height: 44px; /* 터치 타깃(HIG) */
+}
+
+.filterOn {
+  background: var(--c-surface-2);
+  color: var(--c-brand);
+  font-weight: 600;
+  border-color: var(--c-brand);
+}

@@ -12,7 +12,7 @@ const PAGES: Record<string, React.LazyExoticComponent<() => React.JSX.Element>> 
   '/': lazy(() => import('@/pages/MapPage')),
   '/calendar': lazy(() => import('@/pages/CalendarPage')),
   '/trips': lazy(() => import('@/pages/TripsPage')),
-  '/discover': lazy(() => import('@/pages/RecommendPage')),
+  '/places': lazy(() => import('@/pages/PlacesPage')),
   '/us': lazy(() => import('@/pages/UsPage')),
 }
 
@@ -81,8 +81,7 @@ export const routes: RouteObject[] = [
             element: lazyRoute(<TripDetailPage />),
             errorElement: <RouteError />,
           },
-          // /places는 지도(/)로 통합됨 — 북마크/딥링크 보존용 명시적 리다이렉트.
-          { path: 'places', element: <Navigate to="/" replace /> },
+          // (2026-08) '/places'는 다시 실제 탭이다 — 예전 '지도로 통합' 리다이렉트를 걷어냈다.
           // 미지정(로그인 상태) 경로는 지도(/)로.
           { path: '*', element: <Navigate to="/" replace /> },
         ],

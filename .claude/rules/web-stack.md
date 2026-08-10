@@ -176,13 +176,14 @@ export function loadKakaoMaps(): Promise<void> {
   /          → 지도   (첫 화면 — 장소 탭이 여기로 통합됨, 2026-06)
   /calendar  → 일정
   /trips     → 여행   (2026-07 신설 — '우리'의 접힌 섹션에서 승격)
-  /discover  → 추천
+  /places    → 장소   (2026-08 — '추천'을 대체. 담은 곳 목록·검색·관리 + 지역별 코스 짜기)
   /us        → 우리(설정·연결·내보내기)
   ```
   + `/auth`(로그인/매직링크 콜백), `/onboarding`(초대·연결, 색상 선택, 위치·사진 상호 동의 — §8/§10.3).
+  (`/discover`는 더는 없다 — `*` 폴백이 지도로 보낸다. `/places`는 2026-06에 지도로 통합됐다가 2026-08에 목록 탭으로 되살아났다.)
   탭 메타의 **단일 출처는 `src/app/tabs.ts`(TABS)** — TabBar·router·페이지 셸·테스트가 전부 여기서 도출된다. 탭을 더하거나 뺄 땐 이 파일만 고친다.
 - **가드:** 비로그인 → `/auth`. 로그인했으나 couple 미연결 → `/onboarding`. 둘 다 충족해야 탭 진입.
-- 상세는 중첩/모달 라우트: `/trips/:tripId`(Day 계획), `/trips/:tripId/recap`(리캡), `/calendar/event/:eventId` 등. 딥링크 가능하게 placeId/tripId를 URL에. (`/places`는 `/`로 리다이렉트 — 북마크 보존.)
+- 상세는 중첩/모달 라우트: `/trips/:tripId`(Day 계획), `/trips/:tripId/recap`(리캡), `/calendar/event/:eventId` 등. 딥링크 가능하게 placeId/tripId를 URL에. 
 - **여행 계획은 별도 저장소를 만들지 않는다.** 여행 Day N의 스톱 = 그 날짜에 든 `events` 중 `place_id`가 있는 것(`lib/trips/tripDays.ts`). `events.trip_id` 컬럼도, 조인 테이블도 만들지 말 것 — 캘린더와 이중 관리가 되어 §7(상태는 도출) 위반이다.
 - 코드 스플리팅: 페이지는 `React.lazy` + `Suspense`(로딩 스켈레톤). 지도·캘린더 등 무거운 모듈 지연 로드.
 
