@@ -206,9 +206,26 @@ export function PlaceSheet({
   // 정작 '저장' 버튼을 눌러야 하는 미저장 후보는 사용자가 시트를 손으로 펼쳐야 했다.
   // 그래서 §8이 약속한 위시 저장 ≤3탭이 실제로는 4탭이었다(리포 자신의 e2e가 '시트 펼치기'를
   // 클릭하며 증언하던 마찰). 대칭으로 맞춘다.
+  //
+  // ★ 발화 조건은 '선택이 **새로 생긴** 순간' 하나뿐이다. snap을 deps에 두면 선택이 살아 있는 동안
+  //   snap이 peek가 될 때마다 다시 발화해, 사용자가 시트를 끌어내리거나 백드롭을 탭해도 곧바로
+  //   half로 되올려진다 — peek에 1프레임도 머물지 못한다. 백드롭은 progress>0인 내내
+  //   pointer-events:auto인 전체화면 레이어(z44)라, 그 상태에서 딤이 걷히지 않고 지도 탭·핀 탭이
+  //   전부 막힌다. 지도 빈 곳 탭으로 선택을 푸는 경로(NaverMap click → onClose)까지 그 백드롭에
+  //   가려지므로, 상세를 한 번 열면 시트 안 ✕ 말고는 빠져나올 방법이 없어진다.
+  //   ("올렸다 내리면 화면이 어두워지고 아무것도 안 된다"가 정확히 이것이었다.)
+  //   이웃 effect(autoHalfRef)와 같은 1회성 규약으로 맞춘다.
+  const selectionKey = selectedId ?? (previewHit ? `hit:${previewHit.kakaoPlaceId}` : null)
+  const prevSelectionRef = useRef<string | null>(null)
+  // snap은 '지금 peek인가'를 읽기만 하고 재발화 트리거는 아니다 — 그래서 dep이 아니라 ref로 본다.
+  const snapRef = useRef(snap)
+  snapRef.current = snap
   useEffect(() => {
-    if ((selectedId || previewHit) && snap === 'peek') setSnap('half')
-  }, [selectedId, previewHit, snap])
+    const prev = prevSelectionRef.current
+    prevSelectionRef.current = selectionKey
+    // 다른 장소로 갈아탄 경우도 '새로 생김'으로 본다(목록→상세→다른 마커).
+    if (selectionKey !== null && selectionKey !== prev && snapRef.current === 'peek') setSnap('half')
+  }, [selectionKey, setSnap])
 
   // 빈/미연결이면 첫 화면이 죽지 않게 half로 자동 오픈(spec §3.3). peek에서만(사용자 펼침 존중).
   // ★ 로딩 '중'에는 판단 보류 — 로딩 순간을 빈 상태로 오판해 장소가 있어도 매번 half로 열리면

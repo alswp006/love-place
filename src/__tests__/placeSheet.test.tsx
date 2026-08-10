@@ -67,9 +67,10 @@ function Harness(props: Omit<Parameters<typeof PlaceSheet>[0], 'snap' | 'onSnapC
   return <PlaceSheet {...props} snap={snap} onSnapChange={setSnap} />
 }
 
-function renderSheet(over: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const props: Omit<Parameters<typeof PlaceSheet>[0], 'snap' | 'onSnapChange'> = {
+function sheetProps(
+  over: Partial<Parameters<typeof PlaceSheet>[0]> = {},
+): Omit<Parameters<typeof PlaceSheet>[0], 'snap' | 'onSnapChange'> {
+  return {
     coupleId: 'c1',
     myId: 'u1',
     coupleActive: true,
@@ -85,17 +86,30 @@ function renderSheet(over: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
     onCloseDetail: () => {},
     ...over,
   }
-  return render(
+}
+
+function renderSheet(over: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  // 트리 팩토리로 두면 rerenderWith가 같은 QueryClient/Harness 인스턴스를 유지한다
+  // (재마운트되면 Harness의 snap state가 초기화돼 '선택 등장 시 승격'을 검증할 수 없다).
+  const tree = (p: Omit<Parameters<typeof PlaceSheet>[0], 'snap' | 'onSnapChange'>) => (
     <MemoryRouter>
       <QueryClientProvider client={qc}>
         <OfflineQueueProvider>
           <ToastProvider>
-            <Harness {...props} />
+            <Harness {...p} />
           </ToastProvider>
         </OfflineQueueProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+  const result = render(tree(sheetProps(over)))
+  return {
+    ...result,
+    /** props만 갈아끼워 다시 렌더(마운트 유지) — 선택이 '새로 생기는' 전이를 재현할 때 쓴다. */
+    rerenderWith: (next: Partial<Parameters<typeof PlaceSheet>[0]>) =>
+      result.rerender(tree(sheetProps({ ...over, ...next }))),
+  }
 }
 
 describe('PlaceSheet (드래그 시트)', () => {
@@ -307,6 +321,38 @@ describe('PlaceSheet (드래그 시트)', () => {
     fireEvent.click(backdrop) // 탭 → peek로 접힘.
     expect(backdrop.style.opacity).toBe('0')
     expect(backdrop.style.pointerEvents).toBe('none')
+  })
+
+  // ── 상세가 열린 상태의 접기 (회귀) ────────────────────────────────────────────
+  // 위 백드롭 테스트는 selectedId=null로만 돌아서 이 조합을 못 잡았다. 실제 사용자는 거의 항상
+  // '마커를 탭해서 상세를 연' 상태이고, 바로 그 상태에서 시트가 peek로 못 내려갔다.
+  it('상세가 열려 있어도 백드롭 탭으로 peek까지 접힌다 — 되올라오면 지도가 영구히 막힌다(회귀)', () => {
+    // 회귀 내용: auto-half effect의 deps에 snap이 있어, 선택이 살아 있는 동안 snap이 peek가 될
+    // 때마다 다시 발화했다. 시트가 peek에 1프레임도 못 머물러 딤이 걷히지 않고, pointer-events:auto인
+    // 전체화면 백드롭이 지도 탭·핀 탭을 전부 삼켰다(지도 빈 곳 탭 → 선택 해제 경로까지 가려짐).
+    // 탈출구가 시트 안 ✕ 하나뿐인 상태 = 사용자가 본 "어두워지고 아무것도 안 됨".
+    renderSheet({ places: [aPlace], selectedId: 'p1' })
+    const backdrop = screen.getByRole('button', { name: '시트 접기' })
+    // 선택이 있으니 마운트 시 half로 승격되는 건 의도된 동작(§6 (c)) — 딤이 보인다.
+    expect(Number(backdrop.style.opacity)).toBeGreaterThan(0)
+    expect(backdrop.style.pointerEvents).toBe('auto')
+
+    fireEvent.click(backdrop)
+
+    // ★ 여기서 half로 되돌아오면 실패. 선택은 그대로여도 접기는 존중돼야 한다.
+    expect(backdrop.style.opacity).toBe('0')
+    expect(backdrop.style.pointerEvents).toBe('none')
+  })
+
+  it('선택이 새로 생기면 여전히 peek→half로 올라온다(위시 저장 ≤3탭 보존)', () => {
+    // 되올림을 없앤 게 아니라 '1회성'으로 바꾼 것뿐이다. 승격 자체가 죽으면 §8의 ≤3탭이 깨진다.
+    const { rerenderWith } = renderSheet({ places: [aPlace], selectedId: null })
+    const backdrop = screen.getByRole('button', { name: '시트 접기' })
+    expect(backdrop.style.opacity).toBe('0') // 선택 없음 → peek
+
+    rerenderWith({ selectedId: 'p1' })
+
+    expect(Number(backdrop.style.opacity)).toBeGreaterThan(0) // 선택 발생 → half로 승격
   })
 
   it('빈 상태(0곳·연결됨)면 마운트 시 시트가 half로 자동 오픈', () => {
