@@ -24,7 +24,14 @@ jobs:
         run: npm run typecheck
 
       # Edge Function은 tsconfig·eslint·vitest 어디에도 안 걸린다(Deno 런타임, 별도 그래프).
-      # 그래서 프록시가 컴파일도 안 되는 상태로 배포될 수 있었다 — 이 한 줄이 그 구멍을 막는다.
+      # 그래서 프록시가 컴파일도 안 되는 상태로 배포될 수 있었다 — 이 두 스텝이 그 구멍을 막는다.
+      #
+      # deno를 devDependency로 두지 않는 이유: Docker 빌더가 node:22-alpine(musl)인데 deno는
+      # musl 바이너리를 배포하지 않아 `npm ci`가 깨질 수 있다. 배포 경로에 위험을 심지 않는다.
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Typecheck (edge functions)
         run: npm run typecheck:functions
 
