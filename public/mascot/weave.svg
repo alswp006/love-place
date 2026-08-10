@@ -1,0 +1,46 @@
+<svg viewBox="0 0 120 108" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Weave 마스코트 — 실뭉치">
+  <!-- Weave 마스코트: 실뭉치에서 실이 풀려 나와 길이 된다.
+       실이 곧 지도 위 동선이라, 마스코트가 제품 메커니즘 그 자체다.
+       ⚠ 초안에서 꼬리를 옆으로 빼니 정자 실루엣이 됐다 — 아래로 내려 '지도 위에 눕는 길'로 바꿨다.
+       귀여움은 그림이 아니라 비율에서 낸다: 큰 머리, 낮고 넓은 눈, 작은 입. -->
+  <defs>
+    <clipPath id="w-body"><circle cx="52" cy="42" r="32"/></clipPath>
+  </defs>
+
+  <!-- 풀려 나온 실 = 동선. 몸통 아래에서 시작해 옆으로 눕는다(지도 위의 길처럼). -->
+  <path d="M 52 74 C 52 88 66 92 80 90 C 92 88 98 92 104 96"
+        fill="none" stroke="#e2638a" stroke-width="5.5" stroke-linecap="round"/>
+  <!-- 길 끝의 점 — 공유 카드의 동선 끝점과 같은 표식. -->
+  <circle cx="104" cy="96" r="4" fill="#b23a60"/>
+
+  <!-- 몸통 -->
+  <circle cx="52" cy="42" r="32" fill="#ffd9e3"/>
+
+  <!-- 감긴 실 — 실제 실뭉치는 **한 방향 가닥이 대부분**이고 몇 개만 가로지른다.
+       격자로 그리면 실뭉치가 아니라 비치볼이 된다(초안이 그랬다).
+       얇게(1.6) 여러 가닥으로, 몸통 밖까지 그어 clip으로 잘라 '감겨 돌아간' 느낌을 낸다. -->
+  <g clip-path="url(#w-body)" stroke="#f4a3ba" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.9">
+    <path d="M 6 62 C 26 34 54 12 88 6"/>
+    <path d="M 8 74 C 30 44 60 20 96 14"/>
+    <path d="M 14 84 C 38 54 68 30 102 24"/>
+    <path d="M 22 90 C 46 62 76 40 108 36"/>
+    <path d="M 32 94 C 56 70 84 52 112 50"/>
+    <path d="M 46 96 C 68 78 94 66 116 66"/>
+    <path d="M 2 46 C 24 26 52 10 84 4"/>
+    <!-- 가로지르는 가닥 둘 — 이게 없으면 그냥 빗금이다. -->
+    <path d="M 10 22 C 34 44 54 70 66 98" opacity="0.75"/>
+    <path d="M 40 -2 C 58 26 74 50 82 82" opacity="0.75"/>
+  </g>
+
+  <!-- 얼굴 -->
+  <g fill="#4a3038">
+    <circle cx="42" cy="46" r="4"/>
+    <circle cx="63" cy="46" r="4"/>
+  </g>
+  <path d="M 49.5 55 Q 52.5 58.4 55.5 55" fill="none" stroke="#4a3038"
+        stroke-width="2.6" stroke-linecap="round"/>
+  <g fill="#f8879f" opacity="0.5">
+    <circle cx="36" cy="54" r="3.2"/>
+    <circle cx="69" cy="54" r="3.2"/>
+  </g>
+</svg>

@@ -1,0 +1,13 @@
+<svg viewBox="0 0 120 108" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Weave 마스코트">
+  <!-- 작은 크기(≤32px) 전용 — 감긴 실·볼터치를 빼고 실루엣만. 디테일은 뭉개져 오히려 지저분해진다. -->
+  <path d="M 52 74 C 52 88 66 92 80 90 C 92 88 98 92 104 96"
+        fill="none" stroke="#e2638a" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="104" cy="96" r="5" fill="#b23a60"/>
+  <circle cx="52" cy="42" r="32" fill="#ffd9e3"/>
+  <g fill="#4a3038">
+    <circle cx="42" cy="46" r="4.6"/>
+    <circle cx="63" cy="46" r="4.6"/>
+  </g>
+  <path d="M 49.5 55 Q 52.5 59 55.5 55" fill="none" stroke="#4a3038"
+        stroke-width="3" stroke-linecap="round"/>
+</svg>

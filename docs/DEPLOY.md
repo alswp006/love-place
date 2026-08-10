@@ -48,9 +48,16 @@ npm run cap:ios          # Xcode 실행
 |---|---|---|---|
 | 1 | Apple ID 추가 | Xcode → Settings → Accounts | — |
 | 2 | 서명 켜기 | `npm run cap:ios` → App 타깃 → Signing & Capabilities → Team + **Automatically manage signing** | 인증서·프로파일이 **이때** 생긴다. 번들 ID `app.loveplace`도 자동 등록 |
-| 3 | 앱 레코드 생성 | appstoreconnect.apple.com → 앱 → `+` | 앱 **이름은 전역 고유** — 겹치면 다른 이름을 써야 한다 |
+| 3 | 앱 레코드 생성 | appstoreconnect.apple.com → 앱 → `+` | 앱 **이름은 전역 고유**. 아래 이름/부제를 쓴다 |
 | 4 | 계약 확인 | App Store Connect → 비즈니스 | 무료 앱 계약이 '활성'이어야 빌드가 뜬다 |
 | 5 | API 키 발급 | 사용자 및 액세스 → 통합 → App Store Connect API | 역할 **App Manager**. `.p8`는 **한 번만** 받을 수 있다 |
+
+**앱스토어에 넣을 이름**(이름 30자·부제 30자, 각각 별도 필드):
+```
+이름  Weave — 커플 여행 지도        ← 고유성 + 검색 키워드(커플·여행·지도)
+부제  걸은 만큼 남는 커플 지도       ← 뭘 하는 앱인지
+```
+`Weave` 단독은 흔한 단어라 선점됐을 가능성이 크다. 한국어 키워드를 붙이면 고유성과 ASO를 같이 얻는다.
 
 5번 뒤:
 ```bash
