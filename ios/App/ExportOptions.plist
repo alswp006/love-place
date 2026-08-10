@@ -3,7 +3,11 @@
 <!--
   아카이브 → App Store Connect 업로드 옵션. scripts/release-ios.mjs가 쓴다.
 
-  destination=upload : 로컬에 .ipa를 만들지 않고 곧바로 올린다. Organizer를 손으로 여는 단계가 사라진다.
+  destination=export : .ipa를 로컬에 만들기만 한다. **업로드는 altool이 따로** 한다.
+    처음엔 destination=upload로 한 번에 가려 했는데, 그러면 xcodebuild가 서명까지 API 키로
+    처리하려 든다. App Manager 키에는 인증서 발급 권한이 없어(그건 Admin 영역)
+    "Cloud signing permission error / No signing certificate iOS Distribution found"로 죽는다.
+    키 권한을 Admin으로 올리는 대신, **서명은 Xcode 세션에 · 업로드만 API 키에** 맡긴다(최소 권한).
   signingStyle=automatic : Xcode가 관리하는 프로파일을 쓴다(수동 프로파일 파일을 저장소에 두지 않는다).
   uploadSymbols=true : 크래시 로그가 해독 가능해진다(어차피 우리 둘이 쓰는 앱이라 특히 유용).
 -->
@@ -12,7 +16,7 @@
   <key>method</key>
   <string>app-store-connect</string>
   <key>destination</key>
-  <string>upload</string>
+  <string>export</string>
   <key>signingStyle</key>
   <string>automatic</string>
   <key>uploadSymbols</key>

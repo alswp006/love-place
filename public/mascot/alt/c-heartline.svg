@@ -1,0 +1,11 @@
+<svg viewBox="0 0 130 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Weave 하트 실 마크">
+  <!-- C안: 한 줄의 실이 하트를 만들고 그대로 길이 되어 나간다.
+       공유 카드의 동선과 완전히 같은 언어(선 + 끝점)라 카드 안에서 이질감이 없다.
+       캐릭터가 아니라 마크. 가장 안전하지만 가장 평범하다. -->
+  <path d="M 18 78 C 34 74 40 62 40 52 C 40 40 30 34 22 40 C 14 46 18 58 34 68
+           C 50 78 62 74 68 60 C 74 46 66 36 56 40"
+        fill="none" stroke="#e2638a" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 68 60 C 82 54 92 66 106 60" fill="none" stroke="#e2638a" stroke-width="6"
+        stroke-linecap="round" opacity="0.55"/>
+  <circle cx="106" cy="60" r="5" fill="#b23a60"/>
+</svg>

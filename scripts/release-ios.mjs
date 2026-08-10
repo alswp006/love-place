@@ -198,20 +198,36 @@ if (DRY || !canUpload) {
     )
   }
 } else {
-  say(`${++step}. App Store Connect 업로드`)
+  say(`${++step}. IPA 만들기 (배포 서명)`)
+  const outDir = join(ROOT, `.release/out-${next}`)
+  // ⚠️ 여기엔 -authenticationKey* 를 **주지 않는다.**
+  //    주는 순간 xcodebuild가 서명까지 API 키로 하려 들고, App Manager 키에는 인증서 발급
+  //    권한이 없어 "Cloud signing permission error"로 죽는다(실제로 겪었다).
+  //    서명은 Xcode에 로그인된 계정이 한다 — 그 경로는 이미 검증됐다.
   run(
     'xcodebuild',
     [
       '-exportArchive',
       '-archivePath', archive,
       '-exportOptionsPlist', join(IOS, 'ExportOptions.plist'),
+      '-exportPath', outDir,
       '-allowProvisioningUpdates',
-      '-authenticationKeyPath', join(KEY_DIR, keyFile),
-      '-authenticationKeyID', KEY_ID,
-      '-authenticationKeyIssuerID', ISSUER,
     ],
     { cwd: IOS },
   )
+  const ipa = join(outDir, 'App.ipa')
+  if (!existsSync(ipa)) die(`IPA를 찾지 못했습니다: ${ipa}`)
+  ok(ipa.replace(ROOT, ''))
+
+  say(`${++step}. App Store Connect 업로드`)
+  // altool은 업로드 권한만 쓴다 → App Manager 키로 충분하다.
+  run('xcrun', [
+    'altool', '--upload-app',
+    '-f', ipa,
+    '-t', 'ios',
+    '--apiKey', KEY_ID,
+    '--apiIssuer', ISSUER,
+  ])
   ok('업로드 완료')
 }
 

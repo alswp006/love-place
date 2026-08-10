@@ -46,3 +46,9 @@ pnpm-debug.log*
 # TestFlight 아카이브(용량 큼)와 API 키 설정 — 커밋 금지
 .release/
 .env.release
+
+# App Store Connect API 비밀키 — 저장소에 절대 들어오면 안 된다.
+# 실제로 브라우저가 저장소 안(appstoreconnect/private_keys/)에 떨어뜨린 적이 있어 방어선을 둔다.
+*.p8
+AuthKey_*
+appstoreconnect/

@@ -1,0 +1,10 @@
+<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Weave 매듭 마크">
+  <!-- B안: 매듭. 두 가닥이 묶여 하나가 되는 형태 — 커플 은유가 직접적이고 대칭이라 어떤 실루엣도 안 닮는다.
+       캐릭터가 아니라 **마크**다(얼굴 없음). 아이콘·워터마크에 강하고, 마스코트로는 약하다. -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="11">
+    <path d="M 38 34 C 20 34 20 62 38 62 C 56 62 64 34 82 34 C 100 34 100 62 82 62 C 64 62 56 34 38 34 Z"
+          stroke="#f6aec2"/>
+    <path d="M 38 34 C 20 34 20 62 38 62 C 56 62 64 34 82 34" stroke="#e2638a"/>
+  </g>
+  <circle cx="60" cy="48" r="4.5" fill="#b23a60"/>
+</svg>

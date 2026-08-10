@@ -1,0 +1,10 @@
+<svg viewBox="0 0 150 88" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Weave 마스코트">
+  <!-- ≤32px 전용 — 감긴 실을 뺀다. 이 크기에선 '점 두 개 + 선'으로 읽히는 게 목적이다. -->
+  <path d="M 54 46 C 66 60 84 30 96 44" fill="none" stroke="#e2638a" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="34" cy="44" r="22" fill="#cbe9dc"/>
+  <g fill="#2f5649"><circle cx="27" cy="47" r="3.2"/><circle cx="41" cy="47" r="3.2"/></g>
+  <path d="M 31.5 53.5 Q 34 56.5 36.5 53.5" fill="none" stroke="#2f5649" stroke-width="2.3" stroke-linecap="round"/>
+  <circle cx="116" cy="44" r="22" fill="#ffd0dd"/>
+  <g fill="#5c2b3c"><circle cx="109" cy="47" r="3.2"/><circle cx="123" cy="47" r="3.2"/></g>
+  <path d="M 113.5 53.5 Q 116 56.5 118.5 53.5" fill="none" stroke="#5c2b3c" stroke-width="2.3" stroke-linecap="round"/>
+</svg>

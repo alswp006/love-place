@@ -1,0 +1,40 @@
+<svg viewBox="0 0 150 88" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Weave 마스코트 — 실로 이어진 둘">
+  <!-- A안: 실뭉치 둘 + 사이를 잇는 실.
+       '둥근 몸통 + 하나의 꼬리' 구조를 버렸다 — 그 구조는 꼬리를 어디로 빼도 정자 실루엣이 된다.
+       대신 **둘**이 실로 이어진 형태다. 커플 앱이고, 지도 언어(점 + 선)와 정확히 같아서
+       20px로 줄면 자연스럽게 '점 두 개와 선'이 된다.
+       색은 앱 트랙 색 그대로: 왼쪽 민트(나) · 오른쪽 핑크(상대) · 잇는 실은 브랜드 핑크(동선). -->
+  <defs>
+    <clipPath id="ball-l"><circle cx="34" cy="44" r="22"/></clipPath>
+    <clipPath id="ball-r"><circle cx="116" cy="44" r="22"/></clipPath>
+  </defs>
+
+  <!-- 둘을 잇는 실 = 동선. 공유 카드의 선과 같은 색·같은 굵기 감각. -->
+  <path d="M 54 46 C 66 60 84 30 96 44" fill="none" stroke="#e2638a" stroke-width="5" stroke-linecap="round"/>
+
+  <g clip-path="url(#ball-l)">
+    <circle cx="34" cy="44" r="22" fill="#cbe9dc"/>
+    <g stroke="#a3d6c1" stroke-width="1.5" fill="none" stroke-linecap="round">
+      <path d="M 4 60 C 16 40 34 24 60 16"/>
+      <path d="M 2 48 C 16 30 36 18 62 12"/>
+      <path d="M 8 70 C 22 50 42 34 66 26"/>
+      <path d="M 14 76 C 28 58 48 44 70 38"/>
+      <path d="M 10 18 C 22 34 32 52 34 74" opacity="0.7"/>
+    </g>
+  </g>
+  <g fill="#2f5649"><circle cx="27" cy="47" r="2.9"/><circle cx="41" cy="47" r="2.9"/></g>
+  <path d="M 31.5 53.5 Q 34 56.2 36.5 53.5" fill="none" stroke="#2f5649" stroke-width="2" stroke-linecap="round"/>
+
+  <g clip-path="url(#ball-r)">
+    <circle cx="116" cy="44" r="22" fill="#ffd0dd"/>
+    <g stroke="#f6a8c0" stroke-width="1.5" fill="none" stroke-linecap="round">
+      <path d="M 86 60 C 98 40 116 24 142 16"/>
+      <path d="M 84 48 C 98 30 118 18 144 12"/>
+      <path d="M 90 70 C 104 50 124 34 148 26"/>
+      <path d="M 96 76 C 110 58 130 44 152 38"/>
+      <path d="M 92 18 C 104 34 114 52 116 74" opacity="0.7"/>
+    </g>
+  </g>
+  <g fill="#5c2b3c"><circle cx="109" cy="47" r="2.9"/><circle cx="123" cy="47" r="2.9"/></g>
+  <path d="M 113.5 53.5 Q 116 56.2 118.5 53.5" fill="none" stroke="#5c2b3c" stroke-width="2" stroke-linecap="round"/>
+</svg>
