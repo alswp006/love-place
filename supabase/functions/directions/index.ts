@@ -24,7 +24,15 @@ const CACHE_TTL = 60 * 60 * 24 // leg 24h(03-proxy-contract line 128)
 
 type LatLng = { lat: number; lng: number }
 type Leg = { from: LatLng; to: LatLng }
-type LegResult = { polyline: LatLng[] | null; distanceMeters: number | null; degraded: boolean }
+// durationSec: 계약(03-proxy-contract.md §route-eta)이 요구한 소요시간. 그동안 **파싱조차 안 하고 있었고**,
+// 그래서 코스의 이동시간이 전부 고정 30분 가정이었다(coursePlan.ts). upstream이 주는 값을 그대로 싣는다.
+// null = 제공자가 안 줬거나 degraded — 호출측은 '모른다'로 다뤄야 하며 임의 추정치를 만들지 말 것.
+type LegResult = {
+  polyline: LatLng[] | null
+  distanceMeters: number | null
+  durationSec: number | null
+  degraded: boolean
+}
 
 const round5 = (n: number) => Math.round(n * 1e5) / 1e5
 const key5 = (p: LatLng) => `${round5(p.lat)},${round5(p.lng)}`
@@ -56,7 +64,7 @@ async function fetchKakao(leg: Leg, restKey: string): Promise<LegResult | null> 
     const data = (await res.json()) as {
       routes?: Array<{
         result_code?: number
-        summary?: { distance?: number }
+        summary?: { distance?: number; duration?: number } // duration=초(카카오모빌리티)
         sections?: Array<{ roads?: Array<{ vertexes?: number[] }> }>
       }>
     }
@@ -70,7 +78,12 @@ async function fetchKakao(leg: Leg, restKey: string): Promise<LegResult | null> 
       }
     }
     if (polyline.length < 2) return null
-    return { polyline, distanceMeters: route.summary?.distance ?? null, degraded: false }
+    return {
+      polyline,
+      distanceMeters: route.summary?.distance ?? null,
+      durationSec: route.summary?.duration ?? null,
+      degraded: false,
+    }
   } catch {
     return null
   }
@@ -96,26 +109,28 @@ async function fetchTmap(leg: Leg, appKey: string): Promise<LegResult | null> {
     const data = (await res.json()) as {
       features?: Array<{
         geometry?: { type?: string; coordinates?: number[][] }
-        properties?: { totalDistance?: number }
+        properties?: { totalDistance?: number; totalTime?: number } // totalTime=초(TMap)
       }>
     }
     const polyline: LatLng[] = []
     let distanceMeters: number | null = null
+    let durationSec: number | null = null
     for (const f of data.features ?? []) {
       if (typeof f.properties?.totalDistance === 'number') distanceMeters = f.properties.totalDistance
+      if (typeof f.properties?.totalTime === 'number') durationSec = f.properties.totalTime
       if (f.geometry?.type === 'LineString') {
         for (const c of f.geometry.coordinates ?? []) polyline.push({ lng: c[0]!, lat: c[1]! })
       }
     }
     if (polyline.length < 2) return null
-    return { polyline, distanceMeters, degraded: false }
+    return { polyline, distanceMeters, durationSec, degraded: false }
   } catch {
     return null
   }
 }
 
 async function resolveLeg(ctx: ProxyCtx, leg: Leg): Promise<LegResult> {
-  const cacheKey = FN + ':' + (await sha256Hex(`CAR|${key5(leg.from)}|${key5(leg.to)}`))
+  const cacheKey = FN + ':' + (await sha256Hex(`CAR2|${key5(leg.from)}|${key5(leg.to)}`))
   const cached = (await cacheGet(ctx, cacheKey)) as LegResult | null
   if (cached) return cached
 
@@ -129,7 +144,7 @@ async function resolveLeg(ctx: ProxyCtx, leg: Leg): Promise<LegResult> {
     await cacheSet(ctx, cacheKey, FN, result, CACHE_TTL) // 성공 leg만 캐시
     return result
   }
-  return { polyline: null, distanceMeters: null, degraded: true } // 둘 다 실패 → 클라가 측지선 폴백(캐시 안 함)
+  return { polyline: null, distanceMeters: null, durationSec: null, degraded: true } // 둘 다 실패 → 클라가 측지선 폴백(캐시 안 함)
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {

@@ -23,6 +23,11 @@ jobs:
       - name: Typecheck (tsc 0 errors)
         run: npm run typecheck
 
+      # Edge Function은 tsconfig·eslint·vitest 어디에도 안 걸린다(Deno 런타임, 별도 그래프).
+      # 그래서 프록시가 컴파일도 안 되는 상태로 배포될 수 있었다 — 이 한 줄이 그 구멍을 막는다.
+      - name: Typecheck (edge functions)
+        run: npm run typecheck:functions
+
       - name: Lint
         run: npm run lint
 

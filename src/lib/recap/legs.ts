@@ -3,7 +3,13 @@ import type { RecapVertex } from '@/lib/recap/recapStats'
 // 도로 스냅 leg 도출/병합(순수). 클라가 인접 leg(N-1)만 프록시에 보내 provider 경유지 상한을 우회.
 export type LatLng = { lat: number; lng: number }
 export type Leg = { from: LatLng; to: LatLng }
-export type LegResult = { polyline: LatLng[] | null; distanceMeters: number | null; degraded: boolean }
+export type LegResult = {
+  polyline: LatLng[] | null
+  distanceMeters: number | null
+  /** 소요시간(초). 제공자가 안 주거나 degraded면 null — '모른다'이지 0이 아니다. 옵셔널은 옛 캐시 payload 호환. */
+  durationSec?: number | null
+  degraded: boolean
+}
 
 /** 정점 → 인접 구간(leg) 배열. */
 export function toLegs(vertices: LatLng[]): Leg[] {
