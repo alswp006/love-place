@@ -18,6 +18,8 @@ const PAGES: Record<string, React.LazyExoticComponent<() => React.JSX.Element>> 
 
 // 인증 페이지(공개) — 가드 밖.
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
+const PrivacyPolicyPage = lazy(() => import('@/pages/legal/PrivacyPolicyPage'))
+const LocationPolicyPage = lazy(() => import('@/pages/legal/LocationPolicyPage'))
 const AuthCallbackPage = lazy(() => import('@/pages/auth/AuthCallbackPage'))
 // 커플 연결(온보딩) — 가드 안, 단 탭바 없는 풀스크린(AppLayout 밖).
 const ConnectPage = lazy(() => import('@/pages/ConnectPage'))
@@ -49,6 +51,11 @@ export const routes: RouteObject[] = [
   // 공개 인증 경로(가드 밖) — 비로그인도 접근.
   { path: '/auth', element: lazyRoute(<LoginPage />), errorElement: <RouteError /> },
   { path: '/auth/callback', element: lazyRoute(<AuthCallbackPage />), errorElement: <RouteError /> },
+
+  // 법무 문서 — **반드시 가드 밖**이다. App Store Connect의 '개인정보처리방침 URL'과
+  // 심사관이 로그인 없이 여기로 온다. 가드 안에 두면 둘 다 /auth로 튕겨 심사에서 막힌다.
+  { path: '/privacy', element: lazyRoute(<PrivacyPolicyPage />), errorElement: <RouteError /> },
+  { path: '/location-policy', element: lazyRoute(<LocationPolicyPage />), errorElement: <RouteError /> },
 
   // 앱 셸 = 로그인 + 커플 연결 필요. RequireAuth가 비로그인→/auth, 미연결→/onboarding.
   {

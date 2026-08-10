@@ -206,3 +206,30 @@
   cursor: pointer;
   text-decoration: underline;
 }
+
+/* 비밀번호 로그인 — 접어 둔다. 실사용자는 매직링크·소셜을 쓰고, 이건 심사용 데모 계정 경로다.
+   <details>를 쓰는 이유: 네이티브라 키보드·스크린리더 동작이 공짜로 따라온다. */
+.pwDisclosure {
+  margin-top: var(--sp-4);
+}
+
+.pwSummary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 44px; /* 터치 타깃(§1) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-caption);
+  color: var(--c-text-weak);
+}
+
+.pwSummary::-webkit-details-marker {
+  display: none;
+}
+
+.pwSummary:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}

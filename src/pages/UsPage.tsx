@@ -273,6 +273,18 @@ export default function UsPage() {
           </section>
         ) : null}
 
+        {/* 방침 — 앱 안에서도 도달할 수 있어야 한다(심사 항목이자 정보주체의 열람권). */}
+        <section className={styles.card} aria-label="약관 및 방침">
+          <div className={styles.policyLinks}>
+            <Link className={styles.policyLink} to="/privacy">
+              개인정보처리방침
+            </Link>
+            <Link className={styles.policyLink} to="/location-policy">
+              위치정보처리방침
+            </Link>
+          </div>
+        </section>
+
         {/* 연결 해제 — 혼자면 해제할 상대가 없다. 눌러도 할 일이 없는 위험 버튼을 두지 않는다(0024). */}
         {couple?.status === 'ACTIVE' && !couple.isSolo ? (
           <section className={styles.card} aria-label="연결 관리">

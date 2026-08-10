@@ -193,22 +193,24 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* 개발용 비밀번호 로그인 — 운영 빌드엔 노출 안 함(자동 검증·테스트 안전망). 위 이메일 칸을 그대로 사용. */}
-            {import.meta.env.DEV ? (
+            {/* 비밀번호 로그인 — **운영 빌드에도 남긴다.**
+                이유: 로그인이 필요한 앱은 심사에 데모 계정을 제공해야 하는데, 매직링크·OTP는
+                우리 메일함으로 가고 소셜 로그인은 심사관 계정이 커플에 묶이지 않는다.
+                즉 이게 없으면 심사관이 앱에 들어올 방법이 없어 그 자리에서 반려된다.
+                실사용자를 헷갈리게 하지 않도록 접어 두고, 눌러야 열린다. */}
+            <details className={styles.pwDisclosure}>
+              <summary className={styles.pwSummary}>비밀번호로 로그인</summary>
               <form
                 className={styles.form}
                 onSubmit={onPwSubmit}
-                aria-label="개발용 비밀번호 로그인"
+                aria-label="비밀번호로 로그인"
                 data-testid="dev-password-login"
               >
-                <div className={styles.divider}>
-                  <span>개발용 · 비밀번호</span>
-                </div>
                 <input
                   type="password"
                   autoComplete="current-password"
                   className={styles.input}
-                  placeholder="비밀번호 (테스트 계정)"
+                  placeholder="비밀번호"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   aria-label="비밀번호"
@@ -226,10 +228,10 @@ export default function LoginPage() {
                   disabled={pw.status === 'signing'}
                   data-testid="dev-password-submit"
                 >
-                  {pw.status === 'signing' ? '로그인 중…' : '비밀번호로 로그인 (개발용)'}
+                  {pw.status === 'signing' ? '로그인 중…' : '로그인'}
                 </Button>
               </form>
-            ) : null}
+            </details>
           </>
         )}
       </div>

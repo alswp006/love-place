@@ -176,3 +176,19 @@ img.avatar {
   font-weight: 600;
   text-decoration: none;
 }
+
+/* 방침 링크 — 텍스트 링크지만 터치 타깃 44px(§1). */
+.policyLinks {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.policyLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--c-brand);
+  font-size: var(--fs-label);
+  text-decoration: none;
+}
