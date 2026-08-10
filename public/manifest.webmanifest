@@ -1,6 +1,6 @@
 {
-  "name": "love place — 둘의 여행",
-  "short_name": "love place",
+  "name": "Weave — 우리가 누빈 길",
+  "short_name": "Weave",
   "description": "둘이 쓰는 여행 관리 앱 — 가고싶은/가본 장소, 공유 일정, 사진, AI 추천 경로",
   "lang": "ko",
   "start_url": "/",
@@ -10,9 +10,29 @@
   "background_color": "#fef8fb",
   "theme_color": "#b03d5b",
   "icons": [
-    { "src": "/icons/icon-192.webp", "type": "image/webp", "sizes": "192x192", "purpose": "any" },
-    { "src": "/icons/icon-512.webp", "type": "image/webp", "sizes": "512x512", "purpose": "any" },
-    { "src": "/icons/icon-192.webp", "type": "image/webp", "sizes": "192x192", "purpose": "maskable" },
-    { "src": "/icons/icon-512.webp", "type": "image/webp", "sizes": "512x512", "purpose": "maskable" }
+    {
+      "src": "/icons/icon-192.webp",
+      "type": "image/webp",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.webp",
+      "type": "image/webp",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.webp",
+      "type": "image/webp",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.webp",
+      "type": "image/webp",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
   ]
 }

@@ -57,9 +57,17 @@ describe('inviteCode 유틸 (P0d 커플 연결)', () => {
     })
 
     it('앱 공유 문구(inviteShareText) 전체에서 실제 코드를 추출 (브랜딩 오추출 방지)', () => {
-      // 'love place' 브랜딩은 자체로 유효 윈도우(VEPLACEA)를 만들지만,
-      //   '초대코드' 라벨 뒤 구간을 우선 탐색하므로 실제 코드를 정확히 추출해야 한다.
+      // 브랜드명 'Weave'는 전부 Base32 알파벳이라, 한글을 걷어내면 코드와 이어 붙어
+      // **첫 유효 8자 윈도우가 WEAVEABC**가 된다(브랜드가 love place였을 때보다 더 나쁘다).
+      // '초대코드' 라벨 뒤를 우선 탐색하기 때문에 실제 코드가 나온다 — 그 우선순위가 이 테스트의 요지다.
       expect(extractInviteCode(inviteShareText('ABCD2345'))).toBe('ABCD2345')
+    })
+
+    it('브랜드명이 코드로 오인될 수 있음을 못박는다 — 라벨 없이 훑으면 실제로 틀린다', () => {
+      // 라벨을 뗀 같은 문구. 순진하게 훑으면 브랜드 글자가 먼저 잡힌다.
+      // 이게 실패하기 시작하면 브랜드명이 바뀌었거나 추출 규칙이 바뀐 것이니 둘 다 다시 봐야 한다.
+      const noLabel = inviteShareText('ABCD2345').replace('초대코드:', '')
+      expect(extractInviteCode(noLabel)).not.toBe('ABCD2345')
     })
 
     it('하이픈/소문자만 있어도 정규화 후 추출', () => {

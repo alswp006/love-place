@@ -20,7 +20,7 @@ export function isValidInviteCode(raw: string): boolean {
 
 /** 카톡 등 공유 텍스트. */
 export function inviteShareText(code: string): string {
-  return `우리 여행앱 love place에서 연결해요! 초대코드: ${formatInviteCode(code)} (48시간 내 입력)`
+  return `우리 여행앱 Weave에서 연결해요! 초대코드: ${formatInviteCode(code)} (48시간 내 입력)`
 }
 
 /** 정규화된 문자열에서 첫 유효 8자 윈도우(없으면 null). */

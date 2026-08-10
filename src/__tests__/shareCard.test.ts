@@ -76,7 +76,7 @@ describe('drawRecapCard', () => {
     const ctx = mockCtx()
     drawRecapCard(ctx, { title: 'x', stats, path: [], recorded: false })
     const said = (ctx.fillText as unknown as { mock: { calls: unknown[][] } }).mock.calls.map((c) => String(c[0]))
-    expect(said).toContain('love place')
+    expect(said).toContain('Weave')
   })
 })
 

@@ -142,7 +142,7 @@ export function drawRecapCard(ctx: CanvasRenderingContext2D, data: ShareCardData
 
   ctx.fillStyle = ACCENT
   ctx.font = '600 48px sans-serif'
-  ctx.fillText('love place', w / 2, h - 140)
+  ctx.fillText('Weave', w / 2, h - 140)
 }
 
 type ShareNavigator = Navigator & {

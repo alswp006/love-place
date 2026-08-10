@@ -4,7 +4,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 // 백그라운드 위치/지오로케이션 plugin은 의도적으로 없음(R6 게이트). server.url(라이브리로드)은 기본 비활성.
 const config: CapacitorConfig = {
   appId: 'app.loveplace',
-  appName: 'love place',
+  appName: 'Weave',
   webDir: 'dist',
   // contentInset은 never — 인셋은 CSS env(safe-area-inset-*)가 단일 소스다(viewport-fit=cover).
   // 'always'는 UIKit 스크롤뷰 인셋이 하단 safe-area를 한 번 더 먹어 탭바 아래 빈 띠를 만든다.

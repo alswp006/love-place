@@ -9,13 +9,13 @@ import { blockFonts } from './harness/seed'
 test('보호된 루트(/)는 로그인 화면으로 보낸다', async ({ page }) => {
   await page.goto('/')
   await expect(page).toHaveURL((url) => url.pathname === '/auth')
-  await expect(page.getByRole('heading', { name: 'love place' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Weave' })).toBeVisible()
 })
 
 test('로그인 화면이 모바일 뷰포트에서 렌더된다', async ({ page }) => {
   await blockFonts(page) // 결정론적 폴백 폰트(스냅샷 플래키 제거)
   await page.goto('/auth')
-  await expect(page.getByRole('heading', { name: 'love place' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Weave' })).toBeVisible()
 
   // 픽셀 스냅샷은 OS마다 렌더가 달라, 커밋된 같은-플랫폼 베이스라인이 있을 때만 실제 비교한다.
   const baseline = fileURLToPath(

@@ -36,6 +36,9 @@ export function createMemoryStore(): OutboxStore {
 }
 
 /** IndexedDB store — 브라우저에서 새로고침/앱 종료에도 살아남는 durable 아웃박스. */
+// ⚠️ dbName은 브랜드가 Weave로 바뀌어도 'love_place' 그대로다.
+// 바꾸는 순간 기존 기기의 IndexedDB가 **다른 DB**가 되어, 아직 못 보낸 오프라인 큐가
+// 통째로 고아가 된다(유실 0이 P1부터의 계약이다 §4.3). 이름은 사용자에게 안 보이는 식별자다.
 export function createIdbStore(dbName = 'love_place', storeName = 'outbox'): OutboxStore {
   function open(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {

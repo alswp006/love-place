@@ -78,7 +78,7 @@ export default function UsPage() {
     setExportError(null)
     try {
       const data = await fetchCoupleExport(couple.coupleId)
-      downloadJson(`love_place_${dayKey(new Date().toISOString())}.json`, data)
+      downloadJson(`weave_${dayKey(new Date().toISOString())}.json`, data)
       setExported(true)
     } catch (e) {
       setExportError(e instanceof Error ? e.message : '내보내기에 실패했어요.')
@@ -97,7 +97,7 @@ export default function UsPage() {
       const photoRows = (data.tables.photos as { id: string; storage_url: string }[]) ?? []
       const blobs = await fetchPhotoBlobs(couple.coupleId, photoRows)
       const zip = buildExportZip(data, blobs)
-      downloadBlob(`love_place_${dayKey(new Date().toISOString())}.zip`, zip)
+      downloadBlob(`weave_${dayKey(new Date().toISOString())}.zip`, zip)
       setExported(true)
       setZipExported(true)
     } catch (e) {

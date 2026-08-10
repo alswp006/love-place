@@ -67,7 +67,7 @@ export default function LoginPage() {
         {/* 이모지 대신 실제 앱 마크 — 로그인은 앱의 첫인상이고, 홈 화면 아이콘과 같은 그림이어야
             "그 앱"으로 이어진다. */}
         <img className={styles.logo} src="/brand-mark.svg" alt="" aria-hidden />
-        <h1 className={styles.title}>love place</h1>
+        <h1 className={styles.title}>Weave</h1>
         <p className={styles.subtitle}>둘만의 여행을 기록해요</p>
 
         {!configured ? (

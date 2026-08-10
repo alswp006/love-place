@@ -17,6 +17,7 @@ type PointPayload = { sessionId: string; point: PendingPoint }
 export function createDefaultPointStore(): OutboxStore {
   if (typeof indexedDB !== 'undefined') {
     try {
+      // 이름 그대로 유지 — 바꾸면 아직 못 올린 동선 점이 고아가 된다(outboxStore 주석 참조).
       return createIdbStore('love_place_points', 'route_points')
     } catch {
       return createMemoryStore()
