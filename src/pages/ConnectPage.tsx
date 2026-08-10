@@ -18,12 +18,14 @@ import { ValuePreview } from '@/components/onboarding/ValuePreview'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import styles from './ConnectPage.module.css'
+import { useAppReady } from '@/hooks/useAppReady'
 
 // 💑 커플 연결 — 내 코드 만들기/공유 + 상대 코드 입력.
 //
 // 더 이상 로그인 직후의 관문이 아니다(0024). 혼자 쓰다가 우리 탭에서 '상대 연결하기'로 온다.
 // 그래서 **되돌아갈 길**이 반드시 있어야 한다 — 연결은 선택이지 통과 조건이 아니다.
 export default function ConnectPage() {
+  useAppReady() // 연결 화면이 떴다 = 스플래시를 걷을 시점(lib/native/splash.ts)
   const navigate = useNavigate()
   const toast = useToast()
   const { data: couple, isLoading } = useCouple()

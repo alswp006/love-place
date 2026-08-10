@@ -10,9 +10,11 @@ import { GoogleIcon } from '@/components/auth/GoogleIcon'
 import { Button } from '@/components/ui/Button'
 import { isNativePlatform } from '@/lib/platform'
 import styles from './LoginPage.module.css'
+import { useAppReady } from '@/hooks/useAppReady'
 
 // 로그인 화면(§10.3). 구글(권장, 메일 한도 없음) + 이메일 매직링크.
 export default function LoginPage() {
+  useAppReady() // 로그인 화면이 떴다 = 스플래시를 걷을 시점(lib/native/splash.ts)
   const { initializing, session, configured } = useAuth()
   const { status, error, sendMagicLink, verifyCode, reset } = useSignInWithOtp()
   const google = useSignInWithGoogle()

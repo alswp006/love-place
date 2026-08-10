@@ -27,6 +27,7 @@ function bodyStyleFor(snap: SnapStop): { overflowY?: 'hidden'; touchAction?: 'no
 }
 import { sheetTravelHeight, setAppVh } from '@/lib/layout/appViewport'
 import { readPxVar } from '@/lib/layout/cssOffsets'
+import { effectiveTabbarHeight, findTabbar } from '@/lib/layout/tabbarHeight'
 import { haptic } from '@/lib/haptics'
 import {
   useCreateCollection,
@@ -156,7 +157,10 @@ export function PlaceSheet({
   // 리스너로 갱신해야 시트 위치(translateY)가 어긋나지 않는다(모바일 Safari 1차 대상).
   const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 800))
   // 시트는 탭바 위에 앵커 — translate 계산에서 탭바·safe-area를 제외한다(탭바 가림 방지).
-  const tabbarH = readPxVar('--tabbar-h', 72) // 토큰 --tabbar-h(tokens.css) 단일출처. 시트는 탭바 위에 앵커.
+  // 토큰이 아니라 **실측**이 정본이다. TabBar가 --tabbar-h를 발행하긴 하지만 두 컴포넌트의
+  // ResizeObserver 발화 순서는 보장되지 않아(PlaceSheet가 먼저 마운트된다) 토큰을 읽으면 한 프레임
+  // 낡은 값을 볼 수 있다. 같은 DOM을 각자 재면 순서와 무관하게 늘 일치한다. 초기값만 토큰 폴백.
+  const [tabbarH, setTabbarH] = useState(() => readPxVar('--tabbar-h', 72))
   const peekRef = useRef<HTMLDivElement>(null)
   // 토큰 --sheet-peek-h(=112+safe)를 읽되 fallback은 기존 리터럴 128로 무회귀 보존. 런타임 peekRef 실측이 즉시 덮어씀.
   const [peekPx, setPeekPx] = useState(() => readPxVar('--sheet-peek-h', 128))
@@ -169,16 +173,19 @@ export function PlaceSheet({
       const sb = getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')
       const px = parseFloat(sb) || 0
       setSafeBottom(px)
+      // 탭바 실측 — 0이면(jsdom·레이아웃 전) 토큰 폴백. 여기서 0을 쓰면 시트가 화면 밖으로 나간다.
+      const tabbar = findTabbar()
+      const measured = tabbar ? effectiveTabbarHeight(tabbar) : 0
+      const tH = measured > 0 ? measured : readPxVar('--tabbar-h', 72)
+      setTabbarH(tH)
       if (peekRef.current) {
         const h = peekRef.current.getBoundingClientRect().height
         setPeekPx(h)
         // 지도가 예약할 하단 인셋을 '실측'으로 발행 — 지도 하단이 시트 peek 상단에 정확히 닿게.
         // peek 상단(viewport Y) = travel - peekPx. 지도영역 하단 = 실제 탭바 top.
-        // 예약 = 탭바top - peek상단. (토큰 --tabbar-h/--safe로 계산하면 실제 탭바 높이와 어긋나
-        // 지도-시트 사이에 배경 공백이 생긴다 — 탭바 이중계산 버그.)
-        const peekTopY = Math.max(0, window.innerHeight - tabbarH - px - h)
-        const tabbar = document.querySelector('[class*="tabbar"]') as HTMLElement | null
-        const tabbarTop = tabbar?.getBoundingClientRect().top ?? window.innerHeight - tabbarH - px
+        // 예약 = 탭바top - peek상단. tH가 정확해지면 이 값은 자연히 h(=peek 헤더 높이)로 수렴한다.
+        const peekTopY = Math.max(0, window.innerHeight - tH - px - h)
+        const tabbarTop = tabbar?.getBoundingClientRect().top ?? window.innerHeight - tH - px
         const reserve = Math.max(h, tabbarTop - peekTopY)
         document.documentElement.style.setProperty('--map-bottom-reserve', `${reserve}px`)
       }
@@ -186,9 +193,18 @@ export function PlaceSheet({
     measure()
     window.addEventListener('resize', measure)
     window.visualViewport?.addEventListener('resize', measure) // iOS 주소창 변화
+    // 탭바·peek 헤더는 **글자 크기**에서 파생돼 resize 없이도 높이가 바뀐다(Dynamic Type).
+    // resize 리스너만으로는 그 변화를 놓쳐 시트가 어긋난 채 남는다.
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => measure()) : null
+    if (ro) {
+      if (peekRef.current) ro.observe(peekRef.current)
+      const tb = findTabbar()
+      if (tb) ro.observe(tb)
+    }
     return () => {
       window.removeEventListener('resize', measure)
       window.visualViewport?.removeEventListener('resize', measure)
+      ro?.disconnect()
     }
   }, [])
   const travel = sheetTravelHeight(vh, tabbarH, safeBottom)

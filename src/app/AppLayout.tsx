@@ -3,11 +3,13 @@ import { TabBar } from '@/components/nav/TabBar'
 import { OfflineQueueProvider } from '@/state/OfflineQueueProvider'
 import { OfflineQueueBadge } from '@/components/common/OfflineQueueBadge'
 import styles from './AppLayout.module.css'
+import { useAppReady } from '@/hooks/useAppReady'
 
 // 셸: 콘텐츠 영역 + 오프라인 배지 + 하단 탭바. safe-area를 존중(§8).
 // 오프라인 큐(D2)는 셸 전역에 제공 — 모든 탭의 쓰기가 오프라인이면 큐에 적재, 재연결 시 동기화.
 // 토스트(R1.5)는 상위 RequireAuth 셸에서 제공(온보딩 포함 전역) — 여기선 중첩하지 않는다.
 export function AppLayout() {
+  useAppReady() // 앱 셸 화면이 떴다 = 스플래시를 걷을 시점(lib/native/splash.ts)
   const { pathname } = useLocation()
   return (
     <OfflineQueueProvider>
