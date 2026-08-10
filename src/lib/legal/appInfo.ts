@@ -17,7 +17,7 @@ export const OPERATOR = 'Weave 운영팀'
  * 공개 연락처. 정보주체가 열람·정정·삭제를 요구할 실제 창구이므로 **받는 사람이 있어야 한다.**
  * 개인 메일을 그대로 노출하지 않으려면 서비스 전용 주소를 두고 개인함으로 전달하는 편이 낫다.
  */
-export const CONTACT_EMAIL = 'alswp006@gmail.com'
+export const CONTACT_EMAIL = 'dev.aifac@gmail.com'
 
 export const LEGAL_VALUES: Record<string, string> = {
   사업자명: OPERATOR,
