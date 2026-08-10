@@ -17,8 +17,9 @@ function shot(name: string) {
 // peek 전제(플로팅 버튼/오버레이 가시)를 검증하려면, 데이터가 정착해 latch가 끝난 뒤(백드롭 등장)
 // 백드롭을 눌러 명시적으로 peek로 접고, 핸들의 aria-expanded=false로 정착을 확인한다(race 방지).
 async function collapseToPeek(page: import('@playwright/test').Page) {
-  // 리스트가 떠야(=로딩 종료) auto-half latch가 확정된다. 그 직후에만 collapse가 의미 있음.
-  await expect(page.getByText('속초 칠성조선소')).toBeVisible()
+  // 로딩이 끝나야(=auto-half latch 확정) collapse가 의미 있다. 예전엔 목록 카드가 떴는지로 확인했는데
+  // 목록은 장소 탭으로 옮겨졌다(2026-08) — 이제 시트 헤더의 개수 요약이 로딩 종료의 신호다.
+  await expect(page.getByText(/우리 장소 \d+곳/)).toBeVisible()
   const handle = page.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
   // half이면 백드롭으로 peek로 접는다. 백드롭은 전체화면이지만 시트(z45)가 하단을 덮으므로
   // 시트에 가리지 않는 상단 지도 밴드(y≈20)를 눌러 backdrop의 onClick(setSnap('peek'))을 친다.
@@ -38,21 +39,24 @@ test('빈 상태(0곳) — peek 요약', async ({ page }) => {
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
 })
 
-test('장소 N개 — 리스트 렌더', async ({ page }) => {
+test('장소 N개 — 지도 마커 + 시트 요약(목록은 장소 탭으로 이관)', async ({ page }) => {
   await seedAuthedMap(page, { places: PLACES })
   await page.goto('/')
-  await expect(page.getByText('속초 칠성조선소')).toBeVisible()
+  // 지도는 핀으로 말하고, 시트는 개수만 요약한다. 목록 카드는 여기 없다(→ /places).
+  await expect(page.getByText(/우리 장소 2곳/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /속초 칠성조선소 — 가고싶음/ })).toBeVisible()
   const s = shot('map-places')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
 })
 
-test('선택 상세 — 리스트 탭 시 시트가 half로 상세 표시', async ({ page }) => {
+test('선택 상세 — 장소를 고르면 시트가 half로 상세 표시', async ({ page }) => {
   await seedAuthedMap(page, { places: PLACES })
-  await page.goto('/')
-  // peek에선 리스트가 화면 밖(뷰포트 아래) — 핸들로 한 단계 펼쳐 리스트를 노출한 뒤 탭한다(플랜 §162 "리스트 선택 구동").
-  await page.getByRole('button', { name: '시트 펼치기' }).click()
-  await page.getByRole('button', { name: '속초 칠성조선소 지도에서 보기' }).click()
+  // 목록이 장소 탭으로 옮겨간 뒤 지도에서 장소를 고르는 경로는 마커 탭과 ?place= 딥링크 둘이다.
+  // 여기선 딥링크로 구동한다 — 마커는 지도 idle/zoom마다 통째로 파괴·재생성돼서(NaverMap.render)
+  // Playwright의 actionability 'stable' 검사를 통과하지 못한다(클릭이 30초 타임아웃).
+  // 마커 자체가 뜨는지는 위 '지도 마커 + 시트 요약' 테스트가 본다.
+  await page.goto('/?place=p1')
   // 시트는 role="region"(PlaceSheet.tsx). 선택 후에도 시트는 표시된다.
   await expect(page.getByRole('region', { name: '장소 시트' })).toBeVisible()
   const s = shot('map-selected')
@@ -98,7 +102,7 @@ test('다크 모드 — 빈 상태', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await seedAuthedMap(page, { places: PLACES })
   await page.goto('/')
-  await expect(page.getByText('속초 칠성조선소')).toBeVisible()
+  await expect(page.getByText(/우리 장소 2곳/)).toBeVisible()
   const s = shot('map-dark')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
@@ -150,8 +154,9 @@ test.describe('작은/큰 뷰포트', () => {
   })
 })
 
-test('사진 — 있으면 카드에 썸네일, 없으면 슬롯 자체를 안 그린다', async ({ page }) => {
+test('사진 — 목록 카드에 썸네일, 없으면 슬롯 자체를 안 그린다(장소 탭)', async ({ page }) => {
   // 회색 자리표시는 빈 화면보다 나쁘다(§7) — 사진이 없을 때 빈 박스가 생기지 않는지가 요점.
+  // 목록이 장소 탭으로 옮겨졌으므로(2026-08) 검증 장소도 함께 옮긴다.
   const PLACES = [
     { id: 'p1', name: '사진 있는 곳', address: '속초시', region_label: '속초', lat: 38.2, lng: 128.59, category: null, kakao_place_id: 'k1', added_by: USER_A, version: 1 },
     { id: 'p2', name: '사진 없는 곳', address: '속초시', region_label: '속초', lat: 38.21, lng: 128.6, category: null, kakao_place_id: 'k2', added_by: USER_A, version: 1 },
@@ -182,7 +187,7 @@ test('사진 — 있으면 카드에 썸네일, 없으면 슬롯 자체를 안 �
   await page.route('**/e2e-photo.png', (route) =>
     route.fulfill({ status: 200, contentType: 'image/png', body: png }),
   )
-  await page.goto('/')
+  await page.goto('/places')
 
   const withPhoto = page.getByRole('button', { name: /사진 있는 곳 지도에서 보기/ })
   const without = page.getByRole('button', { name: /사진 없는 곳 지도에서 보기/ })

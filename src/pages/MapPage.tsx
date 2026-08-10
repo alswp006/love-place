@@ -202,11 +202,9 @@ export default function MapPage() {
           myId={myId}
           coupleActive={coupleActive}
           places={enriched}
-          wishes={wishes}
           visitedIds={visitedIds}
           placesLoading={placesLoading}
           selectedId={selectedId}
-          onSelect={setSelectedId}
           previewHit={previewHit}
           reactions={reactions}
           onSave={() => onSheetSave()}

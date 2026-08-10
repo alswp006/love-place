@@ -284,7 +284,10 @@ describe('장소 사용자 여정(검색 시드→저장→상세→다녀왔어
     )
   })
 
-  it('상세를 닫으면 목록으로 복귀하고 저장한 장소가 목록 카드로 보인다(상세→목록 왕복)', async () => {
+  it('상세를 닫으면 상세가 사라지고 목록으로 가는 길이 남는다(상세→지도 복귀)', async () => {
+    // 2026-08 개편: 시트는 더 이상 목록을 품지 않는다(목록·검색·필터는 장소 탭).
+    // 그래서 '상세를 닫으면 목록 카드가 보인다'가 아니라 '지도로 돌아가고, 목록은 탭으로 간다'가
+    // 이 흐름의 계약이다.
     renderJourney()
 
     // 검색→프리뷰→저장(앞 흐름 압축).
@@ -296,10 +299,10 @@ describe('장소 사용자 여정(검색 시드→저장→상세→다녀왔어
     )
     await screen.findByLabelText('장소 상세')
 
-    // 상세 닫기(✕ → onCloseDetail이 selectedId 비움) → 목록 복귀 + 저장한 장소가 카드로 등장.
+    // 상세 닫기(✕ → onCloseDetail이 selectedId 비움).
     fireEvent.click(within(screen.getByLabelText('장소 상세')).getByRole('button', { name: '닫기' }))
-    const list = await screen.findByRole('region', { name: '장소 목록' })
-    expect(within(list).getByRole('button', { name: '속초 칠성조선소 지도에서 보기' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: '장소 목록 열기' })).toHaveAttribute('href', '/places')
     expect(screen.queryByLabelText('장소 상세')).toBeNull()
+    // (저장 자체가 됐는지는 바로 위 '한 흐름' 테스트가 이미 증언한다 — 여기선 왕복만 본다.)
   })
 })

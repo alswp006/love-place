@@ -75,11 +75,9 @@ function sheetProps(
     myId: 'u1',
     coupleActive: true,
     places: [],
-    wishes: { byPlace: {}, mine: {} },
     visitedIds: new Set<string>(),
     placesLoading: false,
     selectedId: null,
-    onSelect: () => {},
     previewHit: null,
     reactions: {},
     onSave: () => {},
@@ -139,15 +137,18 @@ describe('PlaceSheet (드래그 시트)', () => {
     expect(screen.getByRole('region', { name: '장소 시트' })).toBeInTheDocument()
   })
 
-  it('필터 칩(전체/가고싶음/가봤음)은 peek 헤더(핸들/요약 영역)에 렌더된다(§5 peek 콘텐츠)', () => {
-    renderSheet()
-    // peek-pinned 헤더 그룹 — body(접힘 영역)가 아니라 항상 보이는 영역에 있어야 한다.
-    const group = screen.getByRole('group', { name: '장소 필터' })
-    expect(group).toBeInTheDocument()
-    expect(group.closest('[data-peek-pinned="true"]')).not.toBeNull()
-    expect(screen.getByRole('button', { name: '전체' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '가고싶은' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '가본' })).toBeInTheDocument()
+  it('★ 필터 칩은 시트에 없다 — 목록과 함께 장소 탭으로 옮겼다(2026-08)', () => {
+    // 시트가 검색·목록·관리를 한꺼번에 지면서 스냅 상태가 꼬여 지도가 잠기는 버그가 났고,
+    // 드래그 시트 안에서 수백 곳을 거른다는 것 자체가 성립하지 않았다.
+    // 거를 목록이 없으니 칩도 여기 있을 이유가 없다.
+    renderSheet({ places: [aPlace] })
+    expect(screen.queryByRole('group', { name: '장소 필터' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '전체' })).toBeNull()
+  })
+
+  it('★ 아무것도 안 골랐을 땐 목록으로 가는 길을 준다(죽은 시트 금지)', () => {
+    renderSheet({ places: [aPlace] })
+    expect(screen.getByRole('link', { name: '장소 목록 열기' })).toHaveAttribute('href', '/places')
   })
 
   it('peek에서 selectedId가 생기면 half로 살짝 올린다(§6 (c))', () => {
@@ -156,6 +157,8 @@ describe('PlaceSheet (드래그 시트)', () => {
     const SelHarness = ({ selectedId }: { selectedId: string | null }) => {
       const [snap, setSnap] = useState<SnapStop>('peek')
       return (
+        // 시트의 '장소 목록 열기'가 <Link>라 라우터 컨텍스트가 필요하다.
+        <MemoryRouter>
         <QueryClientProvider client={qc}>
           <OfflineQueueProvider>
             <ToastProvider>
@@ -165,11 +168,9 @@ describe('PlaceSheet (드래그 시트)', () => {
                 coupleActive
                 // 장소가 있어야 auto-half(T14)가 발화하지 않아 selectedId→half 효과를 단독 검증할 수 있다.
                 places={[aPlace]}
-                wishes={{ byPlace: {}, mine: {} }}
                 visitedIds={new Set<string>()}
                 placesLoading={false}
                 selectedId={selectedId}
-                onSelect={() => {}}
                 previewHit={null}
                 reactions={{}}
                 onSave={() => {}}
@@ -180,6 +181,7 @@ describe('PlaceSheet (드래그 시트)', () => {
             </ToastProvider>
           </OfflineQueueProvider>
         </QueryClientProvider>
+        </MemoryRouter>
       )
     }
     const { rerender } = render(<SelHarness selectedId={null} />)
@@ -206,12 +208,7 @@ describe('PlaceSheet (드래그 시트)', () => {
     expect(screen.queryByRole('region', { name: '장소 목록' })).toBeNull()
   })
 
-  it('상세 모드에서는 peek 헤더의 필터 칩 그룹을 숨긴다', () => {
-    renderSheet({ places: [aPlace], selectedId: 'p1' })
-    expect(screen.queryByRole('group', { name: '장소 필터' })).toBeNull()
-  })
-
-  it('상세 모드에서 닫으면(selectedId 해제) 목록이 다시 보이고 상세는 사라진다', () => {
+  it('상세를 닫으면 상세가 사라지고 목록으로 가는 안내가 돌아온다', () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const CloseHarness = ({ selectedId }: { selectedId: string | null }) => {
       const [snap, setSnap] = useState<SnapStop>('peek')
@@ -221,11 +218,9 @@ describe('PlaceSheet (드래그 시트)', () => {
           myId="u1"
           coupleActive
           places={[aPlace]}
-          wishes={{ byPlace: {}, mine: {} }}
           visitedIds={new Set<string>()}
           placesLoading={false}
           selectedId={selectedId}
-          onSelect={() => {}}
           previewHit={null}
           reactions={{}}
           onSave={() => {}}
@@ -249,7 +244,7 @@ describe('PlaceSheet (드래그 시트)', () => {
     // 상세 모드: 목록 없음.
     expect(screen.getByLabelText('장소 상세')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: '장소 목록' })).toBeNull()
-    // 닫기(onCloseDetail이 MapPage에서 selectedId를 비움) → 목록 복귀, 상세 사라짐, 칩 복귀.
+    // 닫기(onCloseDetail이 MapPage에서 selectedId를 비움) → 상세 사라짐, 목록 안내 복귀.
     rerender(
       <MemoryRouter>
         <QueryClientProvider client={qc}>
@@ -262,8 +257,8 @@ describe('PlaceSheet (드래그 시트)', () => {
       </MemoryRouter>,
     )
     expect(screen.queryByLabelText('장소 상세')).toBeNull()
-    expect(screen.getByRole('region', { name: '장소 목록' })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: '장소 필터' })).toBeInTheDocument()
+    // 목록 자체는 더는 시트에 없다 — 대신 목록으로 가는 길이 돌아온다.
+    expect(screen.getByRole('link', { name: '장소 목록 열기' })).toBeInTheDocument()
   })
 
   it('미리보기(previewHit) 모드에서도 목록은 숨기고 미리보기 상세만 보인다', () => {
@@ -284,13 +279,14 @@ describe('PlaceSheet (드래그 시트)', () => {
     expect(screen.getByRole('link', { name: /우리 탭에서 연결/ })).toHaveAttribute('href', '/us')
   })
 
-  it('연결 상태면 필터·목록을 호스팅하되 여행/휴지통 섹션은 더는 렌더하지 않는다(P4)', () => {
-    renderSheet()
+  it('시트는 검색·목록·여행·휴지통 어느 것도 호스팅하지 않는다 — 지도는 공간을 보는 곳이다', () => {
+    // 검색 → 지도 위 상단 오버레이 / 목록·필터·컬렉션 → 장소 탭 / 휴지통 → 우리 탭.
+    // 시트에 남는 것은 '고른 장소의 상세' 하나뿐이다.
+    renderSheet({ places: [aPlace] })
     expect(screen.queryByTestId('place-search')).not.toBeInTheDocument()
     expect(screen.queryByTestId('trips-section')).not.toBeInTheDocument()
-    // 휴지통 토글은 '우리' 탭으로 이동 — 시트엔 없음.
     expect(screen.queryByRole('button', { name: /휴지통/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('group', { name: '장소 필터' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: '장소 필터' })).toBeNull()
   })
 
   it('뷰포트 높이 변화(resize)에 시트 위치(translateY)를 갱신한다(iOS 주소창/회전 대응)', () => {
@@ -397,11 +393,9 @@ describe('PlaceSheet — peekHeader 전체 드래그 + 6px 임계 + 당겨 접�
                 myId="u1"
                 coupleActive
                 places={[aPlace]}
-                wishes={{ byPlace: {}, mine: {} }}
                 visitedIds={new Set<string>()}
                 placesLoading={false}
                 selectedId={null}
-                onSelect={() => {}}
                 previewHit={null}
                 reactions={{}}
                 onSave={() => {}}
@@ -435,11 +429,9 @@ describe('PlaceSheet — peekHeader 전체 드래그 + 6px 임계 + 당겨 접�
           myId="u1"
           coupleActive
           places={[aPlace]}
-          wishes={{ byPlace: {}, mine: {} }}
           visitedIds={new Set<string>()}
           placesLoading={false}
           selectedId={null}
-          onSelect={() => {}}
           previewHit={null}
           reactions={{}}
           onSave={() => {}}
@@ -534,27 +526,8 @@ describe('PlaceSheet — peekHeader 전체 드래그 + 6px 임계 + 당겨 접�
 
   // 회귀: 필터 칩은 peekHeader의 자식이므로 칩 탭의 pointerdown→pointerup이 헤더로 버블한다.
   // no-move 분기가 cycleSnap을 부르면 '필터 선택'이 시트 단계까지 바꾸는 부작용이 생긴다(잡혀야 함).
-  it('필터 칩 탭은 aria-pressed만 토글하고 시트 스냅을 바꾸지 않는다(헤더 드래그 부작용 방지)', () => {
-    const { onSnapChange, peekHeader } = renderWithSpy('peek')
-    const wishChip = within(peekHeader).getByRole('button', { name: '가고싶은' })
-    // 실제 칩 탭: 칩 위에서 pointerdown→(이동 없음)→pointerup, 그 뒤 합성 click.
-    firePointer(wishChip, 'pointerDown', 600)
-    firePointer(wishChip, 'pointerUp', 600)
-    fireEvent.click(wishChip)
-    // 필터는 선택되지만(aria-pressed=true), 시트 스냅은 절대 바뀌면 안 된다.
-    expect(wishChip).toHaveAttribute('aria-pressed', 'true')
-    expect(onSnapChange).not.toHaveBeenCalled()
-  })
 
   // 칩에서 시작한 6px 초과 이동(가로 스크롤 등)도 시트를 드래그하지 않는다(드래그 표면에서 칩 제외).
-  it('필터 칩 위에서 시작한 포인터 이동은 시트를 드래그하지 않는다', () => {
-    const { onSnapChange, peekHeader } = renderWithSpy('peek')
-    const allChip = within(peekHeader).getByRole('button', { name: '전체' })
-    firePointer(allChip, 'pointerDown', 600)
-    firePointer(allChip, 'pointerMove', 560) // 40px > 6px
-    firePointer(allChip, 'pointerUp', 560)
-    expect(onSnapChange).not.toHaveBeenCalled()
-  })
 })
 
 describe('PlaceSheet — 가봤음 취소 상태별 토스트(R1.2: 무동작 성공 제거)', () => {
@@ -657,29 +630,5 @@ describe('PlaceSheet — 저장·방문 토글 햅틱 배선(R4.1: 성공/제거
   })
 })
 
-describe('PlaceSheet — 사용자 정의 컬렉션 칩(가산 필터)', () => {
-  const coll = [{ id: 'col1', name: '데이트코스', version: 1 }]
-  const placeCols = [{ id: 'pc1', collection_id: 'col1', place_id: 'p1', version: 1 }]
-  const p2 = { ...aPlace, id: 'p2', name: '다른곳', kakao_place_id: 'k2' } as typeof aPlace
-
-  it('내장 칩(전체/가고싶은/가본) 뒤에 컬렉션 칩과 [목록 관리] 버튼을 렌더한다', () => {
-    renderSheet({ places: [aPlace, p2], collections: coll, placeCollections: placeCols })
-    const group = screen.getByRole('group', { name: '장소 필터' })
-    expect(within(group).getByRole('button', { name: '데이트코스' })).toBeInTheDocument()
-    expect(within(group).getByRole('button', { name: '목록 관리' })).toBeInTheDocument()
-  })
-
-  it('컬렉션 칩을 누르면 그 목록에 담긴 장소만 보인다(내장 가고싶음/가본과 별개의 가산 필터)', () => {
-    renderSheet({ places: [aPlace, p2], collections: coll, placeCollections: placeCols })
-    fireEvent.click(screen.getByRole('button', { name: '데이트코스' }))
-    const list = screen.getByRole('region', { name: '장소 목록' })
-    expect(within(list).getByText('칠성조선소')).toBeInTheDocument() // col1 멤버(p1)
-    expect(within(list).queryByText('다른곳')).toBeNull() // 비멤버(p2) 숨김
-  })
-
-  it('[목록 관리] 버튼을 누르면 관리 모달(dialog)이 열린다', () => {
-    renderSheet({ places: [aPlace], collections: coll, placeCollections: [] })
-    fireEvent.click(screen.getByRole('button', { name: '목록 관리' }))
-    expect(screen.getByRole('dialog', { name: '목록 관리' })).toBeInTheDocument()
-  })
-})
+// 컬렉션 칩(가산 필터)·[목록 관리] 검증은 장소 탭으로 옮겼다 → src/__tests__/placesPage.test.tsx.
+// 시트에는 더 이상 필터 행이 없다.

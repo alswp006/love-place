@@ -43,6 +43,16 @@ vi.mock('@/hooks/usePlaceTrash', () => ({
   useRestorePlace: () => ({ restorePlace: vi.fn() }),
 }))
 vi.mock('@/hooks/useRealtimePlaces', () => ({ useRealtimePlaces: () => {} }))
+vi.mock('@/hooks/useRealtimeCollections', () => ({ useRealtimeCollections: () => {} }))
+let collectionsState: { id: string; name: string; version: number }[] = []
+let placeCollectionsState: { id: string; collection_id: string; place_id: string; version: number }[] = []
+vi.mock('@/hooks/useCollections', () => ({
+  useCollections: () => ({ data: collectionsState }),
+  usePlaceCollections: () => ({ data: placeCollectionsState }),
+  useCreateCollection: () => ({ mutate: vi.fn(), isPending: false }),
+  useRenameCollection: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteCollection: () => ({ mutate: vi.fn(), isPending: false }),
+}))
 vi.mock('@/hooks/useEventMutations', () => ({
   useEventMutations: () => ({ addCourse: { mutateAsync: vi.fn(), isPending: false } }),
 }))
@@ -91,6 +101,8 @@ describe('장소 탭', () => {
     coupleState = { status: 'ACTIVE', isLoading: false }
     placesState = { data: [], isLoading: false }
     visitsState = { data: [], isLoading: false }
+    collectionsState = []
+    placeCollectionsState = []
   })
 
   it('로딩 중엔 스켈레톤 — 빈 상태로 오판해 깜빡이지 않게', () => {
@@ -177,5 +189,54 @@ describe('장소 탭', () => {
     fireEvent.click(screen.getByRole('button', { name: '가고싶음' }))
     expect(screen.getByRole('button', { name: '가고싶음' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: '전체' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  // ── 컬렉션(사용자 목록) — 지도 시트에서 이 탭으로 이관 ─────────────────────
+  describe('사용자 목록(컬렉션)', () => {
+    beforeEach(() => {
+      collectionsState = [{ id: 'col1', name: '데이트코스', version: 1 }]
+      placeCollectionsState = [{ id: 'pc1', collection_id: 'col1', place_id: 'p1', version: 1 }]
+      placesState = { data: PLACES, isLoading: false }
+    })
+
+    it('상태 칩 뒤에 목록 칩과 [＋ 목록]을 렌더한다', () => {
+      renderPlaces()
+      const group = screen.getByRole('group', { name: '장소 필터' })
+      expect(within(group).getByRole('button', { name: '데이트코스' })).toBeInTheDocument()
+      expect(within(group).getByRole('button', { name: '목록 관리' })).toBeInTheDocument()
+    })
+
+    it('목록 칩을 누르면 그 목록의 장소만 남는다', () => {
+      renderPlaces()
+      fireEvent.click(screen.getByRole('button', { name: '데이트코스' }))
+      // col1 멤버는 p1(속초) 하나 → 속초 1곳만 남고 강릉 그룹은 사라진다.
+      expect(screen.getByRole('region', { name: '속초 1곳' })).toBeInTheDocument()
+      expect(screen.queryByTestId('region-group-강릉')).toBeNull()
+    })
+
+    it('★ 목록 칩은 상태 칩을 덮어쓰지 않는다 — 셋이 함께 걸린다(시트의 배타 구조와 다른 점)', () => {
+      visitsState = { data: [{ place_id: 'p1' }] as VisitRow[], isLoading: false }
+      renderPlaces()
+      fireEvent.click(screen.getByRole('button', { name: '데이트코스' }))
+      fireEvent.click(screen.getByRole('button', { name: '가고싶음' }))
+      // p1은 목록 멤버지만 '가봤음'이라 가고싶음 필터에서 빠진다 → 결과 0.
+      expect(screen.getByText('조건에 맞는 장소가 없어요')).toBeInTheDocument()
+    })
+
+    it('[＋ 목록]을 누르면 관리 모달(dialog)이 열린다', () => {
+      renderPlaces()
+      fireEvent.click(screen.getByRole('button', { name: '목록 관리' }))
+      expect(screen.getByRole('dialog', { name: '목록 관리' })).toBeInTheDocument()
+    })
+
+    it('삭제된 목록을 가리키고 있으면 전체로 폴백한다(칩은 사라졌는데 필터만 남는 일 방지)', () => {
+      const { rerender } = renderPlaces()
+      fireEvent.click(screen.getByRole('button', { name: '데이트코스' }))
+      expect(screen.queryByTestId('region-group-강릉')).toBeNull()
+      collectionsState = []
+      rerender(<div />)
+      renderPlaces()
+      expect(screen.getByTestId('region-group-강릉')).toBeInTheDocument()
+    })
   })
 })

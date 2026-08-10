@@ -4,18 +4,13 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { useToast } from '@/components/common/ToastProvider'
 import { usePhotosByPlace, useSignedPhotoUrls } from '@/hooks/usePhotos'
-import { PlaceList } from '@/components/places/PlaceList'
 import { PlaceDetail } from '@/components/places/PlaceDetail'
 import { PlacePreviewDetail } from '@/components/places/PlacePreviewDetail'
 import { useToggleReaction, type ReactionMap } from '@/hooks/useReactions'
 import { reactionLabel } from '@/lib/places/aggregateReactions'
-import { useToggleWish } from '@/hooks/useToggleWish'
 import type { KakaoPlaceHit } from '@/lib/kakao/types'
 import { useMarkVisited, useUnmarkVisited } from '@/hooks/useVisits'
-import { useSetWishPriority } from '@/hooks/useSetWishPriority'
-import { useDeletePlace, useRestorePlace } from '@/hooks/usePlaceTrash'
 import { useConflict } from '@/lib/sync/useConflict'
-import type { WishData } from '@/hooks/useWishes'
 import type { PlaceRow } from '@/hooks/usePlaces'
 import type { WithWish } from '@/lib/places/wishStatus'
 import { nextSnap, prevSnap, snapForFlick, translateYFor, dimProgress, type SnapStop } from '@/lib/places/sheetSnap'
@@ -38,7 +33,7 @@ import {
   type CollectionRow,
   type PlaceCollectionRow,
 } from '@/hooks/useCollections'
-import { memberPlaceIdSet, memberCollectionIdSet } from '@/lib/places/collectionFilter'
+import { memberCollectionIdSet } from '@/lib/places/collectionFilter'
 import { CollectionManager } from './CollectionManager'
 import styles from './PlaceSheet.module.css'
 
@@ -49,11 +44,9 @@ export function PlaceSheet({
   myId,
   coupleActive,
   places,
-  wishes,
   visitedIds,
   placesLoading,
   selectedId,
-  onSelect,
   previewHit,
   reactions,
   onSave,
@@ -67,11 +60,9 @@ export function PlaceSheet({
   myId: string | null
   coupleActive: boolean
   places: WithWish<PlaceRow>[]
-  wishes: WishData | undefined
   visitedIds: Set<string>
   placesLoading: boolean
   selectedId: string | null
-  onSelect: (id: string) => void
   previewHit: KakaoPlaceHit | null
   reactions: ReactionMap | undefined
   onSave: () => void
@@ -96,13 +87,9 @@ export function PlaceSheet({
   const conflict = useConflict()
   const markVisited = useMarkVisited(coupleId, myId)
   const unmarkVisited = useUnmarkVisited(coupleId, myId, conflict.flag)
-  const { setPriority, isPending: priorityPending } = useSetWishPriority(coupleId, myId, conflict.flag)
-  const { deletePlace, isPending: deletePending } = useDeletePlace(coupleId, myId, conflict.flag)
-  const { restorePlace } = useRestorePlace(coupleId, myId, conflict.flag)
   // 시트 소유 리액션 토글(말풍선 폐지). 끄기는 version 조건부 softDelete — 충돌 시 conflict.flag로 배너.
   const toggleReaction = useToggleReaction(coupleId, myId, conflict.flag)
   // '나도 찜' — 상대가 담은 장소에 내 의도를 더하는 유일한 경로(bothWished ✦에 도달하려면 필요).
-  const toggleWish = useToggleWish(coupleId, myId, conflict.flag)
   // 컬렉션(저장 목록) 쓰기 — 데이터(collections/placeCollections)는 상위(MapPage)에서 props로,
   // 쓰기 mutation만 시트가 보유(다른 mutation과 동일 패턴). 변경계는 conflict.flag로 충돌 배너.
   const createCollection = useCreateCollection(coupleId, myId)
@@ -111,25 +98,10 @@ export function PlaceSheet({
   const addToCollection = useAddPlaceToCollection(coupleId, myId)
   const removeFromCollection = useRemovePlaceFromCollection(coupleId, myId, conflict.flag)
   const selectedPlace = selectedId ? places.find((p) => p.id === selectedId) ?? null : null
-  const [placeFilter, setPlaceFilter] = useState<'all' | 'wish' | 'visited'>('all')
-  // 활성 컬렉션 필터(내장 칩과 별개) + 목록 관리 모달. 삭제된 컬렉션을 가리키면 'all'로 폴백.
-  const [activeCollId, setActiveCollId] = useState<string | null>(null)
   const [managerOpen, setManagerOpen] = useState(false)
-  const effectiveCollId =
-    activeCollId && collections.some((c) => c.id === activeCollId) ? activeCollId : null
   // 상세 모드(마커/카드 탭) — 상세를 주요로 두고 목록·필터 칩을 숨긴다(R1.6, T18). 닫으면 목록 복귀.
   const detailMode = Boolean(selectedPlace || previewHit)
 
-  const collMembers = useMemo(
-    () => (effectiveCollId ? memberPlaceIdSet(placeCollections, effectiveCollId) : null),
-    [effectiveCollId, placeCollections],
-  )
-  const visible = useMemo(() => {
-    if (collMembers) return places.filter((p) => collMembers.has(p.id))
-    if (placeFilter === 'wish') return places.filter((p) => !visitedIds.has(p.id))
-    if (placeFilter === 'visited') return places.filter((p) => visitedIds.has(p.id))
-    return places
-  }, [places, placeFilter, visitedIds, collMembers])
 
   // 스냅 상태 + 드래그 — transform: translateY로 위치. JS 드래그는 애니메이션이 아니라 즉시 반영,
   // 손 뗀 뒤 정착만 CSS transition(reduce-motion이 0으로 만듦, ux §5).
@@ -393,58 +365,7 @@ export function PlaceSheet({
           </button>
         </div>
 
-        {coupleActive && !detailMode ? (
-          // data-no-sheet-drag: 칩 탭/가로 스크롤이 헤더 드래그/cycleSnap을 트리거하지 않게 표시(위 가드).
-          // 상세 모드에서는 칩을 숨겨 상세에 집중(T18) — 닫으면 다시 렌더.
-          <div className={styles.filterRow} role="group" aria-label="장소 필터" data-no-sheet-drag>
-            {(
-              [
-                ['all', '전체'],
-                ['wish', '가고싶은'],
-                ['visited', '가본'],
-              ] as const
-            ).map(([key, label]) => {
-              const on = effectiveCollId === null && placeFilter === key
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  className={`${styles.filterChip} ${on ? styles.filterOn : ''}`}
-                  aria-pressed={on}
-                  onClick={() => {
-                    setPlaceFilter(key)
-                    setActiveCollId(null)
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-            {/* 사용자 정의 컬렉션 칩(가산) — 내장 칩과 같은 행. 탭하면 그 목록으로 필터(토글). */}
-            {collections.map((c) => {
-              const on = effectiveCollId === c.id
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`${styles.filterChip} ${on ? styles.filterOn : ''}`}
-                  aria-pressed={on}
-                  onClick={() => setActiveCollId(on ? null : c.id)}
-                >
-                  {c.name}
-                </button>
-              )
-            })}
-            <button
-              type="button"
-              className={styles.manageChip}
-              aria-label="목록 관리"
-              onClick={() => setManagerOpen(true)}
-            >
-              ＋ 목록
-            </button>
-          </div>
-        ) : null}
+        {/* 필터·컬렉션 칩은 '장소' 탭으로 옮겼다(2026-08) — 여기엔 거를 목록이 없다. */}
       </div>
 
       {!coupleActive ? (
@@ -553,45 +474,18 @@ export function PlaceSheet({
             <>
               {conflict.conflict ? <ConflictBanner onDismiss={conflict.clear} /> : null}
 
-              <PlaceList
-                photosByPlace={photosByPlace}
-                photoUrls={photoUrls}
-                visible={visible}
-                wishes={wishes}
-                visitedIds={visitedIds}
-                placesLoading={placesLoading}
-                placeFilter={effectiveCollId ? 'collection' : placeFilter}
-                selectedId={selectedId}
-                onSelect={onSelect}
-                setPriority={setPriority}
-                priorityPending={priorityPending}
-                onToggleWish={(placeId) =>
-                  toggleWish.mutate(
-                    { placeId },
-                    {
-                      onError: (e) =>
-                        toast.show(e instanceof Error ? e.message : '찜하지 못했어요.'),
-                    },
-                  )
+              {/* 목록은 '장소' 탭으로 옮겼다(2026-08). 시트가 검색·목록·관리를 한꺼번에 지면서
+                  스냅 상태가 꼬여 지도가 잠기는 버그까지 났고, 드래그 시트 안에서 200곳을 관리한다는
+                  건 애초에 성립하지 않았다. 지도는 공간을 보는 곳 — 핀을 고르면 그 상세만 연다. */}
+              <EmptyState
+                icon="map"
+                title="핀을 눌러 자세히 보기"
+                hint="담은 장소를 목록으로 보고 찾으려면 '장소' 탭으로 가세요."
+                action={
+                  <Link className={styles.emptyAction} to="/places">
+                    장소 목록 열기
+                  </Link>
                 }
-                markVisited={markVisited}
-                onUnvisit={(placeId) =>
-                  unmarkVisited.mutate(
-                    { placeId },
-                    {
-                      onSuccess: (r) => {
-                        // removed → 훅이 '되돌리기' Undo 토스트를 띄움(Task 18, 중복 토스트 방지).
-                        if (r.status === 'noop') toast.show('이미 취소된 기록이에요')
-                      },
-                    },
-                  )
-                }
-                unvisitPending={unmarkVisited.isPending}
-                deletePlace={deletePlace}
-                deletePending={deletePending}
-                onToast={toast.show}
-                onToastAction={toast.show}
-                restorePlace={restorePlace}
               />
             </>
           )}

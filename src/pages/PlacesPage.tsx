@@ -19,6 +19,16 @@ import { useSetWishPriority } from '@/hooks/useSetWishPriority'
 import { useToggleWish } from '@/hooks/useToggleWish'
 import { useDeletePlace, useRestorePlace } from '@/hooks/usePlaceTrash'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
+import {
+  useCollections,
+  usePlaceCollections,
+  useCreateCollection,
+  useRenameCollection,
+  useDeleteCollection,
+} from '@/hooks/useCollections'
+import { useRealtimeCollections } from '@/hooks/useRealtimeCollections'
+import { memberPlaceIdSet } from '@/lib/places/collectionFilter'
+import { CollectionManager } from '@/components/places/CollectionManager'
 import { useEventMutations } from '@/hooks/useEventMutations'
 import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
@@ -63,6 +73,9 @@ export default function PlacesPage() {
   const { data: visits, isLoading: visitsLoading } = useVisits(coupleId)
   // 지도 탭과 동시에 마운트되지 않는다(라우트가 배타적) — 여기서도 구독해야 상대의 추가가 즉시 보인다.
   useRealtimePlaces(coupleId)
+  const { data: collections } = useCollections(coupleId)
+  const { data: placeCollections } = usePlaceCollections(coupleId)
+  useRealtimeCollections(coupleId)
 
   const toast = useToast()
   const navigate = useNavigate()
@@ -76,6 +89,10 @@ export default function PlacesPage() {
   const { restorePlace } = useRestorePlace(coupleId, myId, conflict.flag)
   const toggleWish = useToggleWish(coupleId, myId, conflict.flag)
   const { addCourse } = useEventMutations(coupleId, myId, () => {})
+  // 컬렉션(사용자가 만든 목록) — 지도 시트에서 이 탭으로 옮겨 왔다. 목록을 다루는 곳이 여기다.
+  const createCollection = useCreateCollection(coupleId, myId)
+  const renameCollection = useRenameCollection(coupleId, myId, conflict.flag)
+  const deleteCollection = useDeleteCollection(coupleId, myId, conflict.flag)
 
   // 사진 썸네일 — 시트와 동일 동작을 유지한다(여기서 빼면 목록이 시트보다 빈약해진다).
   // 알려진 한계: 화면에 보이는 카드가 아니라 커플 전체 사진의 서명 URL을 한 번에 요청한다.
@@ -92,6 +109,8 @@ export default function PlacesPage() {
 
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<StatusFilter>('all')
+  const [collId, setCollId] = useState<string | null>(null)
+  const [managerOpen, setManagerOpen] = useState(false)
   const [sheet, setSheet] = useState<{ regionLabel: string; places: CoursePlace[] } | null>(null)
   // 코스 미리보기 기본 날짜 = 내일. 확인을 눌러야 캘린더에 쓴다.
   const defaultDate = dayKey(new Date(Date.now() + 86_400_000).toISOString())
@@ -101,11 +120,19 @@ export default function PlacesPage() {
     [places, wishes, myId],
   )
   const visitedIds = useMemo(() => new Set((visits ?? []).map((v) => v.place_id)), [visits])
-  // 상태 × 질의는 곱해진다("가본 곳 중에 속초"). 지도 시트의 배타 필터로는 못 하던 것.
-  const filtered = useMemo(
-    () => filterSaved(enriched, { status, query, visitedIds }),
-    [enriched, status, query, visitedIds],
+  // 삭제된 컬렉션을 가리키고 있으면 전체로 폴백(칩이 사라졌는데 필터만 남는 일 방지).
+  const effectiveCollId =
+    collId && (collections ?? []).some((c) => c.id === collId) ? collId : null
+  const collMembers = useMemo(
+    () => (effectiveCollId ? memberPlaceIdSet(placeCollections ?? [], effectiveCollId) : null),
+    [effectiveCollId, placeCollections],
   )
+  // 세 축(상태 × 컬렉션 × 질의)이 전부 **곱해진다**. 지도 시트는 컬렉션이 상태를 덮어쓰는 배타
+  // 구조라 "가본 곳 중에 속초"도, "이 목록 중에 카페"도 표현할 수 없었다.
+  const filtered = useMemo(() => {
+    const byColl = collMembers ? enriched.filter((p) => collMembers.has(p.id)) : enriched
+    return filterSaved(byColl, { status, query, visitedIds })
+  }, [enriched, collMembers, status, query, visitedIds])
   // 지역 그룹 — region_code는 DB에서 항상 NULL이라 사실상 region_label 문자열 그룹핑이다.
   const clusters = useMemo(() => regionClusters(filtered), [filtered])
   const byId = useMemo(() => new Map(filtered.map((p) => [p.id, p])), [filtered])
@@ -193,6 +220,29 @@ export default function PlacesPage() {
                   {f.label}
                 </button>
               ))}
+              {/* 사용자 목록 칩 — 상태 칩을 덮어쓰지 않고 **함께** 걸린다(교차 필터). */}
+              {(collections ?? []).map((c) => {
+                const on = effectiveCollId === c.id
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`${styles.filterChip} ${on ? styles.filterOn : ''}`}
+                    aria-pressed={on}
+                    onClick={() => setCollId(on ? null : c.id)}
+                  >
+                    {c.name}
+                  </button>
+                )
+              })}
+              <button
+                type="button"
+                className={styles.manageChip}
+                aria-label="목록 관리"
+                onClick={() => setManagerOpen(true)}
+              >
+                ＋ 목록
+              </button>
               <span className={styles.count}>{filtered.length}곳</span>
             </div>
           </>
@@ -292,6 +342,16 @@ export default function PlacesPage() {
             ))}
           </section>
         ) : null}
+
+        <CollectionManager
+          open={managerOpen}
+          onClose={() => setManagerOpen(false)}
+          collections={collections ?? []}
+          onCreate={(name) => createCollection.mutate({ name })}
+          onRename={(id, version, name) => renameCollection.mutate({ id, version, name })}
+          onDelete={(id, version) => deleteCollection.mutate({ id, version })}
+          busy={createCollection.isPending || renameCollection.isPending || deleteCollection.isPending}
+        />
 
         {sheet ? (
           <CourseSheet

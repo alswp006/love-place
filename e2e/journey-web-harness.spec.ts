@@ -41,7 +41,7 @@ test('웹에서도 동선이 실제로 기록된다 — 시작 전·기록 중 �
   await page.goto('/')
 
   // 장소 시트가 half로 열려 있으면 동선 컨트롤을 덮는다 — peek로 접는다(map-harness와 같은 절차).
-  await expect(page.getByText('속초 칠성조선소')).toBeVisible()
+  await expect(page.getByText(/우리 장소 \d+곳/)).toBeVisible() // 목록은 장소 탭으로 이관 — 헤더 요약이 로딩 종료 신호
   const handle = page.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
   if ((await handle.getAttribute('aria-expanded')) === 'true') {
     await page.getByRole('button', { name: '시트 접기' }).click({ position: { x: 50, y: 20 } })

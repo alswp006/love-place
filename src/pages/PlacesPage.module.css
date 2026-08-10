@@ -134,3 +134,16 @@
   font-weight: 600;
   border-color: var(--c-brand);
 }
+
+/* '＋ 목록' — 필터가 아니라 관리 진입이라 칩과 다른 결(점선)로 구분한다. */
+.manageChip {
+  border: 1px dashed var(--c-border);
+  background: transparent;
+  color: var(--c-text-weak);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: var(--fs-caption);
+  font-family: inherit;
+  cursor: pointer;
+  min-height: 44px;
+}
