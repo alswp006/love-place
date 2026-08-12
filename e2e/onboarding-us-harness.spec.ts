@@ -60,7 +60,7 @@ test('혼자여도 지도 탭이 열린다 — 연결은 관문이 아니다', a
     ],
   })
   await page.goto('/')
-  await expect(page.getByText(/우리 장소 \d+곳/)).toBeVisible() // 목록은 장소 탭으로 이관
+  await expect(page.getByTestId('search-overlay')).toBeVisible() // 시트가 사라진 뒤(2026-08) 지도 준비 신호는 검색 오버레이다
   // 연결 화면으로 튕기지 않는다.
   expect(new URL(page.url()).pathname).toBe('/')
 })

@@ -45,7 +45,6 @@ export function PlaceSheet({
   coupleActive,
   places,
   visitedIds,
-  placesLoading,
   selectedId,
   previewHit,
   reactions,
@@ -61,7 +60,6 @@ export function PlaceSheet({
   coupleActive: boolean
   places: WithWish<PlaceRow>[]
   visitedIds: Set<string>
-  placesLoading: boolean
   selectedId: string | null
   previewHit: KakaoPlaceHit | null
   reactions: ReactionMap | undefined
@@ -215,18 +213,17 @@ export function PlaceSheet({
     if (selectionKey !== null && selectionKey !== prev && snapRef.current === 'peek') setSnap('half')
   }, [selectionKey, setSnap])
 
-  // 빈/미연결이면 첫 화면이 죽지 않게 half로 자동 오픈(spec §3.3). peek에서만(사용자 펼침 존중).
-  // ★ 로딩 '중'에는 판단 보류 — 로딩 순간을 빈 상태로 오판해 장소가 있어도 매번 half로 열리면
-  //   시작 화면(내 위치 지도)을 가리고 내 위치 버튼(peek 전용)도 숨긴다.
+  // 미연결이면 연결 안내가 보이게 half로 자동 오픈(spec §3.3). peek에서만(사용자 펼침 존중).
+  // 2026-08: 예전엔 '장소 0곳'도 조건이었는데, 이제 시트 자체가 보여줄 게 있을 때만 마운트되므로
+  // (MapPage의 sheetOpen) 그 경우는 여기 오지 않는다. 로딩 판단도 함께 필요 없어졌다.
   const autoHalfRef = useRef(false)
   useEffect(() => {
-    if (autoHalfRef.current || placesLoading) return
-    const nothingToShow = !coupleActive || places.length === 0
-    if (nothingToShow && snap === 'peek') {
+    if (autoHalfRef.current) return
+    if (!coupleActive && snap === 'peek') {
       autoHalfRef.current = true
       setSnap('half')
     }
-  }, [coupleActive, placesLoading, places.length, snap])
+  }, [coupleActive, snap, setSnap])
 
   // 탭 대체(제스처 발견성↓ 보완, ux §1): full이면 한 단계 접고, 아니면 한 단계 펼친다.
   // snap은 controlled(prop) — 함수형 updater 대신 현재 값으로 다음 스냅을 계산해 onSnapChange로 올린다.
@@ -359,9 +356,9 @@ export function PlaceSheet({
             aria-expanded={snap !== 'peek'}
             aria-label={handleLabel}
           >
-            <span className={styles.summary}>
-              {placesLoading ? '불러오는 중…' : `우리 장소 ${places.length}곳`}
-            </span>
+            {/* 2026-08: '우리 장소 N곳' 요약을 뺐다. 목록이 장소 탭으로 간 뒤로 이 시트는 '고른
+                장소 하나'만 다루는데, 전체 개수는 여기서 아무 의미가 없었다(오히려 손잡이 자리를
+                차지했다). 손잡이의 접근성 이름은 버튼 aria-label이 이미 제공한다. */}
           </button>
         </div>
 

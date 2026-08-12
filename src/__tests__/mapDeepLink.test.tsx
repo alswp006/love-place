@@ -97,7 +97,8 @@ describe('MapPage ?place= 딥링크 수신(R4.3 — 아젠다 장소칩→지도
   it('?place=가 미존재(타커플/미로드)면 selection 없음', () => {
     renderMap('/?place=ghost')
     expect(screen.getByTestId('selected')).toHaveTextContent('none')
-    expect(screen.getByTestId('sheet-selected')).toHaveTextContent('none')
+    // 2026-08: 고른 장소가 없으면 시트를 아예 마운트하지 않는다(빈 시트가 지도를 가리지 않게).
+    expect(screen.queryByTestId('sheet-selected')).toBeNull()
   })
 
   it('?place=가 없으면 회귀 없이 selection 없음', () => {

@@ -76,7 +76,6 @@ function sheetProps(
     coupleActive: true,
     places: [],
     visitedIds: new Set<string>(),
-    placesLoading: false,
     selectedId: null,
     previewHit: null,
     reactions: {},
@@ -169,7 +168,6 @@ describe('PlaceSheet (드래그 시트)', () => {
                 // 장소가 있어야 auto-half(T14)가 발화하지 않아 selectedId→half 효과를 단독 검증할 수 있다.
                 places={[aPlace]}
                 visitedIds={new Set<string>()}
-                placesLoading={false}
                 selectedId={selectedId}
                 previewHit={null}
                 reactions={{}}
@@ -219,7 +217,6 @@ describe('PlaceSheet (드래그 시트)', () => {
           coupleActive
           places={[aPlace]}
           visitedIds={new Set<string>()}
-          placesLoading={false}
           selectedId={selectedId}
           previewHit={null}
           reactions={{}}
@@ -351,20 +348,22 @@ describe('PlaceSheet (드래그 시트)', () => {
     expect(Number(backdrop.style.opacity)).toBeGreaterThan(0) // 선택 발생 → half로 승격
   })
 
-  it('빈 상태(0곳·연결됨)면 마운트 시 시트가 half로 자동 오픈', () => {
-    renderSheet({ places: [], coupleActive: true, placesLoading: false })
-    // half면 핸들 aria-expanded=true. (auto-half 후 백드롭 '시트 접기'도 /시트/에 걸리므로
-    // 핸들만 매칭하는 구체 라벨로 한정 — 현 트리에 백드롭 버튼이 존재함, 플랜의 /시트/ 광역 셀렉터 adapt.)
+  it('미연결이면 마운트 시 half로 자동 오픈(연결 안내가 접힌 채 안 보이면 안 된다)', () => {
+    // 예전엔 '장소 0곳'도 자동 오픈 조건이었다. 2026-08부터 시트는 보여줄 게 있을 때만
+    // 마운트되므로(MapPage의 sheetOpen) 그 경우는 아예 여기 오지 않는다.
+    renderSheet({ places: [], coupleActive: false })
     expect(screen.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })).toHaveAttribute(
       'aria-expanded',
       'true',
     )
   })
 
-  it('로딩 중 peek 요약은 "불러오는 중…"(‘0곳’ 금지)', () => {
-    renderSheet({ places: [], placesLoading: true })
-    expect(screen.getByText(/불러오는 중…/)).toBeInTheDocument()
-    expect(screen.queryByText('우리 장소 0곳')).toBeNull()
+  it("★ 헤더에 '우리 장소 N곳' 요약이 없다 — 목록이 장소 탭으로 간 뒤 의미를 잃었다", () => {
+    renderSheet({ places: [aPlace], selectedId: 'p1' })
+    expect(screen.queryByText(/우리 장소/)).toBeNull()
+    expect(screen.queryByText(/불러오는 중/)).toBeNull()
+    // 손잡이의 접근성 이름은 버튼 aria-label이 계속 제공한다(라벨 없는 컨트롤 금지, §8).
+    expect(screen.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })).toBeInTheDocument()
   })
 })
 
@@ -394,7 +393,6 @@ describe('PlaceSheet — peekHeader 전체 드래그 + 6px 임계 + 당겨 접�
                 coupleActive
                 places={[aPlace]}
                 visitedIds={new Set<string>()}
-                placesLoading={false}
                 selectedId={null}
                 previewHit={null}
                 reactions={{}}
@@ -430,7 +428,6 @@ describe('PlaceSheet — peekHeader 전체 드래그 + 6px 임계 + 당겨 접�
           coupleActive
           places={[aPlace]}
           visitedIds={new Set<string>()}
-          placesLoading={false}
           selectedId={null}
           previewHit={null}
           reactions={{}}

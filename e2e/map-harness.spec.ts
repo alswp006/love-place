@@ -13,38 +13,35 @@ function shot(name: string) {
   return { skip: !process.env.SEED_SNAPSHOT && !existsSync(baseline), file: `${name}.png` }
 }
 
-// 시드된 장소가 있으면 첫 로딩 플래시(placesLoading) 동안 시트가 half로 자동 오픈되어 latch된다(spec §3.3).
-// peek 전제(플로팅 버튼/오버레이 가시)를 검증하려면, 데이터가 정착해 latch가 끝난 뒤(백드롭 등장)
-// 백드롭을 눌러 명시적으로 peek로 접고, 핸들의 aria-expanded=false로 정착을 확인한다(race 방지).
-async function collapseToPeek(page: import('@playwright/test').Page) {
-  // 로딩이 끝나야(=auto-half latch 확정) collapse가 의미 있다. 예전엔 목록 카드가 떴는지로 확인했는데
-  // 목록은 장소 탭으로 옮겨졌다(2026-08) — 이제 시트 헤더의 개수 요약이 로딩 종료의 신호다.
-  await expect(page.getByText(/우리 장소 \d+곳/)).toBeVisible()
+// 2026-08: 시트는 '고른 장소가 있을 때만' 마운트된다(MapPage의 sheetOpen). 그래서 예전처럼
+// '떠 있는 시트를 peek로 접는' 준비 동작이 필요 없다 — 선택이 없으면 시트 자체가 없다.
+// 선택이 있는 상태에서 peek까지 접는 건 여전히 가능해야 한다(그게 안 돼서 지도가 잠기던 버그를 고쳤다).
+async function collapseOpenSheet(page: import('@playwright/test').Page) {
   const handle = page.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
-  // half이면 백드롭으로 peek로 접는다. 백드롭은 전체화면이지만 시트(z45)가 하단을 덮으므로
-  // 시트에 가리지 않는 상단 지도 밴드(y≈20)를 눌러 backdrop의 onClick(setSnap('peek'))을 친다.
-  if ((await handle.getAttribute('aria-expanded')) === 'true') {
-    await page.getByRole('button', { name: '시트 접기' }).click({ position: { x: 50, y: 20 } })
-  }
+  await expect(handle).toHaveAttribute('aria-expanded', 'true')
+  // 백드롭은 전체화면이지만 위는 검색 오버레이(z50), 아래는 시트가 덮는다. 그 사이의 지도 밴드를 누른다
+  // (y=20으로 두면 검색창을 눌러 클릭이 영영 안 먹는다 — 실제로 그렇게 타임아웃 났다).
+  await page.getByRole('button', { name: '시트 접기' }).click({ position: { x: 50, y: 200 } })
   await expect(handle).toHaveAttribute('aria-expanded', 'false')
 }
 
-test('빈 상태(0곳) — peek 요약', async ({ page }) => {
+test('빈 상태(0곳) — 시트 없이 지도만', async ({ page }) => {
   await seedAuthedMap(page, {})
   await page.goto('/')
-  // 시트는 role="region"(PlaceSheet.tsx — 항상 보이는 패널, modal 아님). 실제 컴포넌트에 맞춰 region으로 검증.
-  await expect(page.getByRole('region', { name: '장소 시트' })).toBeVisible()
+  // 고른 장소가 없으면 시트를 아예 띄우지 않는다 — 빈 띠가 지도 아래를 차지하지 않게(2026-08).
+  await expect(page.getByTestId('search-overlay')).toBeVisible()
+  await expect(page.getByRole('region', { name: '장소 시트' })).toHaveCount(0)
   const s = shot('map-empty')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
 })
 
-test('장소 N개 — 지도 마커 + 시트 요약(목록은 장소 탭으로 이관)', async ({ page }) => {
+test('장소 N개 — 지도는 핀으로만 말한다(목록·요약은 장소 탭으로 이관)', async ({ page }) => {
   await seedAuthedMap(page, { places: PLACES })
   await page.goto('/')
-  // 지도는 핀으로 말하고, 시트는 개수만 요약한다. 목록 카드는 여기 없다(→ /places).
-  await expect(page.getByText(/우리 장소 2곳/)).toBeVisible()
   await expect(page.getByRole('button', { name: /속초 칠성조선소 — 가고싶음/ })).toBeVisible()
+  // 목록도, '우리 장소 N곳' 요약 띠도 여기 없다.
+  await expect(page.getByRole('region', { name: '장소 시트' })).toHaveCount(0)
   const s = shot('map-places')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
@@ -70,13 +67,12 @@ test('내 위치 버튼은 시트가 half로 펼쳐지면 가려지지 않게 �
   // 숨김 시 aria-hidden=true가 붙어 getByRole(a11y 트리)에서 사라지므로, role 대신 attribute 셀렉터로
   // DOM 노드를 직접 잡아 data-hidden/가시성을 검증한다(플랜의 getByRole은 aria-hidden과 모순이라 적응).
   const locBtn = page.locator('button[aria-label="내 위치로 이동"]')
-  // 시드 장소가 있으면 로딩 플래시로 시트가 half에 latch되므로 먼저 peek로 접는다(아래 §collapseToPeek).
-  await collapseToPeek(page)
-  // peek에서는 보임(탭바 위 가시 밴드).
+  // 시트가 없을 땐 보인다(지도 전체가 내 것).
   await expect(locBtn).toBeVisible()
   await expect(locBtn).not.toHaveAttribute('data-hidden', 'true')
-  // 핸들을 눌러 half로 펼치면(snap>peek) 버튼은 data-hidden=true로 숨겨 시트에 가리지 않는다.
-  await page.getByRole('button', { name: '시트 펼치기' }).click()
+  // 장소를 고르면 시트가 올라오고(half), 버튼은 가려지지 않게 스스로 숨는다.
+  await page.goto('/?place=p1')
+  await expect(page.getByRole('region', { name: '장소 시트' })).toBeVisible()
   await expect(locBtn).toHaveAttribute('data-hidden', 'true')
   await expect(locBtn).toBeHidden()
 })
@@ -88,12 +84,10 @@ test('검색 오버레이는 half에서 유지되고 full에서만 접힌다', a
   await seedAuthedMap(page, { places: PLACES })
   await page.goto('/')
   const overlay = page.getByTestId('search-overlay')
-  // 시드 장소가 있으면 로딩 플래시로 시트가 half에 latch되므로 먼저 peek로 접는다.
-  await collapseToPeek(page)
-  await expect(overlay).toBeVisible()
-  await page.getByRole('button', { name: '시트 펼치기' }).click() // peek→half
-  await expect(overlay).not.toHaveAttribute('data-hidden', 'true')
-  await page.getByRole('button', { name: '시트 펼치기' }).click() // half→full
+  await expect(overlay).toBeVisible() // 시트 없음
+  await page.goto('/?place=p1') // 선택 → 시트 half
+  await expect(overlay).not.toHaveAttribute('data-hidden', 'true') // half에서는 유지(≤3탭 보존)
+  await page.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ }).click() // half→full
   await expect(overlay).toHaveAttribute('data-hidden', 'true')
   await expect(overlay).toBeHidden()
 })
@@ -102,20 +96,19 @@ test('다크 모드 — 빈 상태', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await seedAuthedMap(page, { places: PLACES })
   await page.goto('/')
-  await expect(page.getByText(/우리 장소 2곳/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /속초 칠성조선소 — 가고싶음/ })).toBeVisible()
   const s = shot('map-dark')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
   await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
 })
 
-test('peek↔half — 핸들 aria-expanded 토글', async ({ page }) => {
+test('상세를 연 채로도 시트를 peek까지 접었다 다시 펼 수 있다(지도 잠김 회귀)', async ({ page }) => {
+  // 회귀 방어: 선택이 살아 있는 동안 시트가 peek에 못 머물러, 딤이 걷히지 않고 전체화면 백드롭이
+  // 지도 조작을 통째로 삼키던 버그가 있었다. 탈출구가 시트 안 ✕ 하나뿐이었다.
   await seedAuthedMap(page, { places: PLACES })
-  await page.goto('/')
-  await collapseToPeek(page)
-  // peek: 핸들은 '시트 펼치기' + aria-expanded=false.
-  const handle = page.getByRole('button', { name: '시트 펼치기' })
-  await expect(handle).toHaveAttribute('aria-expanded', 'false')
-  // half로 펼치면 aria-expanded=true(같은 핸들 노드, 라벨 유지).
+  await page.goto('/?place=p1')
+  await collapseOpenSheet(page) // 선택이 있어도 peek로 내려가야 한다
+  const handle = page.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
   await handle.click()
   await expect(handle).toHaveAttribute('aria-expanded', 'true')
 })
@@ -130,12 +123,12 @@ test('검색 프리뷰 — 결과 탭 시 시트에 프리뷰 상세', async ({ 
     ] }) }))
   await page.goto('/')
   // 검색 오버레이는 peek에서만 보이므로 먼저 peek로 접고 검색 → 결과 탭(프리뷰 set).
-  await collapseToPeek(page)
+  // (선택 전엔 시트가 없다 — 예전의 'peek로 접기' 준비 동작은 불필요해졌다)
   await page.getByLabel('장소 검색').fill('식당')
   await page.getByText('새 후보 식당').click()
   await expect(page.getByLabel('검색 결과 미리보기')).toBeVisible()
   // 프리뷰는 시트 body에 있어 peek에선 화면 밖 — 핸들로 half까지 올려 프리뷰 상세를 스냅샷에 담는다.
-  await page.getByRole('button', { name: '시트 펼치기' }).click()
+  // 결과를 고르면 시트가 스스로 올라온다(선택 발생 → half). 예전엔 손으로 펼쳐야 했다.
   await expect(page.getByRole('button', { name: '새 후보 식당 저장' })).toBeVisible()
   const s = shot('map-preview')
   test.skip(s.skip, `베이스라인 없음(${process.platform})`)
@@ -147,7 +140,8 @@ test.describe('작은/큰 뷰포트', () => {
   test('작은 화면 — 빈 상태', async ({ page }) => {
     await seedAuthedMap(page, {})
     await page.goto('/')
-    await expect(page.getByRole('region', { name: '장소 시트' })).toBeVisible()
+    await expect(page.getByTestId('search-overlay')).toBeVisible()
+    await expect(page.getByRole('region', { name: '장소 시트' })).toHaveCount(0)
     const s = shot('map-small')
     test.skip(s.skip, `베이스라인 없음(${process.platform})`)
     await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })

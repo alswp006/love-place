@@ -284,10 +284,9 @@ describe('장소 사용자 여정(검색 시드→저장→상세→다녀왔어
     )
   })
 
-  it('상세를 닫으면 상세가 사라지고 목록으로 가는 길이 남는다(상세→지도 복귀)', async () => {
-    // 2026-08 개편: 시트는 더 이상 목록을 품지 않는다(목록·검색·필터는 장소 탭).
-    // 그래서 '상세를 닫으면 목록 카드가 보인다'가 아니라 '지도로 돌아가고, 목록은 탭으로 간다'가
-    // 이 흐름의 계약이다.
+  it('상세를 닫으면 시트가 통째로 사라지고 지도만 남는다(상세→지도 복귀)', async () => {
+    // 2026-08 개편: 목록·검색·필터는 장소 탭으로 갔고, 시트는 '고른 장소가 있을 때만' 존재한다.
+    // 그래서 '닫으면 목록 카드가 보인다'가 아니라 '닫으면 시트 자체가 없다'가 이 흐름의 계약이다.
     renderJourney()
 
     // 검색→프리뷰→저장(앞 흐름 압축).
@@ -299,10 +298,10 @@ describe('장소 사용자 여정(검색 시드→저장→상세→다녀왔어
     )
     await screen.findByLabelText('장소 상세')
 
-    // 상세 닫기(✕ → onCloseDetail이 selectedId 비움).
+    // 상세 닫기(✕ → onCloseDetail이 selectedId 비움) → 시트가 언마운트된다.
     fireEvent.click(within(screen.getByLabelText('장소 상세')).getByRole('button', { name: '닫기' }))
-    expect(await screen.findByRole('link', { name: '장소 목록 열기' })).toHaveAttribute('href', '/places')
-    expect(screen.queryByLabelText('장소 상세')).toBeNull()
+    await waitFor(() => expect(screen.queryByLabelText('장소 상세')).toBeNull())
+    expect(screen.queryByRole('region', { name: '장소 시트' })).toBeNull()
     // (저장 자체가 됐는지는 바로 위 '한 흐름' 테스트가 이미 증언한다 — 여기선 왕복만 본다.)
   })
 })

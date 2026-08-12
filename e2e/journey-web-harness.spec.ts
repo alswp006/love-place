@@ -40,13 +40,10 @@ test('웹에서도 동선이 실제로 기록된다 — 시작 전·기록 중 �
   await seedAuthedMap(page, { locationConsent: true, places: [PLACE] })
   await page.goto('/')
 
-  // 장소 시트가 half로 열려 있으면 동선 컨트롤을 덮는다 — peek로 접는다(map-harness와 같은 절차).
-  await expect(page.getByText(/우리 장소 \d+곳/)).toBeVisible() // 목록은 장소 탭으로 이관 — 헤더 요약이 로딩 종료 신호
-  const handle = page.getByRole('button', { name: /시트 펼치기|시트 단계 전환/ })
-  if ((await handle.getAttribute('aria-expanded')) === 'true') {
-    await page.getByRole('button', { name: '시트 접기' }).click({ position: { x: 50, y: 20 } })
-  }
-  await expect(handle).toHaveAttribute('aria-expanded', 'false')
+  // 2026-08: 고른 장소가 없으면 시트가 아예 없다 — 예전처럼 '덮고 있는 시트를 접는' 준비 동작이
+  // 필요 없어졌다. 지도 준비 신호는 검색 오버레이다.
+  await expect(page.getByTestId('search-overlay')).toBeVisible()
+  await expect(page.getByRole('region', { name: '장소 시트' })).toHaveCount(0)
 
   // 시작 전에 한계를 말한다 — 누르고 나서 알면 이미 늦다.
   const start = page.getByRole('button', { name: /동선 시작/ })

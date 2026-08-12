@@ -37,7 +37,7 @@ export default function MapPage() {
   const { data: couple } = useCouple()
   const coupleId = couple?.coupleId ?? null
   const coupleActive = couple?.status === 'ACTIVE'
-  const { data: places, isLoading: placesLoading } = usePlaces(coupleId)
+  const { data: places } = usePlaces(coupleId)
   const { data: wishes } = useWishes(coupleId, myId)
   const { data: visits } = useVisits(coupleId)
   const { data: reactions } = useReactions(coupleId, myId)
@@ -59,6 +59,16 @@ export default function MapPage() {
   const [previewHit, setPreviewHit] = useState<KakaoPlaceHit | null>(null)
   // 시트 snap을 MapPage로 끌어올려 NaverMap(플로팅 버튼/토스트 숨김)과 PlaceSheet가 같은 값을 읽게 한다.
   const [snap, setSnap] = useState<SnapStop>('peek')
+  // 시트를 띄울 이유 = 고른 장소가 있거나, 아직 연결 전이라 안내를 해야 하거나.
+  // 둘 다 아니면 지도만 남긴다(빈 시트가 화면 아래를 차지하지 않게).
+  const sheetOpen = Boolean(selectedId || previewHit || !coupleActive)
+  // 시트를 닫을 땐 snap도 peek로 되돌린다 — 다음에 열릴 때 아래에서 올라오는 느낌을 유지한다
+  // (안 하면 half인 채로 언마운트돼 다음 마운트가 이미 펼쳐진 상태로 튀어나온다).
+  const closeSheet = () => {
+    setSelectedId(null)
+    setPreviewHit(null)
+    setSnap('peek')
+  }
   const savePlace = useSavePlace(coupleId)
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -157,7 +167,7 @@ export default function MapPage() {
           {/* R6 동선 기록(A안) — 화면 한가운데 위를 막던 것을 '내 위치' 버튼 위 우하단 레일로 옮겼다.
               엄지 도달 영역이고, 지도를 가리지 않으며, 기록 중 배지도 같은 자리에서 커진다. */}
           {coupleActive ? (
-            <div className={styles.journeyRail} data-hidden={snap !== 'peek' ? 'true' : undefined}>
+            <div className={styles.journeyRail} data-hidden={sheetOpen ? 'true' : undefined}>
               <JourneyRecordControl coupleId={coupleId} userId={myId} />
             </div>
           ) : null}
@@ -181,10 +191,7 @@ export default function MapPage() {
               setPreviewHit(null)
               setSelectedId(id)
             }}
-            onClose={() => {
-              setSelectedId(null)
-              setPreviewHit(null)
-            }}
+            onClose={closeSheet}
           />
         </div>
       ) : (
@@ -195,23 +202,22 @@ export default function MapPage() {
           hint="네이버 지도 키를 설정하면 여기에 우리 장소가 마커로 떠요."
         />
       )}
-      {/* 키 없을 때(준비 중)는 시트를 렌더하지 않아 '준비 중' 안내 1개만 보이게 한다(spec §3.3). */}
-      {isNaverMapConfigured() ? (
+      {/* 시트는 **보여줄 게 있을 때만** 존재한다(2026-08). 목록이 장소 탭으로 간 뒤로, 아무것도
+          고르지 않은 시트는 '우리 장소 N곳'이라는 띠 하나로 화면 아래를 계속 차지하고 있었다 —
+          지도를 가리면서 정작 아무 일도 하지 않는다. 이제 핀/검색결과를 고르면 그때 올라온다.
+          (키 없을 때도 렌더하지 않는다 — '준비 중' 안내가 둘이 되면 안 된다, spec §3.3) */}
+      {isNaverMapConfigured() && sheetOpen ? (
         <PlaceSheet
           coupleId={coupleId}
           myId={myId}
           coupleActive={coupleActive}
           places={enriched}
           visitedIds={visitedIds}
-          placesLoading={placesLoading}
           selectedId={selectedId}
           previewHit={previewHit}
           reactions={reactions}
           onSave={() => onSheetSave()}
-          onCloseDetail={() => {
-            setSelectedId(null)
-            setPreviewHit(null)
-          }}
+          onCloseDetail={closeSheet}
           snap={snap}
           onSnapChange={setSnap}
           collections={collections ?? []}
