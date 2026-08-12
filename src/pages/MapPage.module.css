@@ -69,3 +69,10 @@
 .journeyRail > * {
   pointer-events: auto;
 }
+
+/* 신호 한 줄이 시트와 겹쳐 떠 있으면 상세를 읽는 데 방해가 된다 — 동선 레일과 같은 규칙으로 숨는다. */
+.feedOverlay[data-hidden='true'] {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}

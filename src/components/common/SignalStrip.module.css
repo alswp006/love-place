@@ -1,0 +1,94 @@
+/* 신호 한 줄 — 지도 위에 얹히지만 지도를 이기지 않게. 검색바와 같은 유리 결로 한 가족처럼 보이되
+   한 단계 작고 옅다(주인공은 지도, 이건 각주다). */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  align-items: stretch;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  /* 고정 높이가 아니라 min-height — 글자를 키워도 잘리지 않고 줄바꿈된다(Dynamic Type §8). */
+  min-height: 36px;
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  color: var(--c-text);
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.pill:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+}
+
+.icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--c-brand);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  /* 한 줄이 원칙이지만 잘라내기보다 말줄임 — 긴 제목이 화면을 밀지 않게. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more {
+  flex-shrink: 0;
+  padding: 1px var(--sp-2);
+  border-radius: 999px;
+  background: var(--c-surface-2);
+  color: var(--c-text-weak);
+  font-size: var(--fs-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 스크린리더 전용 — '+2'는 눈으로만 읽히므로 소리로는 '외 2건'을 준다. */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--c-text-weak);
+  transition: transform var(--motion-fast) var(--ease);
+}
+
+.chevron[data-open='true'] {
+  transform: rotate(180deg);
+}
+
+/* 펼친 카드들 — 원래 UpcomingFeed/ActivityFeed를 그대로 담는다(중복 구현 금지).
+   지도를 다 덮지 않게 최대 높이를 두고 안에서 스크롤한다. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  max-height: 46vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

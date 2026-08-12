@@ -188,3 +188,26 @@ test('사진 — 목록 카드에 썸네일, 없으면 슬롯 자체를 안 그�
   await expect(withPhoto.locator('img')).toHaveCount(1)
   await expect(without.locator('img')).toHaveCount(0)
 })
+
+// 신호 한 줄(SignalStrip) — 웹푸시가 안 닿는 자리를 메우는 1차 알림 수단(ux §6).
+// 지도의 주인공은 지도이므로 평소엔 한 줄이고, 탭해야 카드가 펼쳐진다.
+test('신호 한 줄 — 접힌 채로 뜨고, 탭하면 펼쳐진다', async ({ page }) => {
+  const soon = new Date(Date.now() + 25 * 60_000).toISOString()
+  await seedAuthedMap(page, {
+    places: PLACES,
+    events: [
+      {
+        id: 'ev1', title: '속초 카페 투어', start: soon,
+        end: new Date(Date.now() + 85 * 60_000).toISOString(),
+        is_all_day: false, time_zone: 'Asia/Seoul', visibility: 'SHARED', participants: 'BOTH',
+        owner_id: USER_A, reminders: [], place_id: null, version: 1,
+      },
+    ],
+  })
+  await page.goto('/')
+  const pill = page.getByRole('button', { expanded: false }).filter({ hasText: '속초 카페 투어' })
+  await expect(pill).toBeVisible()
+  const s = shot('map-signal')
+  test.skip(s.skip, `베이스라인 없음(${process.platform})`)
+  await expect(page).toHaveScreenshot(s.file, { fullPage: true, maxDiffPixelRatio: 0.02 })
+})

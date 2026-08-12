@@ -14,6 +14,7 @@ import { useVisits } from '@/hooks/useVisits'
 import { useConflict } from '@/lib/sync/useConflict'
 import { ConflictBanner } from '@/components/common/ConflictBanner'
 import { JourneyRecordControl } from '@/components/journey/JourneyRecordControl'
+import { SignalStrip } from '@/components/common/SignalStrip'
 import { useReactions } from '@/hooks/useReactions'
 import { useRealtimePlaces } from '@/hooks/useRealtimePlaces'
 import { useCollections, usePlaceCollections } from '@/hooks/useCollections'
@@ -163,7 +164,13 @@ export default function MapPage() {
             </div>
           ) : null}
           {/* 알림(다가오는 일정 + 상대 활동)은 한 줄로 접어 둔다 — 지도 탭의 주인공은 지도다.
-              탭하면 원래 카드가 그대로 펼쳐지고, 0건이면 통째로 사라진다(ux §6). */}
+              탭하면 원래 카드가 그대로 펼쳐지고, 0건이면 통째로 사라진다(ux §6).
+              시트가 올라오면 함께 숨는다 — 상세를 보는 중에 지도 위 각주가 끼어들 이유가 없다. */}
+          {coupleActive ? (
+            <div className={styles.feedOverlay} data-hidden={sheetOpen ? 'true' : undefined}>
+              <SignalStrip coupleId={coupleId} myId={myId} />
+            </div>
+          ) : null}
           {/* R6 동선 기록(A안) — 화면 한가운데 위를 막던 것을 '내 위치' 버튼 위 우하단 레일로 옮겼다.
               엄지 도달 영역이고, 지도를 가리지 않으며, 기록 중 배지도 같은 자리에서 커진다. */}
           {coupleActive ? (
