@@ -13,6 +13,7 @@ import '../places/save_place.dart';
 import '../search/place_hit.dart';
 import 'offline_queue.dart';
 import 'outbox_store.dart';
+import 'versioned_update.dart';
 
 Future<FlushOutcome> executeOutbox(
   SupabaseClient client,
@@ -29,6 +30,18 @@ Future<FlushOutcome> executeOutbox(
         p['uid'] as String,
       );
       return FlushOutcome.ok;
+    case 'wish.setPriority':
+      final p = entry.payload;
+      // 큐에 담을 때의 version으로 재생 — 그 사이 상대가 고쳤으면 conflict로
+      // 보고된다(LWW 금지). 오프라인 중 재편집은 dedupeKey가 최신 의도만 남겼다.
+      final r = await versionedUpdate(
+        client,
+        'wishes',
+        p['wishId'] as String,
+        p['expectedVersion'] as int,
+        {'priority': p['priority'], 'updated_by': p['myId']},
+      );
+      return r is VersionedOk ? FlushOutcome.ok : FlushOutcome.conflict;
     default:
       // 진짜 미지의 종류 — 무시+제거(웹판 default와 동일). throw로 잔류시키면
       // poison 엔트리 하나가 뒤의 모든 큐를 영구 차단한다(head-of-line blocking) —

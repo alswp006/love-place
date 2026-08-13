@@ -16,6 +16,7 @@ import 'state/auth.dart';
 import 'state/couple.dart';
 import 'state/offline.dart';
 import 'state/places.dart';
+import 'state/wish_mutations.dart';
 import 'sync/offline_executor.dart';
 
 class AppShell extends ConsumerWidget {
@@ -91,6 +92,37 @@ class MapTab extends ConsumerWidget {
                     ref.invalidate(placesProvider);
                     ref.invalidate(wishesProvider);
                     return SavedNow(result);
+                  },
+            myWishOf: (placeId) =>
+                ref.watch(wishesProvider).value?.mine[placeId],
+            onSetPriority: uid == null
+                ? null
+                : ({
+                    required wishId,
+                    required expectedVersion,
+                    required priority,
+                  }) async {
+                    final outcome = await ref
+                        .read(wishMutationsProvider.notifier)
+                        .setPriority(
+                          wishId: wishId,
+                          expectedVersion: expectedVersion,
+                          priority: priority,
+                          myId: uid,
+                        );
+                    if (!context.mounted) return;
+                    // 충돌/큐 적재는 사용자에게 표시(무음 금지 §4.3).
+                    final msg = switch (outcome) {
+                      SetPriorityOutcome.conflict =>
+                        '상대가 먼저 수정했어요. 최신 내용으로 새로고침했어요.',
+                      SetPriorityOutcome.queued =>
+                        '오프라인이에요 — 연결되면 자동으로 반영할게요',
+                      SetPriorityOutcome.applied => null,
+                    };
+                    if (msg != null) {
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text(msg)));
+                    }
                   },
           ),
         ),

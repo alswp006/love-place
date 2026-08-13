@@ -16,6 +16,8 @@ import 'package:flutter/material.dart';
 
 import '../places/save_place.dart'
     show QueuedOffline, SaveOutcome, SavedNow;
+import '../places/wish_aggregate.dart' show MyWish;
+import '../places/wish_status.dart' show cyclePriority, maxPriorityStep;
 import '../search/place_hit.dart';
 import '../search/search_controller.dart';
 import 'map_focus.dart';
@@ -32,6 +34,8 @@ class MapScreen extends StatefulWidget {
     this.polyline,
     this.onSaveHit,
     this.searchController,
+    this.myWishOf,
+    this.onSetPriority,
   });
 
   final List<MapPlace> places;
@@ -43,6 +47,16 @@ class MapScreen extends StatefulWidget {
 
   /// 테스트 주입용. 미지정 시 프록시 호출 컨트롤러 생성.
   final PlaceSearchController? searchController;
+
+  /// 내 위시 상세(우선순위 하트 컨트롤용). null이면 하트 미표시.
+  final MyWish? Function(String placeId)? myWishOf;
+
+  /// 하트 단계 변경(MapTab이 제공 — 낙관적 락 + 충돌/큐 표시는 호출부 책임).
+  final Future<void> Function({
+    required String wishId,
+    required int expectedVersion,
+    required int priority,
+  })? onSetPriority;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -58,6 +72,11 @@ class _MapScreenState extends State<MapScreen> {
   final _searchFocus = FocusNode();
   late final PlaceSearchController _search =
       widget.searchController ?? PlaceSearchController();
+
+  /// 테스트 전용 — 마커 탭과 동일한 선택 경로(NaverMap 플랫폼 뷰는 위젯
+  /// 테스트에서 렌더되지 않아 마커를 직접 탭할 수 없다).
+  @visibleForTesting
+  void debugSelectForTest(String id) => _select(id);
 
   void _select(String id) {
     setState(() {
@@ -229,6 +248,10 @@ class _MapScreenState extends State<MapScreen> {
                   saving: _saving,
                   saveError: _saveError,
                   canSave: widget.onSaveHit != null,
+                  myWish: selected != null
+                      ? widget.myWishOf?.call(selected.id)
+                      : null,
+                  onSetPriority: widget.onSetPriority,
                   scrollController: scrollController,
                   onSave: _save,
                   onClose: _close,
@@ -372,6 +395,8 @@ class _PlaceSheet extends StatelessWidget {
     required this.saving,
     required this.saveError,
     required this.canSave,
+    required this.myWish,
+    required this.onSetPriority,
     required this.scrollController,
     required this.onSave,
     required this.onClose,
@@ -382,6 +407,12 @@ class _PlaceSheet extends StatelessWidget {
   final bool saving;
   final String? saveError;
   final bool canSave;
+  final MyWish? myWish;
+  final Future<void> Function({
+    required String wishId,
+    required int expectedVersion,
+    required int priority,
+  })? onSetPriority;
   final ScrollController scrollController;
   final VoidCallback onSave;
   final VoidCallback onClose;
@@ -441,7 +472,7 @@ class _PlaceSheet extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(color: theme.colorScheme.error)),
             ],
-          ] else if (place != null)
+          ] else if (place != null) ...[
             // 상태는 색이 아니라 텍스트로도(§8 이중화).
             Text(
               place!.visited
@@ -451,7 +482,59 @@ class _PlaceSheet extends StatelessWidget {
                       : '☆ 가고싶음',
               style: theme.textTheme.bodyMedium,
             ),
+            if (myWish != null && onSetPriority != null) ...[
+              const SizedBox(height: 12),
+              _PriorityHearts(
+                priority: myWish!.priority,
+                onTap: () => onSetPriority!(
+                  wishId: myWish!.wishId,
+                  expectedVersion: myWish!.version,
+                  priority: cyclePriority(myWish!.priority),
+                ),
+              ),
+            ],
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// 우선순위 하트 단계(0~3) — 위시 의도의 세기. ❤️ 리액션과 다른 컨트롤(ux §2 혼동
+/// 금지: 우선순위=하트 단계, 리액션=이모지 칩 — 한 컨트롤로 섞지 않는다).
+/// 탭 = 순환(0→1→2→3→0, 웹판 cyclePriority). 색+개수로 이중화(§8).
+class _PriorityHearts extends StatelessWidget {
+  const _PriorityHearts({required this.priority, required this.onTap});
+
+  final int priority;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '우선순위 하트 $priority단계 (최대 $maxPriorityStep)',
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 1; i <= maxPriorityStep; i++)
+                Icon(
+                  i <= priority ? Icons.favorite : Icons.favorite_border,
+                  size: 22,
+                  color: i <= priority ? scheme.primary : scheme.outline,
+                ),
+              const SizedBox(width: 8),
+              Text('$priority/$maxPriorityStep',
+                  style: Theme.of(context).textTheme.labelMedium),
+            ],
+          ),
+        ),
       ),
     );
   }

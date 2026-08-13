@@ -134,8 +134,10 @@ lib/core/supabase.dart           싱글턴 초기화(publishableKey)
       가드, 프록시 `naver-search`) → 프리뷰 마커 → 저장(`places/save_place.dart`:
       합성키 dedup + 좌표창 폴백 + wish select-then-insert). **≤3탭 회귀 테스트**
       (`map_screen_save_flow_test.dart`)가 탭 수를 고정한다.
-- [ ] 위시 mutation(우선순위 하트 — versioned_update 사용) + 시트에 하트/리액션 연결
-      (executor에 'wish.setPriority' case를 함께 추가할 것 — dedupeKey='wish:<id>')
+- [x] 위시 하트 mutation(`state/wish_mutations.dart` — versioned_update, 충돌=서버
+      정본 승리+표시, 오프라인=dedupeKey로 최신 의도만) + 시트 하트 컨트롤
+      (`_PriorityHearts` — 우선순위 하트 ≠ ❤️ 리액션, ux §2 혼동 금지 준수).
+      executor 'wish.setPriority' case 포함. ❤️ 리액션은 P3 이후.
 - [x] 오프라인 큐(§4.3) — `sync/outbox_store.dart`(파일=durable, 원자적 쓰기) +
       `sync/offline_queue.dart`(유실 0: ok=제거/conflict=제거+보고/throw=중단+잔류) +
       `sync/offline_executor.dart`('place.save' 재생, 미지 kind=제거로 poison 차단 방지) +
