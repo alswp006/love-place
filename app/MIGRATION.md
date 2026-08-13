@@ -124,10 +124,14 @@ lib/core/supabase.dart           싱글턴 초기화(publishableKey)
 
 - [x] `lib/core/env.dart` — `--dart-define` 주입 (비공개 키 반입 금지, CLAUDE.md §5)
 - [x] `lib/core/supabase.dart` — 클라이언트 싱글턴
-- [ ] 인증 — OTP 6자리 우선(웹판이 네이티브에서 매직링크 PKCE 교차컨텍스트를 피한 이유와 동일), 딥링크 복귀
-- [ ] `places`/`wishes` 리포지토리(Riverpod) + Realtime 구독 → MapScreen에 실데이터 연결
-      (쿼리부는 미작성 — 가공부 `wish_aggregate.dart`·모델 `place_row.dart`는 완료)
+- [x] 인증 — OTP 6자리 1차(`auth/login_screen.dart`; 매직링크 PKCE 교차컨텍스트 회피).
+      OAuth(구글/애플)·딥링크 복귀는 후속.
+- [x] `places`/`wishes`/`visits` 리포지토리(Riverpod, `state/places.dart`) + Realtime 구독
+      (`realtimeSyncProvider` — 무효화로 일원화, 채널 dispose 정리) + 커플 게이트
+      (`state/couple.dart` — ensure_solo_couple 마지막 방어선, 사용자당 1회) →
+      `app_shell.dart`가 로그인→커플→지도를 게이트, `MapTab`이 실데이터 연결
 - [ ] 위시 저장 흐름(검색 프록시 `naver-search` 호출 → 후보 → 저장 ≤3탭 회귀 테스트, ux §3)
+- [ ] 위시 mutation(우선순위 하트 — versioned_update 사용) + 시트에 저장/하트 연결
 - [x] 지도 화면 — `NaverMap` + `contentPadding`에 `sheetOcclusionPx()` 연결
 - [x] 마커 **diff 갱신**(B2 고침 — 전체 재생성 금지)
 - [x] 장소 시트 — `DraggableScrollableSheet` + `sheet_snap.dart` (최소판 — 저장/메모/리액션은 데이터 연결 후)
