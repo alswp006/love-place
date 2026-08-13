@@ -130,8 +130,13 @@ lib/core/supabase.dart           싱글턴 초기화(publishableKey)
       (`realtimeSyncProvider` — 무효화로 일원화, 채널 dispose 정리) + 커플 게이트
       (`state/couple.dart` — ensure_solo_couple 마지막 방어선, 사용자당 1회) →
       `app_shell.dart`가 로그인→커플→지도를 게이트, `MapTab`이 실데이터 연결
-- [ ] 위시 저장 흐름(검색 프록시 `naver-search` 호출 → 후보 → 저장 ≤3탭 회귀 테스트, ux §3)
-- [ ] 위시 mutation(우선순위 하트 — versioned_update 사용) + 시트에 저장/하트 연결
+- [x] 위시 저장 흐름 — 검색(`search/search_controller.dart`: 디바운스 250ms + seq stale
+      가드, 프록시 `naver-search`) → 프리뷰 마커 → 저장(`places/save_place.dart`:
+      합성키 dedup + 좌표창 폴백 + wish select-then-insert). **≤3탭 회귀 테스트**
+      (`map_screen_save_flow_test.dart`)가 탭 수를 고정한다.
+- [ ] 위시 mutation(우선순위 하트 — versioned_update 사용) + 시트에 하트/리액션 연결
+- [ ] 오프라인 큐(§4.3 — 웹판 OfflineQueueProvider/outboxStore의 이식. 저장이 현재
+      온라인 전용이다. P1 계약이므로 실기기 검증 전에 붙일 것)
 - [x] 지도 화면 — `NaverMap` + `contentPadding`에 `sheetOcclusionPx()` 연결
 - [x] 마커 **diff 갱신**(B2 고침 — 전체 재생성 금지)
 - [x] 장소 시트 — `DraggableScrollableSheet` + `sheet_snap.dart` (최소판 — 저장/메모/리액션은 데이터 연결 후)

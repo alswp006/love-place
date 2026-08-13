@@ -16,6 +16,7 @@ import 'package:flutter_naver_map/flutter_naver_map.dart';
 
 import '../core/env.dart';
 import '../geo/locator.dart';
+import '../places/marker_visual.dart';
 import 'camera_policy.dart';
 import 'cluster.dart';
 import 'marker_diff.dart';
@@ -49,6 +50,7 @@ class MapView extends StatefulWidget {
     this.bottomOcclusionPx = 0,
     this.orderById,
     this.polyline,
+    this.preview,
     this.locator = const GeolocatorLocator(),
   });
 
@@ -67,6 +69,10 @@ class MapView extends StatefulWidget {
 
   /// 리캡 동선 폴리라인(정점 순서).
   final List<({double lat, double lng})>? polyline;
+
+  /// 프리뷰(미저장 검색 후보) — 전용 transient 마커 1개(웹판 previewMarkerRef).
+  /// 상세/저장은 시트가 담당. diff가 생성·이동·제거를 자동 처리한다.
+  final ({double lat, double lng, String name})? preview;
 
   final Locator locator;
 
@@ -102,8 +108,19 @@ class _MapViewState extends State<MapView> {
     }
     if (!identical(old.places, widget.places) ||
         old.selectedId != widget.selectedId ||
-        !identical(old.orderById, widget.orderById)) {
+        !identical(old.orderById, widget.orderById) ||
+        old.preview != widget.preview) {
       _requestRender();
+    }
+    if (old.preview != widget.preview && widget.preview != null) {
+      // 새 프리뷰 → 그 좌표로 이동(동네 줌 미만이면 끌어올림).
+      final p = widget.preview!;
+      _applyCamera(CameraMoveTo(
+        lat: p.lat,
+        lng: p.lng,
+        zoom: _zoom < locateZoom ? locateZoom : _zoom,
+      ));
+      _policy.onUserPanned(); // 프리뷰 탐색 중 자동 센터링이 끼어들지 않게
     }
     if (old.polyline != widget.polyline) _syncPolyline();
   }
@@ -216,6 +233,20 @@ class _MapViewState extends State<MapView> {
         selectedId: widget.selectedId,
         orderById: widget.orderById,
       );
+      final preview = widget.preview;
+      if (preview != null) {
+        // 프리뷰는 클러스터 대상이 아니다(transient) — 저장 마커 위에 뜬다.
+        specs.add(MarkerSpec(
+          key: 'preview',
+          lat: preview.lat,
+          lng: preview.lng,
+          glyph: '☆',
+          kind: MarkerKind.wish,
+          label: '${preview.name} — 검색 결과',
+          selected: true,
+          zIndex: selectedZIndex + 1,
+        ));
+      }
       final diff = diffMarkers(_current, specs);
       if (diff.isEmpty) return;
 
@@ -263,6 +294,11 @@ class _MapViewState extends State<MapView> {
   }
 
   void _wireTap(NMarker marker, MarkerSpec spec) {
+    if (spec.key == 'preview') {
+      // 프리뷰는 place id가 아니다 — 시트는 이미 떠 있으니 탭은 무동작.
+      marker.setOnTapListener((_) {});
+      return;
+    }
     if (spec.isCluster) {
       final ids = spec.key.substring(2).split(',');
       marker.setOnTapListener((_) => _onClusterTap(ids, spec));

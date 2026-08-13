@@ -11,6 +11,7 @@ import 'auth/login_screen.dart';
 import 'core/env.dart';
 import 'core/supabase.dart';
 import 'map/map_screen.dart';
+import 'places/save_place.dart';
 import 'state/auth.dart';
 import 'state/couple.dart';
 import 'state/places.dart';
@@ -52,9 +53,24 @@ class MapTab extends ConsumerWidget {
     ref.watch(realtimeSyncProvider); // 구독 유지(§5.1 공유 자동 전파)
     final loading = ref.watch(placesProvider).isLoading;
     final places = ref.watch(mapPlacesProvider);
+    final coupleId = ref.watch(coupleIdProvider);
+    final uid = ref.watch(currentUserProvider)?.id;
     return Stack(
       children: [
-        Positioned.fill(child: MapScreen(places: places)),
+        Positioned.fill(
+          child: MapScreen(
+            places: places,
+            onSaveHit: (coupleId == null || uid == null)
+                ? null
+                : (hit) async {
+                    final result = await savePlace(db, coupleId, hit, uid);
+                    // Realtime이 무효화를 밀어주지만, 내 쓰기는 즉시 반영(체감 지연 제거).
+                    ref.invalidate(placesProvider);
+                    ref.invalidate(wishesProvider);
+                    return result;
+                  },
+          ),
+        ),
         // 첫 로딩만 표시(마커 0개로 오해하지 않게). 갱신 중엔 이전 값이 이미 떠 있다.
         if (loading && places.isEmpty)
           const Positioned(
