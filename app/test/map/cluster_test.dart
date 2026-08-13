@@ -53,6 +53,14 @@ void main() {
       expect(cellSizeDeg(3), 1.0);
       expect(cellSizeDeg(0), 1.0);
     });
+
+    test('소수 줌도 연속으로 처리한다 — 핀치 중 클러스터가 계단식으로 안 튀게', () {
+      // 네이티브 카메라 줌은 double. 정수부만 계산하면 12.0과 12.9의 셀이 같아져
+      // 13.0에서 갑자기 절반으로 뛴다(이식 초기 버그).
+      expect(cellSizeDeg(12.5), closeTo(1.0 / 90.50966799, 1e-9)); // 2^6.5
+      expect(cellSizeDeg(12.5), lessThan(cellSizeDeg(12.0)));
+      expect(cellSizeDeg(12.5), greaterThan(cellSizeDeg(13.0)));
+    });
   });
 
   group('boundsSpanTiny — 클러스터 클릭 시 fitBounds vs 줌인 분기', () {
@@ -78,6 +86,25 @@ void main() {
         boundsSpanTiny(const [
           ClusterPoint(id: 'a', lat: 37.50, lng: 127.00),
           ClusterPoint(id: 'b', lat: 37.55, lng: 127.05),
+        ]),
+        isFalse,
+      );
+    });
+
+    test('임계값은 웹판과 동일한 0.0005°(≈55m) — 수십 m 간격도 tiny다', () {
+      // 이식 초기에 1e-6으로 좁혀 옮기는 오류가 있었다. 그러면 ~30m 간격 클러스터를
+      // 눌렀을 때 fitBounds가 과확대되는, 웹판이 minDeg로 막아둔 버그가 재발한다.
+      expect(
+        boundsSpanTiny(const [
+          ClusterPoint(id: 'a', lat: 37.5000, lng: 127.0000),
+          ClusterPoint(id: 'b', lat: 37.5003, lng: 127.0003), // ≈33m
+        ]),
+        isTrue,
+      );
+      expect(
+        boundsSpanTiny(const [
+          ClusterPoint(id: 'a', lat: 37.5000, lng: 127.0000),
+          ClusterPoint(id: 'b', lat: 37.5010, lng: 127.0000), // ≈111m
         ]),
         isFalse,
       );

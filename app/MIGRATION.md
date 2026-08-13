@@ -77,37 +77,62 @@ flutter test      # 전부 통과
 
 ---
 
-## 완료 (46 테스트 통과 · analyze 0)
+## 완료 (75 테스트 통과 · analyze 0)
 
 ```
 lib/places/wish_status.dart      찜 상태 도출 — 웹판 충실 이식
 lib/places/marker_visual.dart    마커 모양 도출(색+모양 이중화, §8)
+lib/places/place_row.dart        places/wishes 행 모델 + 경계 파싱(zod 역할)
+lib/places/wish_aggregate.dart   wishes 행 → place별 집계(useWishes 가공부 이식)
 lib/map/cluster.dart             그리드 클러스터러 — 웹판 충실 이식
 lib/map/sheet_snap.dart          시트 스냅 전이 — 웹판 충실 이식
 lib/map/map_focus.dart           ★ 신규 — C1 고침(시트 가림 보정)
 lib/map/camera_policy.dart       ★ 신규 — C2 고침(초기 센터링 상태기계)
+lib/map/marker_diff.dart         ★ 신규 — B2 고침(마커 diff, 전체 재생성 폐지)
+lib/map/marker_icon.dart         핀/클러스터 위젯 + 아이콘 캐시 키(OKLCH→sRGB 정변환)
+lib/map/map_view.dart            NaverMap 조립 — C1·C2·B2 합류점(웹판 NaverMap.tsx 대체)
+lib/map/map_screen.dart          시트(DraggableScrollableSheet) + occlusion → contentPadding
+lib/sync/versioned_update.dart   낙관적 락 — versionedUpdate/softDelete 이식(§4.3 비협상)
+lib/geo/locator.dart             위치 래퍼 — A2 정식 대체(자동 locate는 granted만, 요청은 맥락)
+lib/core/env.dart                dart-define 주입(전부 공개값 — 비공개 키 반입 금지)
+lib/core/supabase.dart           싱글턴 초기화(publishableKey)
 ```
 
-### 이식하며 잡은 함정
+### 이식하며 잡은 함정 (전부 회귀 테스트로 못박음)
 
-**Dart의 `List.sort`는 안정 정렬이 아니다.** 웹판 `attachAndSortWishes`는 JS `Array.sort`의
-안정성(ES2019+)에 기대어 "동률이면 최신순 유지"를 얻고 있었다(주석에 명시돼 있음).
-그대로 옮겼으면 동률 장소 순서가 조용히 깨졌을 것 — 원래 인덱스를 타이브레이커로 넣어 막았고
-회귀 테스트로 못박았다(`wish_status_test.dart`).
+1. **Dart의 `List.sort`는 안정 정렬이 아니다.** 웹판 `attachAndSortWishes`는 JS `Array.sort`의
+   안정성(ES2019+)에 기대어 "동률이면 최신순 유지"를 얻고 있었다. 인덱스 타이브레이커로 해결.
+2. **`boundsSpanTiny` 임계값** — 웹판은 `0.0005°`(≈55m)인데 1차 이식이 `1e-6`으로 좁혔다.
+   그대로면 수십 m 클러스터 클릭 시 fitBounds 과확대(웹판이 막아둔 버그)가 재발한다.
+3. **줌은 소수다** — 네이티브 카메라 줌은 double. 셀 크기 계산이 정수부만 보면 핀치 도중
+   클러스터가 계단식으로 튄다. `math.pow`로 연속화.
+4. **Postgres numeric의 JSON int 함정** — 정수값 좌표가 int로 와서 double 캐스트가 터진다.
+   경계 파서에서 승격.
+
+### 설계 노트
+
+- 마커 아이콘은 `NOverlayImage.fromWidget` + **변형당 1회 캐시**(`iconKeyOf`) — 마커 수백 개여도
+  이미지 몇 개. 웹판이 마커마다 DOM을 만들던 것(A3)의 반대.
+- 사용자 조작 감지는 `NCameraUpdateReason.gesture` — 웹판이 `dragend`만 들어 프로그램적
+  줌의 오탐을 피하던 우회의 정식 대체.
+- 시트 물리는 `DraggableScrollableSheet`(스냅 3점) — 커스텀 제스처 코드 없이 네이티브 감각.
+  비율의 단일 출처는 `sheet_snap.dart`.
 
 ---
 
 ## 다음 (수직 슬라이스 나머지)
 
-- [ ] `lib/core/env.dart` — `--dart-define`으로 Supabase URL/anon, 네이버 client id 주입
-      (**키는 클라이언트에 두지 않는다** — 네이버 REST·Claude·길찾기는 전부 Edge Function 프록시. CLAUDE.md §5)
-- [ ] `lib/core/supabase.dart` — 클라이언트 싱글턴 + 세션 관리
+- [x] `lib/core/env.dart` — `--dart-define` 주입 (비공개 키 반입 금지, CLAUDE.md §5)
+- [x] `lib/core/supabase.dart` — 클라이언트 싱글턴
 - [ ] 인증 — OTP 6자리 우선(웹판이 네이티브에서 매직링크 PKCE 교차컨텍스트를 피한 이유와 동일), 딥링크 복귀
-- [ ] `places` 조회 훅(Riverpod) + Realtime 구독 + `version` 조건부 업데이트(낙관적 락, CLAUDE.md §5-4)
-- [ ] 지도 화면 — `NaverMap` + `contentPadding`에 `sheetOcclusionPx()` 연결
-- [ ] 마커 **diff 갱신**(B2 고침 — 전체 재생성 금지)
-- [ ] 장소 시트 — `DraggableScrollableSheet` + `sheet_snap.dart`
+- [ ] `places`/`wishes` 리포지토리(Riverpod) + Realtime 구독 → MapScreen에 실데이터 연결
+      (쿼리부는 미작성 — 가공부 `wish_aggregate.dart`·모델 `place_row.dart`는 완료)
+- [ ] 위시 저장 흐름(검색 프록시 `naver-search` 호출 → 후보 → 저장 ≤3탭 회귀 테스트, ux §3)
+- [x] 지도 화면 — `NaverMap` + `contentPadding`에 `sheetOcclusionPx()` 연결
+- [x] 마커 **diff 갱신**(B2 고침 — 전체 재생성 금지)
+- [x] 장소 시트 — `DraggableScrollableSheet` + `sheet_snap.dart` (최소판 — 저장/메모/리액션은 데이터 연결 후)
 - [ ] 골든 테스트 — 빈 상태/로딩/다크(CLAUDE.md §6)
+- [ ] iOS/Android 네이티브 폴더 커밋 정책 결정 + Info.plist 위치 권한 문구(WhenInUse)
 
 ### 이 컨테이너에서 검증 가능한 것 / 아닌 것
 
