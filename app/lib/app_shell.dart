@@ -14,7 +14,9 @@ import 'map/map_screen.dart';
 import 'places/save_place.dart';
 import 'state/auth.dart';
 import 'state/couple.dart';
+import 'state/offline.dart';
 import 'state/places.dart';
+import 'sync/offline_executor.dart';
 
 class AppShell extends ConsumerWidget {
   const AppShell({super.key});
@@ -55,6 +57,18 @@ class MapTab extends ConsumerWidget {
     final places = ref.watch(mapPlacesProvider);
     final coupleId = ref.watch(coupleIdProvider);
     final uid = ref.watch(currentUserProvider)?.id;
+    final sync = ref.watch(offlineSyncProvider);
+
+    // 동기화 충돌 보고(무음 덮어쓰기 금지 §4.3) — 배너 노출 후 카운트 리셋.
+    ref.listen(offlineSyncProvider, (prev, next) {
+      if (next.conflicts > (prev?.conflicts ?? 0)) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('동기화 충돌 ${next.conflicts}건 — 상대가 먼저 수정한 항목이 있어요'),
+        ));
+        ref.read(offlineSyncProvider.notifier).clearConflicts();
+      }
+    });
+
     return Stack(
       children: [
         Positioned.fill(
@@ -63,11 +77,20 @@ class MapTab extends ConsumerWidget {
             onSaveHit: (coupleId == null || uid == null)
                 ? null
                 : (hit) async {
+                    // 오프라인이면 큐 적재(웹판 useSavePlace의 navigator.onLine 분기).
+                    if (ref.read(onlineProvider).value == false) {
+                      await ref.read(offlineSyncProvider.notifier).enqueue(
+                            'place.save',
+                            placeSavePayload(
+                                coupleId: coupleId, hit: hit, uid: uid),
+                          );
+                      return const QueuedOffline();
+                    }
                     final result = await savePlace(db, coupleId, hit, uid);
                     // Realtime이 무효화를 밀어주지만, 내 쓰기는 즉시 반영(체감 지연 제거).
                     ref.invalidate(placesProvider);
                     ref.invalidate(wishesProvider);
-                    return result;
+                    return SavedNow(result);
                   },
           ),
         ),
@@ -78,6 +101,34 @@ class MapTab extends ConsumerWidget {
             left: 0,
             right: 0,
             child: SafeArea(child: LinearProgressIndicator(minHeight: 2)),
+          ),
+        // 대기 배지 — 아이콘+텍스트 이중화(§8). 큐가 비면 사라진다.
+        if (sync.pending > 0)
+          Positioned(
+            top: 76, // 검색 오버레이 아래
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Center(
+                child: Material(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.cloud_upload_outlined, size: 16),
+                        const SizedBox(width: 6),
+                        Text('저장 대기 ${sync.pending} — 연결되면 자동 동기화',
+                            style: Theme.of(context).textTheme.labelMedium),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
       ],
     );

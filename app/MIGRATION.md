@@ -135,8 +135,13 @@ lib/core/supabase.dart           싱글턴 초기화(publishableKey)
       합성키 dedup + 좌표창 폴백 + wish select-then-insert). **≤3탭 회귀 테스트**
       (`map_screen_save_flow_test.dart`)가 탭 수를 고정한다.
 - [ ] 위시 mutation(우선순위 하트 — versioned_update 사용) + 시트에 하트/리액션 연결
-- [ ] 오프라인 큐(§4.3 — 웹판 OfflineQueueProvider/outboxStore의 이식. 저장이 현재
-      온라인 전용이다. P1 계약이므로 실기기 검증 전에 붙일 것)
+      (executor에 'wish.setPriority' case를 함께 추가할 것 — dedupeKey='wish:<id>')
+- [x] 오프라인 큐(§4.3) — `sync/outbox_store.dart`(파일=durable, 원자적 쓰기) +
+      `sync/offline_queue.dart`(유실 0: ok=제거/conflict=제거+보고/throw=중단+잔류) +
+      `sync/offline_executor.dart`('place.save' 재생, 미지 kind=제거로 poison 차단 방지) +
+      `state/offline.dart`(connectivity_plus 재연결 → 자동 flush, 동시 flush 가드,
+      대기 배지 + 충돌 스낵바). ⚠️ 아웃박스 파일명 'love_place_outbox.json'은 브랜드와
+      무관하게 고정 — 바꾸면 기존 기기의 미전송 큐가 고아가 된다.
 - [x] 지도 화면 — `NaverMap` + `contentPadding`에 `sheetOcclusionPx()` 연결
 - [x] 마커 **diff 갱신**(B2 고침 — 전체 재생성 금지)
 - [x] 장소 시트 — `DraggableScrollableSheet` + `sheet_snap.dart` (최소판 — 저장/메모/리액션은 데이터 연결 후)

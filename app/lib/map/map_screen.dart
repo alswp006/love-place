@@ -14,7 +14,8 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../places/save_place.dart' show SaveResult;
+import '../places/save_place.dart'
+    show QueuedOffline, SaveOutcome, SavedNow;
 import '../search/place_hit.dart';
 import '../search/search_controller.dart';
 import 'map_focus.dart';
@@ -36,9 +37,9 @@ class MapScreen extends StatefulWidget {
   final List<MapPlace> places;
   final List<({double lat, double lng})>? polyline;
 
-  /// 검색 후보 저장(MapTab이 제공 — savePlace + provider 무효화).
+  /// 검색 후보 저장(MapTab이 제공 — 온라인=savePlace, 오프라인=큐 적재).
   /// null이면 저장 버튼 비활성(미설정/미로그인 빌드).
-  final Future<SaveResult> Function(PlaceHit hit)? onSaveHit;
+  final Future<SaveOutcome> Function(PlaceHit hit)? onSaveHit;
 
   /// 테스트 주입용. 미지정 시 프록시 호출 컨트롤러 생성.
   final PlaceSearchController? searchController;
@@ -98,15 +99,28 @@ class _MapScreenState extends State<MapScreen> {
       _saveError = null;
     });
     try {
-      final result = await onSave(hit);
+      final outcome = await onSave(hit);
       if (!mounted) return;
       _search.clear();
-      // 저장 완료 → 프리뷰를 실카드 선택으로 전환(jumped=기존 카드로 점프).
-      setState(() {
-        _previewHit = null;
-        _selectedId = result.placeId;
-        _saving = false;
-      });
+      switch (outcome) {
+        case SavedNow(:final result):
+          // 저장 완료 → 프리뷰를 실카드 선택으로 전환(jumped=기존 카드로 점프).
+          setState(() {
+            _previewHit = null;
+            _selectedId = result.placeId;
+            _saving = false;
+          });
+        case QueuedOffline():
+          // 오프라인 적재 — 유실 아님을 분명히 알린다(§4.3).
+          setState(() {
+            _previewHit = null;
+            _saving = false;
+            _snap = SnapStop.peek;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('오프라인이에요 — 연결되면 자동으로 저장할게요'),
+          ));
+      }
     } catch (e) {
       if (!mounted) return;
       // 인라인 에러 + 입력값 보존(ux §7) — 시트를 닫지 않는다.

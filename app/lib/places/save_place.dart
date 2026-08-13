@@ -17,6 +17,22 @@ import '../search/place_hit.dart';
 
 typedef SaveResult = ({String placeId, bool jumped});
 
+/// 저장 시도의 결과 — 온라인 즉시 저장 또는 오프라인 큐 적재(웹판 useSavePlace의
+/// SaveResult | null에 해당하되, null 대신 이름 있는 타입으로).
+sealed class SaveOutcome {
+  const SaveOutcome();
+}
+
+class SavedNow extends SaveOutcome {
+  const SavedNow(this.result);
+  final SaveResult result;
+}
+
+/// 오프라인: 큐에 적재됨 — 재연결 시 자동 동기화(유실 0, §4.3).
+class QueuedOffline extends SaveOutcome {
+  const QueuedOffline();
+}
+
 /// dedup 키(순수): 이름|주소|round(lat,4)|round(lng,4).
 /// 같은 건물 다른 가게 구분 + 좌표 미세변형 흡수.
 String dedupKey({

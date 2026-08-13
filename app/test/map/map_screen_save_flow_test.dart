@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:weave/map/map_screen.dart';
+import 'package:weave/places/save_place.dart';
 import 'package:weave/search/place_hit.dart';
 import 'package:weave/search/search_controller.dart';
 
@@ -30,7 +31,7 @@ void main() {
         searchController: search,
         onSaveHit: (h) async {
           savedHits.add(h);
-          return (placeId: 'p-new', jumped: false);
+          return const SavedNow((placeId: 'p-new', jumped: false));
         },
       ),
     ));
@@ -82,6 +83,30 @@ void main() {
     expect(find.text('저장에 실패했어요. 다시 시도해주세요.'), findsOneWidget);
     // 시트가 닫히지 않았다 — 재시도 가능.
     expect(find.text('가고싶은 곳으로 저장'), findsOneWidget);
+  });
+
+  testWidgets('오프라인 저장 → 큐 적재 안내 + 프리뷰 닫힘(유실 0 고지, §4.3)', (tester) async {
+    final search = PlaceSearchController(fetch: (q) async => [hit]);
+    addTearDown(search.dispose);
+
+    await tester.pumpWidget(MaterialApp(
+      home: MapScreen(
+        places: const [],
+        searchController: search,
+        onSaveHit: (_) async => const QueuedOffline(),
+      ),
+    ));
+
+    await tester.enterText(find.byType(TextField), '망원');
+    await tester.pump(searchDebounce + const Duration(milliseconds: 50));
+    await tester.pump();
+    await tester.tap(find.text('망원한강공원').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('가고싶은 곳으로 저장'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('오프라인이에요 — 연결되면 자동으로 저장할게요'), findsOneWidget);
+    expect(find.text('가고싶은 곳으로 저장'), findsNothing); // 프리뷰 닫힘
   });
 
   testWidgets('빈 결과 → 죽은 화면이 아니라 안내 문구(다층 빈 상태)', (tester) async {
