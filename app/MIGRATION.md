@@ -77,6 +77,52 @@ flutter test      # 전부 통과
 
 ---
 
+## 실기기(시뮬레이터) 1차 판정 — 2026-08-31
+
+Mac + iPhone 17 Pro 시뮬레이터(iOS 26.5)에서 확인. **판정: 통과.**
+
+| 항목 | 결과 |
+|---|---|
+| 빌드(pod install → Xcode) | ✅ |
+| 로그인 화면 · 세션 유지 → 지도 진입 | ✅ Supabase 인증·커플 게이트가 기기에서 실동작 |
+| 지도 타일 | ✅ 네이티브 품질(POI 라벨·건물·해안선) |
+| 마커 · 클러스터 | ✅ 별/체크 아이콘, 클러스터 배지 |
+| 카메라 정책(fitBounds) | ✅ 우리 장소로 자동 맞춤 |
+
+### 이 과정에서 잡은 것
+
+**① 지도가 화면의 18%만 차지하던 버그** — `MapScreen`의 body `Stack`에 `StackFit.expand`가
+없었다. `Scaffold` body는 **느슨한** 제약(min 0)을 주고, `Stack`은 '가장 큰 비positioned 자식'에
+맞춰 크기를 정한다. `_SearchOverlay`가 `SafeArea`를 반환하는 비positioned 자식이라 Stack이
+검색바 높이(테스트 측정 60pt)로 주저앉았고, 그 안의 `Positioned.fill(MapView)`도 같이
+주저앉았다 — fill은 '부모만큼'이지 '화면만큼'이 아니다.
+
+기존 116 테스트가 전부 통과하는데도 실기기에서 띠처럼 보였다. **흐름만 보고 크기를 재지
+않았기 때문**이다. `test/map/map_fills_screen_test.dart`로 못박았다(수정 되돌리면 60 vs 874로 실패).
+
+**② 환경 함정 3개**
+- `flutter upgrade`는 3.47.0으로 올린다 — 이 문서가 고정한 **3.44.9**로 되돌려야 한다.
+- **한글 경로에서 `flutter analyze`가 죽는다**(`FormatException: Unterminated string`).
+  분석 서버 LSP가 Content-Length를 문자 수로 세서 비ASCII 경로에서 JSON이 잘린다.
+  → 워크트리를 ASCII 경로(`~/dev/love-place-flutter`)에 둘 것.
+- `flutter doctor`의 "CocoaPods not working"은 설치 문제가 아니라 `GEM_HOME`/`GEM_PATH`가
+  ruby 3.2 젬을 가리켜서다. `env -u GEM_HOME -u GEM_PATH` 로 실행하면 정상.
+
+**③ NCP는 도메인이 아니라 번들 ID로 인증한다** — 미등록이면 `Authorize failed`로 회색 격자만
+나온다. 웹판(Capacitor)은 호스트 위장으로 도메인 인증을 썼기 때문에 이 등록이 없었다.
+콘솔에 `app.loveplace` · `app.loveplace.weave` 둘 다 등록해 해소.
+
+### 남은 결정: 번들 ID
+
+App Store의 **Weave(6799805794)는 `app.loveplace`에 영구 고정**돼 있다(빌드 8 업로드됨).
+Flutter는 현재 `app.loveplace.weave`.
+- 같은 ID로 되돌리면 앱 레코드·TestFlight·심사 메타데이터를 그대로 승계하고 업데이트로 덮인다.
+  단 오프라인 큐는 이월되지 않는다(WebView IndexedDB → 앱 문서폴더 JSON).
+- 지금은 병행 설치가 판정에 유리하므로 그대로 둔다. **App Store에 업로드하기 전까지는 자유**이고,
+  한 번이라도 올리면 그 ID로 레코드가 고정된다.
+
+---
+
 ## 완료 (75 테스트 통과 · analyze 0)
 
 ```

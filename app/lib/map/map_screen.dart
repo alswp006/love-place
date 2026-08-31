@@ -200,6 +200,12 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: false, // 키보드가 지도를 리사이즈하지 않게
       body: Stack(
+        // ★ expand가 없으면 지도가 화면의 18%만 차지한다.
+        //   Scaffold body는 **느슨한** 제약(min 0)을 준다. 그 아래 Stack은 '가장 큰 비positioned
+        //   자식'에 맞춰 크기를 정하는데, _SearchOverlay가 Positioned로 감싸이지 않은 자식이라
+        //   Stack이 검색바 높이(≈155pt)로 주저앉고 Positioned.fill(MapView)이 그 안만 채웠다.
+        //   시뮬레이터에서 지도 타일이 상단 띠에만 그려지던 것의 원인이다(네이버 인증과 무관).
+        fit: StackFit.expand,
         children: [
           Positioned.fill(
             child: MapView(
