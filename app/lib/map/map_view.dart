@@ -23,6 +23,15 @@ import 'marker_diff.dart';
 import 'marker_icon.dart';
 
 /// 마커에 필요한 최소 데이터(도출 완료 상태로 받는다 — 상태는 저장 아님 §7).
+/// 테스트 관찰점 — 마지막으로 **요청된** 카메라 동작.
+///
+/// 왜 필요한가: 이 저장소는 순수 함수를 테스트로 잘 못박는데, 정작 그 함수가 앱에서 **불리지
+/// 않아도** 테스트는 통과한다. 실제로 두 번 그랬다 — `focusCenterOffsetPx`(C1 초점)와
+/// 레이아웃 `StackFit`. 그래서 계산이 아니라 **배선**을 본다: 선택이 바뀌면 카메라 이동이
+/// 요청되는가. 컨트롤러가 없어도(=지도 미설정 테스트 환경) 이 값은 채워진다.
+@visibleForTesting
+CameraAction? debugLastCameraAction;
+
 class MapPlace {
   const MapPlace({
     required this.id,
@@ -112,6 +121,25 @@ class _MapViewState extends State<MapView> {
         old.preview != widget.preview) {
       _requestRender();
     }
+    // ★ C1의 나머지 절반 — 고른 핀을 **보이는 띠 안으로** 데려온다.
+    //
+    // contentPadding만으로는 부족하다. 그건 '카메라를 움직일 때 시트를 뺀 영역을 기준으로 삼는다'는
+    // 규칙일 뿐이라, **카메라를 아예 안 움직이면 아무 일도 일어나지 않는다.** 실제로 화면 아래쪽
+    // 핀을 탭하면 시트가 그 위를 덮은 채 그대로였다(시뮬레이터에서 확인). 프리뷰(검색 결과)에는
+    // 이 이동이 붙어 있었는데 마커 선택에는 빠져 있었다.
+    //
+    // 줌은 건드리지 않는다 — 고른 핀은 이미 보고 있던 축척의 대상이다. 줌까지 바뀌면
+    // '내가 뭘 눌렀지' 하고 맥락을 잃는다(클러스터 탭은 별개로 줌인한다).
+    if (old.selectedId != widget.selectedId && widget.selectedId != null) {
+      final sel = _coordPlaces
+          .where((p) => p.id == widget.selectedId)
+          .cast<MapPlace?>()
+          .firstWhere((_) => true, orElse: () => null);
+      if (sel != null) {
+        _applyCamera(CameraMoveTo(lat: sel.lat, lng: sel.lng, zoom: _zoom));
+        _policy.onUserPanned(); // 자동 센터링이 끼어들어 선택을 밀어내지 않게
+      }
+    }
     if (old.preview != widget.preview && widget.preview != null) {
       // 새 프리뷰 → 그 좌표로 이동(동네 줌 미만이면 끌어올림).
       final p = widget.preview!;
@@ -130,6 +158,7 @@ class _MapViewState extends State<MapView> {
   // ---- 카메라 ----
 
   Future<void> _applyCamera(CameraAction action) async {
+    debugLastCameraAction = action; // 배선 관찰점(위 주석) — 컨트롤러 체크보다 먼저
     final c = _controller;
     if (c == null) return;
     switch (action) {
