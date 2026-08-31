@@ -16,12 +16,15 @@ void main() {
   });
 
   group('OTP 코드 검증', () {
-    test('6자리 숫자만 유효', () {
-      expect(isValidOtpCode('123456'), isTrue);
-      expect(isValidOtpCode(' 123456 '), isTrue);
-      expect(isValidOtpCode('12345'), isFalse);
-      expect(isValidOtpCode('1234567'), isFalse);
-      expect(isValidOtpCode('12345a'), isFalse);
+    // 자릿수를 숫자로 박지 않는다 — Supabase의 mailer_otp_length가 정본이고 앱은 그걸 따른다.
+    // 예전엔 6으로 박혀 있었는데 서버는 8이라, 코드가 와도 입력이 거부되는 상태였다(2026-08-31).
+    final ok = '1' * otpLength;
+    test('$otpLength자리 숫자만 유효 — 서버 설정과 같아야 한다', () {
+      expect(isValidOtpCode(ok), isTrue);
+      expect(isValidOtpCode(' $ok '), isTrue);
+      expect(isValidOtpCode('1' * (otpLength - 1)), isFalse);
+      expect(isValidOtpCode('1' * (otpLength + 1)), isFalse);
+      expect(isValidOtpCode('${'1' * (otpLength - 1)}a'), isFalse);
     });
   });
 

@@ -166,6 +166,40 @@ lib/core/supabase.dart           싱글턴 초기화(publishableKey)
 
 ---
 
+## 인증 — 구글 1차, 메일 코드 2차 (2026-08-31)
+
+**메일 OTP 경로가 서버 설정 때문에 막혀 있다.** 실기기 테스트에서 드러났다:
+로그인 코드를 요구하는데 메일에는 링크만 온다.
+
+| 항목 | 값 | 문제 |
+|---|---|---|
+| 메일 템플릿 | `{{ .ConfirmationURL }}`만 | 코드(`{{ .Token }}`)가 없다 |
+| 템플릿 수정 | **차단** | 무료 플랜 + 기본 발송기에서는 불가 |
+| 발송 한도 | **시간당 2통** | 개발용 발송기 — 출시 불가 |
+| `mailer_otp_length` | **8** | 앱은 6으로 못박고 있었다(코드가 와도 거부) |
+
+그래서 **구글 로그인을 1차 경로로 올렸다.** Supabase에 구글 provider가 이미 켜져 있어
+(client_id·secret 설정됨) 클라이언트 배선만 하면 됐다. 메일을 안 거치니 위 제약과 무관하다.
+
+배선 3곳 — 하나라도 어긋나면 브라우저가 앱으로 못 돌아온다:
+1. `Info.plist`의 `CFBundleURLSchemes`: `app.loveplace.weave`
+   (Capacitor 앱이 쓰는 `app.loveplace`를 재사용하면 두 앱이 서로의 콜백을 가로챈다)
+2. Supabase `uri_allow_list`에 `app.loveplace.weave://auth/callback` 추가
+3. `signInWithOAuth(google, redirectTo: ...)` — 콜백 처리는 SDK(app_links)가 한다
+
+Google Cloud Console은 손댈 필요가 없었다. 구글은 Supabase의 콜백만 알면 되고
+(`https://<ref>.supabase.co/auth/v1/callback`), 우리 커스텀 스킴은 Supabase가 마지막에
+리다이렉트하는 주소라 Supabase 허용 목록에만 있으면 된다.
+
+시뮬레이터 확인: 버튼 → `accounts.google.com` 정상 표시(SFSafariViewController — 구글이
+임베디드 웹뷰는 차단하지만 이건 별도 프로세스라 허용) → 콜백 스킴이 "'Weave'에서 열겠습니까?"로
+앱에 라우팅되는 것까지. 실제 계정 로그인은 사용자 몫이라 여기까지가 자동 검증 범위다.
+
+메일 코드 경로는 지우지 않았다 — 커스텀 SMTP(Resend 월 3,000통 무료 등)를 붙이면 템플릿 잠금이
+풀리고 그대로 되살아난다. 자릿수는 서버 값(8)에 맞춰 `otpLength` 상수로 뽑았다.
+
+---
+
 ## 다음 (수직 슬라이스 나머지)
 
 - [x] `lib/core/env.dart` — `--dart-define` 주입 (비공개 키 반입 금지, CLAUDE.md §5)
