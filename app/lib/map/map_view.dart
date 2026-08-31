@@ -194,6 +194,14 @@ class _MapViewState extends State<MapView> {
     _syncPolyline();
     // 자동 locate는 이미 granted일 때만(추가 프롬프트 금지, spec §3.5).
     if (await widget.locator.isGranted()) {
+      // ① 캐시된 위치로 **먼저** 잡는다 — 즉시 돌아오므로 기본 좌표(서울시청·도 단위 줌)가
+      //    화면에 머무는 시간을 없앤다. 정밀 위치가 오면 ②에서 다듬는다.
+      final hint = await widget.locator.lastKnown();
+      if (!mounted) return;
+      if (hint case GeoOk(:final lat, :final lng)) {
+        await _applyCamera(_policy.onGeoHint(lat, lng));
+      }
+      // ② 정밀 위치.
       final r = await widget.locator.current();
       if (!mounted) return;
       switch (r) {

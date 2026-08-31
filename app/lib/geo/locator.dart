@@ -43,6 +43,14 @@ abstract interface class Locator {
 
   /// 현재 위치 1회. [requestIfNeeded]면 이 시점에 권한 프롬프트 허용(맥락 요청).
   Future<GeoResult> current({bool requestIfNeeded = false});
+
+  /// OS가 캐시해 둔 마지막 위치. **즉시** 돌아온다(측위를 새로 하지 않는다).
+  ///
+  /// 왜 필요한가: `current()`는 고정밀이라 1~3초 걸린다. 그동안 지도는 기본 좌표(서울시청)를
+  /// 도(道) 단위 줌으로 보여주고 있었고, 위치가 오면 화면이 크게 튀었다 — "처음 지도가 너무 크다".
+  /// 마지막 위치는 대개 지금 있는 곳과 같으므로, 이걸로 먼저 잡고 정밀 위치로 다듬는다.
+  /// 캐시가 없으면(첫 실행·기기 재부팅 직후) 실패를 돌려준다 — 그때만 기본 좌표를 본다.
+  Future<GeoResult> lastKnown();
 }
 
 /// geolocator 구현. iOS WhenInUse 전제(Always 회피 — 설계 §6과 동일 철학).
@@ -55,6 +63,19 @@ class GeolocatorLocator implements Locator {
     final p = await Geolocator.checkPermission();
     return p == LocationPermission.always ||
         p == LocationPermission.whileInUse;
+  }
+
+  @override
+  Future<GeoResult> lastKnown() async {
+    // 권한이 없으면 캐시도 못 읽는다 — 프롬프트는 절대 띄우지 않는다(맥락 요청 규율).
+    if (!await isGranted()) return const GeoFail(GeoFailReason.denied);
+    try {
+      final pos = await Geolocator.getLastKnownPosition();
+      if (pos == null) return const GeoFail(GeoFailReason.unavailable);
+      return GeoOk(lat: pos.latitude, lng: pos.longitude, accuracy: pos.accuracy);
+    } on Exception {
+      return const GeoFail(GeoFailReason.unavailable);
+    }
   }
 
   @override

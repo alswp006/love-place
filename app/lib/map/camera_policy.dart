@@ -65,6 +65,15 @@ class CameraPolicy {
   CameraState _state = CameraState.awaitingGeo;
   CameraState get state => _state;
 
+  /// 마지막으로 알던 위치(캐시) — **잡되 확정하지 않는다.**
+  ///
+  /// 정밀 위치가 곧 뒤따르므로 상태는 awaitingGeo에 머문다. 여기서 settled로 넘기면
+  /// [onGeoResolved]가 무시돼 부정확한 캐시 좌표에 지도가 눌러앉는다.
+  CameraAction onGeoHint(double lat, double lng) {
+    if (_state != CameraState.awaitingGeo) return const CameraNoop();
+    return CameraMoveTo(lat: lat, lng: lng, zoom: locateZoom);
+  }
+
   /// 위치를 얻었다. 사용자가 이미 지도를 조작했으면 무시한다.
   CameraAction onGeoResolved(double lat, double lng) {
     if (_state == CameraState.userControlled ||
