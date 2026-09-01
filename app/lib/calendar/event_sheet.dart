@@ -88,8 +88,7 @@ class _EventSheetState extends State<_EventSheet> {
   late bool _shared = widget.existing?.isShared ?? true;
   String? _error;
 
-  /// 반복 시리즈는 P1에서 고치지 않는다. 회차 하나를 고치는 게 시리즈 전체를 바꾸는 것처럼
-  /// 보이는 상태가 제일 나쁘므로, 아예 잠그고 이유를 말한다.
+  /// 반복 시리즈인가 — 저장·삭제 시 범위를 물어야 한다(어느 회차까지 바꿀지).
   bool get _isRecurring => widget.existing?.recurrenceRule != null;
 
   /// 상대의 PERSONAL 일정 — RLS가 막는다. 눌러보고 실패하게 두지 않는다.
@@ -99,7 +98,7 @@ class _EventSheetState extends State<_EventSheet> {
     return !e.isShared && e.ownerId != widget.myId;
   }
 
-  bool get _readOnly => _isRecurring || _isOthersPersonal;
+  bool get _readOnly => _isOthersPersonal;
 
   @override
   void dispose() {
@@ -215,7 +214,8 @@ class _EventSheetState extends State<_EventSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            if (_readOnly) _ReadOnlyNote(recurring: _isRecurring),
+            if (_readOnly) const _ReadOnlyNote(),
+            if (_isRecurring && !_readOnly) const _RecurringNote(),
             TextField(
               controller: _title,
               enabled: !_readOnly,
@@ -279,7 +279,7 @@ class _EventSheetState extends State<_EventSheet> {
                 ),
                 child: Text(widget.existing == null ? '만들기' : '저장'),
               ),
-            if (widget.existing != null && !_isRecurring) ...[
+            if (widget.existing != null) ...[
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () =>
@@ -296,23 +296,42 @@ class _EventSheetState extends State<_EventSheet> {
 }
 
 class _ReadOnlyNote extends StatelessWidget {
-  const _ReadOnlyNote({required this.recurring});
-  final bool recurring;
+  const _ReadOnlyNote();
+
+  @override
+  Widget build(BuildContext context) => _Note(
+        icon: Icons.lock_outline,
+        text: '상대의 개인 일정이라 볼 수만 있어요.',
+      );
+}
+
+/// 반복 일정임을 **저장 전에** 알린다. 저장을 누른 뒤에야 범위를 묻는 것보다,
+/// 고치는 동안 "이건 반복이다"를 알고 있는 편이 덜 놀란다.
+class _RecurringNote extends StatelessWidget {
+  const _RecurringNote();
+
+  @override
+  Widget build(BuildContext context) => const _Note(
+        icon: Icons.repeat,
+        text: '반복 일정이에요. 저장할 때 어디까지 바꿀지 물어볼게요.',
+      );
+}
+
+class _Note extends StatelessWidget {
+  const _Note({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Row(
           children: [
-            const Icon(Icons.lock_outline, size: 16),
+            Icon(icon, size: 16),
             const SizedBox(width: 6),
             Expanded(
-              child: Text(
-                recurring
-                    ? '반복 일정은 아직 앱에서 고칠 수 없어요. 웹에서 수정해주세요.'
-                    : '상대의 개인 일정이라 볼 수만 있어요.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              child: Text(text,
+                  style: Theme.of(context).textTheme.bodySmall),
             ),
           ],
         ),

@@ -17,6 +17,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/auth.dart';
 import '../state/event_actions.dart';
 import '../state/events.dart';
+import '../state/recurrence_actions.dart';
+import 'scope_dialog.dart';
 import 'event_sheet.dart';
 import 'event_row.dart';
 import 'month_grid.dart';
@@ -54,6 +56,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
     if (result == null || !mounted) return;
 
+    // 반복 시리즈면 어디까지 바꿀지 먼저 묻는다 — 물어보지 않고 하나를 고르면
+    // 나머지 둘은 조용히 틀린 결과가 된다.
+    if (existing != null && existing.recurrenceRule != null) {
+      await _applyRecurring(existing, dayKeyStr, result);
+      return;
+    }
+
     final actions = ref.read(eventActionsProvider);
     final outcome = switch (result) {
       EventSheetSave(:final event) => await actions.create(event),
@@ -61,11 +70,65 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       EventSheetDelete() => await actions.delete(existing!),
     };
     if (!mounted) return;
-    final msg = outcomeMessage(outcome);
-    if (msg != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(msg)));
+    _say(outcomeMessage(outcome));
+  }
+
+  /// 반복 회차 편집/삭제 — 범위를 묻고 그에 맞는 쓰기를 고른다.
+  ///
+  /// [occurrence]는 전개된 **회차**다(시리즈 앵커가 아니다). 그래서 회차 시각을 그대로 넘길 수
+  /// 있고, 폼 시각을 그 날짜로 옮기는 건 쓰기 계층이 한다.
+  Future<void> _applyRecurring(
+    EventRow occurrence,
+    String dayKeyStr,
+    EventSheetResult result,
+  ) async {
+    final scope = await askRecurrenceScope(
+      context,
+      occDayKey: dayKeyStr,
+      deleting: result is EventSheetDelete,
+    );
+    if (scope == null || !mounted) return; // 취소
+
+    final actions = ref.read(recurrenceActionsProvider);
+    final RecurrenceOutcome outcome;
+    if (result is EventSheetDelete) {
+      outcome = await actions.delete(
+        series: occurrence,
+        occDayKey: dayKeyStr,
+        occStart: occurrence.startAt,
+        scope: scope,
+      );
+    } else if (result is EventSheetPatch) {
+      // 시트는 '바뀐 것만' 담은 패치를 준다. 반복 경로는 전체 값이 필요하므로
+      // 패치에 없는 건 회차에서 읽어 채운다(사용자가 안 바꾼 값 = 지금 값).
+      final m = result.patch.map;
+      outcome = await actions.edit(
+        series: occurrence,
+        occDayKey: dayKeyStr,
+        occStart: occurrence.startAt,
+        scope: scope,
+        edit: RecurrenceEdit(
+          title: (m['title'] as String?) ?? occurrence.title,
+          start: m['start'] != null
+              ? DateTime.parse(m['start'] as String)
+              : occurrence.startAt,
+          end: m['end'] != null
+              ? DateTime.parse(m['end'] as String)
+              : occurrence.endAt,
+          isAllDay: (m['is_all_day'] as bool?) ?? occurrence.isAllDay,
+          visibility: (m['visibility'] as String?) ?? occurrence.visibility,
+        ),
+      );
+    } else {
+      return; // 새 일정 생성은 반복 경로로 오지 않는다
     }
+    if (!mounted) return;
+    _say(recurrenceMessage(outcome));
+  }
+
+  void _say(String? msg) {
+    if (msg == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
