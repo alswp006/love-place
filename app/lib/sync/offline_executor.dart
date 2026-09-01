@@ -42,6 +42,37 @@ Future<FlushOutcome> executeOutbox(
         {'priority': p['priority'], 'updated_by': p['myId']},
       );
       return r is VersionedOk ? FlushOutcome.ok : FlushOutcome.conflict;
+    case 'event.create':
+      // 큐에 담을 때 완성된 insert 본문을 그대로 재생한다 — 재계산하면 그 사이 바뀐
+      // 로컬 상태(선택한 날짜 등)가 섞여 다른 행이 만들어진다.
+      // 멱등성은 dedupeKey(시작시각+제목)가 큐 단계에서 보장한다.
+      await client
+          .from('events')
+          .insert((entry.payload['row'] as Map).cast<String, dynamic>());
+      return FlushOutcome.ok;
+    case 'event.update':
+      final p = entry.payload;
+      final r = await versionedUpdate(
+        client,
+        'events',
+        p['id'] as String,
+        p['expectedVersion'] as int,
+        {
+          ...(p['patch'] as Map).cast<String, dynamic>(),
+          'updated_by': p['myId'],
+        },
+      );
+      return r is VersionedOk ? FlushOutcome.ok : FlushOutcome.conflict;
+    case 'event.delete':
+      final p = entry.payload;
+      final r = await softDelete(
+        client,
+        'events',
+        p['id'] as String,
+        p['expectedVersion'] as int,
+        p['myId'] as String,
+      );
+      return r is VersionedOk ? FlushOutcome.ok : FlushOutcome.conflict;
     default:
       // 진짜 미지의 종류 — 무시+제거(웹판 default와 동일). throw로 잔류시키면
       // poison 엔트리 하나가 뒤의 모든 큐를 영구 차단한다(head-of-line blocking) —

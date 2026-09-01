@@ -107,9 +107,9 @@ class OfflineSync extends Notifier<OfflineSyncState> {
           .read(offlineQueueProvider)
           .flush((entry) => executeOutbox(db, entry));
       if (res.done > 0 || res.conflicts.isNotEmpty) {
-        ref.invalidate(placesProvider);
-        ref.invalidate(wishesProvider);
-        ref.invalidate(visitedIdsProvider);
+        // 무효화 대상은 Realtime과 같은 출처에서 온다(places.dart) — 둘이 갈라지면
+        // "상대가 바꾸면 보이는데 내 오프라인 쓰기는 안 보인다" 같은 비대칭이 생긴다.
+        invalidateSyncedData(ref);
       }
       state = OfflineSyncState(
         pending: res.remaining,

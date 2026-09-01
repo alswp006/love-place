@@ -15,7 +15,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/auth.dart';
+import '../state/event_actions.dart';
 import '../state/events.dart';
+import 'event_sheet.dart';
 import 'event_row.dart';
 import 'month_grid.dart';
 import 'track.dart';
@@ -40,6 +42,32 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   static DateTime _firstOfMonth(DateTime d) => DateTime.utc(d.year, d.month, 1);
 
+  /// 시트를 열고 결과를 쓰기 계층으로 넘긴다. 결과 메시지는 한 곳에서 낸다 —
+  /// 무음 실패가 생기지 않게 모든 경로가 무언가를 말하거나 화면을 바꾼다(§4.3).
+  Future<void> _openSheet(String dayKeyStr, EventRow? existing) async {
+    final myId = ref.read(currentUserProvider)?.id;
+    final result = await showEventSheet(
+      context,
+      dayKeyStr: dayKeyStr,
+      myId: myId,
+      existing: existing,
+    );
+    if (result == null || !mounted) return;
+
+    final actions = ref.read(eventActionsProvider);
+    final outcome = switch (result) {
+      EventSheetSave(:final event) => await actions.create(event),
+      EventSheetPatch(:final patch) => await actions.update(existing!, patch),
+      EventSheetDelete() => await actions.delete(existing!),
+    };
+    if (!mounted) return;
+    final msg = outcomeMessage(outcome);
+    if (msg != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(msg)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final myId = ref.watch(currentUserProvider)?.id;
@@ -63,6 +91,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 _month = DateTime.utc(_month.year, _month.month + 1, 1)),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _openSheet(selectedKey, null),
+        tooltip: '일정 만들기',
+        child: const Icon(Icons.add),
       ),
       body: events.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -97,6 +130,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   dayKeyStr: selectedKey,
                   events: visible,
                   myId: myId,
+                  onTapEvent: (e) => _openSheet(selectedKey, e),
                 ),
               ),
             ],
@@ -149,11 +183,13 @@ class _DayAgenda extends StatelessWidget {
     required this.dayKeyStr,
     required this.events,
     required this.myId,
+    required this.onTapEvent,
   });
 
   final String dayKeyStr;
   final List<EventRow> events;
   final String? myId;
+  final ValueChanged<EventRow> onTapEvent;
 
   @override
   Widget build(BuildContext context) {
@@ -195,6 +231,11 @@ class _DayAgenda extends StatelessWidget {
           subtitle: Text(e.isAllDay
               ? '종일'
               : '${formatTime(e.startAt)} – ${formatTime(e.endAt)}'),
+          // 반복 회차는 시리즈 원본이 아니라 그 회차 시각을 들고 있다 — 시트는 잠긴다.
+          trailing: e.recurrenceRule != null
+              ? const Icon(Icons.repeat, size: 16)
+              : null,
+          onTap: () => onTapEvent(e),
         );
       },
     );

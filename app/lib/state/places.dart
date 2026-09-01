@@ -19,6 +19,7 @@ import '../places/place_row.dart';
 import '../places/wish_aggregate.dart';
 import 'auth.dart';
 import 'couple.dart';
+import 'events.dart';
 
 final placesProvider = FutureProvider<List<PlaceRow>>((ref) async {
   final coupleId = ref.watch(coupleIdProvider);
@@ -72,25 +73,36 @@ final mapPlacesProvider = Provider<List<MapPlace>>((ref) {
   );
 });
 
-/// 공유 자동 전파(§5.1) — 상대가 places/wishes/visits를 바꾸면 즉시 무효화.
-/// 화면(MapTab)이 watch하는 동안만 구독이 살아 있다(autoDispose).
+/// Realtime이 감시하는 테이블 = 무효화 대상 provider. **한 곳에서 도출**한다.
+///
+/// 예전엔 테이블 목록과 switch가 따로 있어서, 테이블을 더하면서 switch를 빠뜨리면
+/// 구독은 되는데 화면이 안 갱신되는 무성 실패가 났다(추가하는 쪽이 눈치채기 어렵다).
+/// 이제 이 맵 하나만 고치면 둘 다 따라온다.
+Map<String, void Function(Ref)> _realtimeTargets() => {
+      'places': (r) => r.invalidate(placesProvider),
+      'wishes': (r) => r.invalidate(wishesProvider),
+      'visits': (r) => r.invalidate(visitedIdsProvider),
+      'events': (r) => r.invalidate(eventsProvider),
+    };
+
+/// 오프라인 큐 flush 뒤에도 같은 대상을 무효화한다 — 서버가 정본이므로 재조회로 일원화.
+void invalidateSyncedData(Ref ref) {
+  for (final f in _realtimeTargets().values) {
+    f(ref);
+  }
+}
+
+/// 공유 자동 전파(§5.1) — 상대가 바꾸면 즉시 무효화.
+/// 화면(탭 셸)이 watch하는 동안만 구독이 살아 있다(autoDispose).
 final realtimeSyncProvider = Provider.autoDispose<void>((ref) {
   final coupleId = ref.watch(coupleIdProvider);
   if (coupleId == null || !Env.supabaseConfigured) return;
 
-  RealtimeChannel channel = db.channel('places:$coupleId');
-  void invalidateFor(String table) {
-    switch (table) {
-      case 'places':
-        ref.invalidate(placesProvider);
-      case 'wishes':
-        ref.invalidate(wishesProvider);
-      case 'visits':
-        ref.invalidate(visitedIdsProvider);
-    }
-  }
+  // 채널 이름은 커플 단위 하나 — 테이블마다 채널을 열면 연결이 늘고 정리가 새기 쉽다.
+  RealtimeChannel channel = db.channel('couple:$coupleId');
+  final targets = _realtimeTargets();
 
-  for (final table in const ['places', 'wishes', 'visits']) {
+  for (final table in targets.keys) {
     channel = channel.onPostgresChanges(
       event: PostgresChangeEvent.all,
       schema: 'public',
@@ -100,7 +112,7 @@ final realtimeSyncProvider = Provider.autoDispose<void>((ref) {
         column: 'couple_id',
         value: coupleId,
       ),
-      callback: (_) => invalidateFor(table),
+      callback: (_) => targets[table]!(ref),
     );
   }
   channel.subscribe();
