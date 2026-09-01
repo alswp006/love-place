@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/tab_scaffold.dart';
 import 'auth/login_screen.dart';
 import 'calendar/calendar_screen.dart';
+import 'couple/us_screen.dart';
 import 'core/env.dart';
 import 'core/supabase.dart';
 import 'map/map_screen.dart';
@@ -45,7 +46,8 @@ class AppShell extends ConsumerWidget {
         }
         // 탭 셸 — 순서는 tabs.dart가 단일 출처다(지도·일정).
         // Realtime 구독은 각 탭이 아니라 여기서 한 번만 잡는다(IndexedStack이라 둘 다 살아 있다).
-        return const TabScaffold(screens: [MapTab(), CalendarScreen()]);
+        return const TabScaffold(
+            screens: [MapTab(), CalendarScreen(), UsScreen()]);
       },
     );
   }

@@ -42,4 +42,10 @@ const tabs = <TabDef>[
     activeIcon: Icons.calendar_today,
     testKey: 'tab-calendar',
   ),
+  TabDef(
+    label: '우리',
+    icon: Icons.people_outline,
+    activeIcon: Icons.people,
+    testKey: 'tab-us',
+  ),
 ];
