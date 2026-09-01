@@ -20,6 +20,7 @@ import '../places/wish_aggregate.dart';
 import 'auth.dart';
 import 'couple.dart';
 import 'events.dart';
+import 'trips.dart';
 
 final placesProvider = FutureProvider<List<PlaceRow>>((ref) async {
   final coupleId = ref.watch(coupleIdProvider);
@@ -83,6 +84,7 @@ Map<String, void Function(Ref)> _realtimeTargets() => {
       'wishes': (r) => r.invalidate(wishesProvider),
       'visits': (r) => r.invalidate(visitedIdsProvider),
       'events': (r) => r.invalidate(eventsProvider),
+      'trips': (r) => r.invalidate(tripsProvider),
     };
 
 /// 오프라인 큐 flush 뒤에도 같은 대상을 무효화한다 — 서버가 정본이므로 재조회로 일원화.

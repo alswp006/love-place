@@ -43,6 +43,12 @@ const tabs = <TabDef>[
     testKey: 'tab-calendar',
   ),
   TabDef(
+    label: '여행',
+    icon: Icons.luggage_outlined,
+    activeIcon: Icons.luggage,
+    testKey: 'tab-trips',
+  ),
+  TabDef(
     label: '장소',
     icon: Icons.bookmark_border,
     activeIcon: Icons.bookmark,
