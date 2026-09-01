@@ -7,7 +7,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app/tab_scaffold.dart';
 import 'auth/login_screen.dart';
+import 'calendar/calendar_screen.dart';
 import 'core/env.dart';
 import 'core/supabase.dart';
 import 'map/map_screen.dart';
@@ -41,7 +43,9 @@ class AppShell extends ConsumerWidget {
           return const _GateError(
               message: '커플 공간을 만들지 못했어요. 잠시 후 다시 시도해주세요.');
         }
-        return const MapTab();
+        // 탭 셸 — 순서는 tabs.dart가 단일 출처다(지도·일정).
+        // Realtime 구독은 각 탭이 아니라 여기서 한 번만 잡는다(IndexedStack이라 둘 다 살아 있다).
+        return const TabScaffold(screens: [MapTab(), CalendarScreen()]);
       },
     );
   }
