@@ -38,8 +38,13 @@ class _TabScaffoldState extends State<TabScaffold> {
         '화면 수(${widget.screens.length})와 탭 수(${tabs.length})가 다르다 — tabs.dart가 단일 출처다');
 
     return Scaffold(
-      // extendBody: 지도가 탭바 뒤까지 그려져 '떠 있는 크롬'으로 읽힌다(웹판과 같은 결).
-      extendBody: true,
+      // extendBody는 쓰지 않는다.
+      //
+      // 처음엔 지도가 탭바 뒤까지 그려지는 '떠 있는 크롬' 결을 노렸는데, 두 가지가 어긋났다:
+      // ① Material 3의 NavigationBar는 기본이 불투명이라 비치는 효과가 애초에 없다.
+      // ② 본문이 탭바 뒤까지 늘어나면 **안쪽 화면의 FloatingActionButton이 탭바 뒤로 깔린다**.
+      //    실제로 일정 탭의 '만들기' 버튼이 통째로 사라져 있었다(시뮬레이터에서 확인).
+      // 얻는 것이 없고 잃는 것이 분명해서 걷어냈다.
       body: IndexedStack(index: _index, children: widget.screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
