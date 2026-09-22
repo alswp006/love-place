@@ -117,6 +117,46 @@
   color: var(--c-brand);
 }
 
+/* 쉬는 날 — 일요일·공휴일은 숫자가 빨갛다. 토요일은 따로 두어 한눈에 갈린다.
+   색만으로 구분하지 않는다(§8): 공휴일은 이름이 숫자 옆에 함께 적히고,
+   셀의 aria-label에도 들어간다. */
+.cellDay.rest {
+  color: var(--c-danger);
+}
+
+.cellDay.sat {
+  color: var(--c-text-weak);
+}
+
+/* 오늘 표시가 쉬는 날 색보다 우선한다 — '오늘이 어디인지'가 먼저 읽혀야 한다. */
+.cellToday .cellDay.rest,
+.cellToday .cellDay.sat {
+  color: var(--c-brand);
+}
+
+/* 날짜 줄: 숫자 + 공휴일 이름. 이름이 길면 줄지 않고 잘린다(칸이 안 늘어나게). */
+.cellHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.holiday {
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--c-danger);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.cellOut .holiday {
+  opacity: 0.5;
+}
+
 /* 월 셀 제목 칩(Task 11) — 트랙 심볼+제목, truncate. */
 .cellChips {
   display: flex;

@@ -29,6 +29,7 @@ import { SourceAvatar } from '@/components/common/SourceAvatar'
 import { TrackBadge } from '@/components/calendar/TrackBadge'
 import { useEventCategories } from '@/hooks/useEventCategories'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
+import { holidayLabel, isRestDay, isSundayOrHoliday } from '@/lib/calendar/holidays'
 import { expandEvents, buildRule, parseRule, type Occurrence } from '@/lib/calendar/rrule'
 import { exdateOccurrence, splitFollowing, shiftTimesToOccurrence } from '@/lib/calendar/recurrenceScope'
 import { tabByPath } from '@/app/tabs'
@@ -621,6 +622,14 @@ function MonthGrid({
       {cells.map((c) => {
         const evs = grouped[c.key] ?? []
         const tracks = Array.from(new Set(evs.map((e) => deriveTrack(e, myId))))
+        // 쉬는 날은 숫자가 빨갛다. 일요일·공휴일과 토요일을 갈라 다른 색을 준다.
+        const holiday = holidayLabel(c.key)
+        const dayClass = [
+          styles.cellDay,
+          isSundayOrHoliday(c.key) ? styles.rest : isRestDay(c.key) ? styles.sat : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
         const classes = [
           styles.cell,
           c.inMonth ? '' : styles.cellOut,
@@ -636,9 +645,18 @@ function MonthGrid({
             className={classes}
             onClick={() => onSelect(c.key)}
             aria-pressed={c.key === selected}
-            aria-label={`${c.key}${evs.length ? ` · ${tracks.map((t) => TRACK_META[t].label).join('·')} 일정 ${evs.length}개` : ''}`}
+            aria-label={`${c.key}${holiday ? ` · ${holiday}` : ''}${evs.length ? ` · ${tracks.map((t) => TRACK_META[t].label).join('·')} 일정 ${evs.length}개` : ''}`}
           >
-            <span className={styles.cellDay}>{c.day}</span>
+            {/* 숫자 + 공휴일 이름을 한 줄에 둔다. 이름을 아래 줄로 내리면 글자 크기를
+                키웠을 때(Dynamic Type) 칸이 넘친다 — Flutter판에서 실제로 났던 일이다. */}
+            <span className={styles.cellHead}>
+              <span className={dayClass}>{c.day}</span>
+              {holiday ? (
+                <span className={styles.holiday} title={holiday}>
+                  {holiday}
+                </span>
+              ) : null}
+            </span>
             {/* 제목 칩 앞 2개 + `+N` overflow(조사 01 §4). 색 단독 금지(§8) → 아바타 동반(도형 심볼 대체).
                 칩은 비인터랙티브 span(중첩 버튼 회피 — 셀 button 하나만 탭 대상). */}
             <span className={styles.cellChips}>

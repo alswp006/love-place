@@ -331,3 +331,27 @@ test('별자리 스트립 — 기본은 한 줄, 펼치면 이번 달 별자리�
   await close.click()
   await expect(page.getByRole('region', { name: '우리가 만든 별자리' })).toHaveCount(0)
 })
+
+// ── 공휴일 (2026-09) ────────────────────────────────────────────────────────
+//
+// Flutter 앱에만 있던 것을 웹에도 옮겼다. 두 앱이 같은 달력을 보여줘야 한다.
+// 기대값의 정본은 `src/__tests__/holidays.test.ts`이고, 여기서는 **실제로 화면에 나오는지**만 본다.
+
+test('공휴일 — 이름이 날짜 옆에 뜨고, 원래 날과 대체일이 갈린다', async ({ page }) => {
+  await seedAuthedMap(page, { events: [] })
+  // 2026-10: 3일(토) 개천절, 5일(월) 대체공휴일, 9일(금) 한글날.
+  await page.goto('/calendar?date=2026-10-03')
+
+  // 원래 날에도 이름이 남는다 — 안 그러면 10/3이 아무 날도 아닌 것처럼 보인다.
+  await expect(page.getByText('개천절', { exact: true }).first()).toBeVisible()
+  // 옮겨 쉬는 날은 '개천절 대체'가 아니라 '대체공휴일'이라고만 적는다.
+  await expect(page.getByText('대체공휴일', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('한글날', { exact: true }).first()).toBeVisible()
+})
+
+test('공휴일 — 색만으로 구분하지 않는다(§8): 셀 이름표에 공휴일이 들어간다', async ({ page }) => {
+  await seedAuthedMap(page, { events: [] })
+  await page.goto('/calendar?date=2026-10-03')
+  // 스크린리더는 빨간 숫자를 읽지 못한다. 이름표에 들어가야 '쉬는 날'이 전달된다.
+  await expect(page.getByRole('button', { name: /2026-10-05 · 대체공휴일/ })).toBeVisible()
+})
