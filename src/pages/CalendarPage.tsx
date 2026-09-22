@@ -30,6 +30,8 @@ import { TrackBadge } from '@/components/calendar/TrackBadge'
 import { useEventCategories } from '@/hooks/useEventCategories'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
 import { holidayLabel, isRestDay, isSundayOrHoliday } from '@/lib/calendar/holidays'
+import { weekSpans, laneCount, spanOfEvent, spanOfTrip, type SpanItem } from '@/lib/calendar/weekSpans'
+import { useTrips } from '@/hooks/useTrips'
 import { expandEvents, buildRule, parseRule, type Occurrence } from '@/lib/calendar/rrule'
 import { exdateOccurrence, splitFollowing, shiftTimesToOccurrence } from '@/lib/calendar/recurrenceScope'
 import { tabByPath } from '@/app/tabs'
@@ -57,6 +59,9 @@ export default function CalendarPage() {
   // 저장된 장소 목록 — Task 13: 아젠다 장소 칩(place_id→이름·지도 링크)에 id로 인덱싱해 쓴다.
   // (일정 폼은 '일정만' 관리 — 장소 연결 피커 제거. place_id는 추천 코스→일정·아젠다 칩에서만.)
   const { data: places } = usePlaces(coupleId)
+  // 여행은 **여행 행에서 도출**한다 — 이벤트로 만들어 넣지 않는다(§7). 그래야 여행
+  // 날짜를 고치면 달력이 저절로 따라오고, 같은 사실이 두 군데 저장돼 어긋나지 않는다.
+  const { data: trips } = useTrips(coupleId)
   // 완료 체크(0021) — 회차 단위 기록. 잔디·여정이 여기서 도출된다.
   const { data: completions } = useEventCompletions(coupleId)
   const toggleDone = useToggleEventDone(coupleId, myId)
@@ -178,6 +183,16 @@ export default function CalendarPage() {
     return expandEvents(visibleEvents, winStart, winEnd)
   }, [visibleEvents, cells])
   const grouped = useMemo(() => groupByDay(expanded), [expanded])
+
+  // 주를 가로지르는 막대가 될 것들 — 여러 날 일정 + 여행.
+  // 하루짜리는 여기서 걸러지므로(weekSpans) 반복 회차가 통째로 이어지지 않는다.
+  const spanItems: SpanItem[] = useMemo(
+    () => [
+      ...(trips ?? []).map(spanOfTrip),
+      ...expanded.map((e) => spanOfEvent({ id: e.id, title: e.title, start: e.start, end: e.end })),
+    ],
+    [trips, expanded],
+  )
   const dayEvents = grouped[selected] ?? []
   // 아젠다 장소 칩용 id→장소 인덱스(Task 13). place_id가 가리키는 장소 이름·지도 링크를 O(1) 조회.
   const placeById = useMemo(() => {
@@ -457,6 +472,7 @@ export default function CalendarPage() {
               <MonthGrid
                 cells={cells}
                 grouped={grouped}
+                spanItems={spanItems}
                 selected={selected}
                 todayKey={todayKey}
                 myId={myId}
@@ -595,9 +611,18 @@ function TrackSwitch({
   )
 }
 
+/** 월 격자 — **주 단위**로 그린다.
+ *
+ *  예전엔 42칸을 한 번에 깔았다. 그러면 여러 날 일정을 칸마다 조각으로 그릴 수밖에 없어
+ *  '부산여행'이 '부산여'로 잘리고 이어진 칸은 이름 없는 막대가 된다. 주로 나누면 그 주를
+ *  **가로지르는** 막대 하나에 제목이 온전히 들어간다.
+ *
+ *  막대는 칸 위에 얹히는 게 아니라 칸 **위쪽에 자리를 차지한다**(줄 수만큼 헤더를 비운다).
+ *  겹쳐 놓으면 칸 안의 제목 칩과 글자가 포개진다. */
 function MonthGrid({
   cells,
   grouped,
+  spanItems,
   selected,
   todayKey,
   myId,
@@ -606,78 +631,161 @@ function MonthGrid({
 }: {
   cells: DayCell[]
   grouped: Record<string, EventRow[]>
+  spanItems: SpanItem[]
   selected: string
   todayKey: string
   myId: string | null
   profiles: ProfileMap
   onSelect: (key: string) => void
 }) {
+  const weeks: DayCell[][] = []
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+
   return (
-    <div className={styles.grid}>
-      {WEEKDAYS.map((w) => (
-        <div key={w} className={styles.weekday} aria-hidden>
-          {w}
-        </div>
-      ))}
-      {cells.map((c) => {
-        const evs = grouped[c.key] ?? []
-        const tracks = Array.from(new Set(evs.map((e) => deriveTrack(e, myId))))
-        // 쉬는 날은 숫자가 빨갛다. 일요일·공휴일과 토요일을 갈라 다른 색을 준다.
-        const holiday = holidayLabel(c.key)
-        const dayClass = [
-          styles.cellDay,
-          isSundayOrHoliday(c.key) ? styles.rest : isRestDay(c.key) ? styles.sat : '',
-        ]
-          .filter(Boolean)
-          .join(' ')
-        const classes = [
-          styles.cell,
-          c.inMonth ? '' : styles.cellOut,
-          c.key === selected ? styles.cellSel : '',
-          c.key === todayKey ? styles.cellToday : '',
-        ]
-          .filter(Boolean)
-          .join(' ')
+    <div className={styles.monthGrid}>
+      <div className={styles.grid}>
+        {WEEKDAYS.map((w) => (
+          <div key={w} className={styles.weekday} aria-hidden>
+            {w}
+          </div>
+        ))}
+      </div>
+      {weeks.map((week) => {
+        const spans = weekSpans(
+          week.map((c) => c.key),
+          spanItems,
+        )
+        const lanes = laneCount(spans)
         return (
-          <button
-            key={c.key}
-            type="button"
-            className={classes}
-            onClick={() => onSelect(c.key)}
-            aria-pressed={c.key === selected}
-            aria-label={`${c.key}${holiday ? ` · ${holiday}` : ''}${evs.length ? ` · ${tracks.map((t) => TRACK_META[t].label).join('·')} 일정 ${evs.length}개` : ''}`}
-          >
-            {/* 숫자 + 공휴일 이름을 한 줄에 둔다. 이름을 아래 줄로 내리면 글자 크기를
-                키웠을 때(Dynamic Type) 칸이 넘친다 — Flutter판에서 실제로 났던 일이다. */}
-            <span className={styles.cellHead}>
-              <span className={dayClass}>{c.day}</span>
-              {holiday ? (
-                <span className={styles.holiday} title={holiday}>
-                  {holiday}
-                </span>
-              ) : null}
-            </span>
-            {/* 제목 칩 앞 2개 + `+N` overflow(조사 01 §4). 색 단독 금지(§8) → 아바타 동반(도형 심볼 대체).
-                칩은 비인터랙티브 span(중첩 버튼 회피 — 셀 button 하나만 탭 대상). */}
-            <span className={styles.cellChips}>
-              {evs.slice(0, 2).map((e) => {
-                const t = deriveTrack(e, myId)
-                return (
-                  <span key={e.id} className={styles.cellChip} style={{ color: TRACK_META[t].cssVar }} aria-hidden>
-                    <TrackBadge track={t} profiles={profiles} myId={myId} compact /> {e.title}
+          <div key={week[0]!.key} className={styles.week}>
+            <div className={styles.grid}>
+              {week.map((c) => (
+                <DayCellButton
+                  key={c.key}
+                  cell={c}
+                  evs={grouped[c.key] ?? []}
+                  spanIds={new Set(spans.map((s) => s.item.id))}
+                  lanes={lanes}
+                  selected={selected}
+                  todayKey={todayKey}
+                  myId={myId}
+                  profiles={profiles}
+                  onSelect={onSelect}
+                />
+              ))}
+            </div>
+            {/* 막대는 칸 격자와 같은 7열 위에 절대배치한다 — 칸 사이 경계를 넘어 이어지려면
+                칸 안에 둘 수 없다. 탭은 아래 칸이 받는다(pointer-events: none). */}
+            {spans.length > 0 ? (
+              <div className={styles.bars} aria-hidden>
+                {spans.map((s) => (
+                  <span
+                    key={s.item.id}
+                    className={[
+                      styles.bar,
+                      s.item.isTrip ? styles.barTrip : '',
+                      s.continuesLeft ? styles.barOpenL : '',
+                      s.continuesRight ? styles.barOpenR : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    style={{
+                      gridColumn: `${s.startCol + 1} / ${s.endCol + 2}`,
+                      gridRow: s.lane + 1,
+                    }}
+                    title={s.item.title}
+                  >
+                    {s.item.isTrip ? '🧳 ' : ''}
+                    {s.item.title}
                   </span>
-                )
-              })}
-              {evs.length > 2 ? (
-                <span className={styles.chipMore} aria-hidden>
-                  +{evs.length - 2}
-                </span>
-              ) : null}
-            </span>
-          </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         )
       })}
     </div>
+  )
+}
+
+function DayCellButton({
+  cell: c,
+  evs,
+  spanIds,
+  lanes,
+  selected,
+  todayKey,
+  myId,
+  profiles,
+  onSelect,
+}: {
+  cell: DayCell
+  evs: EventRow[]
+  spanIds: Set<string>
+  lanes: number
+  selected: string
+  todayKey: string
+  myId: string | null
+  profiles: ProfileMap
+  onSelect: (key: string) => void
+}) {
+  // 막대로 그린 것은 칸 안에 또 그리지 않는다 — 같은 일정이 두 번 보인다.
+  const cellEvs = evs.filter((e) => !spanIds.has(e.id))
+  const tracks = Array.from(new Set(cellEvs.map((e) => deriveTrack(e, myId))))
+  const holiday = holidayLabel(c.key)
+  const dayClass = [
+    styles.cellDay,
+    isSundayOrHoliday(c.key) ? styles.rest : isRestDay(c.key) ? styles.sat : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+  const classes = [
+    styles.cell,
+    c.inMonth ? '' : styles.cellOut,
+    c.key === selected ? styles.cellSel : '',
+    c.key === todayKey ? styles.cellToday : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+  return (
+    <button
+      type="button"
+      className={classes}
+      onClick={() => onSelect(c.key)}
+      aria-pressed={c.key === selected}
+      aria-label={`${c.key}${holiday ? ` · ${holiday}` : ''}${cellEvs.length ? ` · ${tracks.map((t) => TRACK_META[t].label).join('·')} 일정 ${cellEvs.length}개` : ''}`}
+    >
+      {/* 숫자 + 공휴일 이름을 한 줄에 둔다. 이름을 아래 줄로 내리면 글자 크기를
+          키웠을 때(Dynamic Type) 칸이 넘친다 — Flutter판에서 실제로 났던 일이다. */}
+      <span className={styles.cellHead}>
+        <span className={dayClass}>{c.day}</span>
+        {holiday ? (
+          <span className={styles.holiday} title={holiday}>
+            {holiday}
+          </span>
+        ) : null}
+      </span>
+      {/* 그 주의 막대가 쓰는 줄만큼 비운다. 칸마다 다르게 비우면 같은 줄의 막대들이
+          서로 다른 높이에서 시작해 계단처럼 보인다 — 주 전체가 같은 값을 쓴다. */}
+      {lanes > 0 ? <span className={styles.barGap} style={{ height: lanes * 16 }} aria-hidden /> : null}
+      {/* 제목 칩 앞 2개 + `+N` overflow. 색 단독 금지(§8) → 아바타 동반(도형 심볼 대체).
+          칩은 비인터랙티브 span(중첩 버튼 회피 — 셀 button 하나만 탭 대상). */}
+      <span className={styles.cellChips}>
+        {cellEvs.slice(0, 2).map((e) => {
+          const t = deriveTrack(e, myId)
+          return (
+            <span key={e.id} className={styles.cellChip} style={{ color: TRACK_META[t].cssVar }} aria-hidden>
+              <TrackBadge track={t} profiles={profiles} myId={myId} compact /> {e.title}
+            </span>
+          )
+        })}
+        {cellEvs.length > 2 ? (
+          <span className={styles.chipMore} aria-hidden>
+            +{cellEvs.length - 2}
+          </span>
+        ) : null}
+      </span>
+    </button>
   )
 }
 

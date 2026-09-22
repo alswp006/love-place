@@ -18,6 +18,8 @@ vi.mock('@/hooks/useCouple', () => ({
 }))
 vi.mock('@/hooks/useEvents', () => ({ useEvents: () => ({ data: state.events, isLoading: false }) }))
 vi.mock('@/hooks/usePlaces', () => ({ usePlaces: () => ({ data: [] }) }))
+// 달력이 여행을 **도출해서** 막대로 그린다(§7) — 목이 없으면 TanStack Query가 없다고 던진다.
+vi.mock('@/hooks/useTrips', () => ({ useTrips: () => ({ data: [] }) }))
 vi.mock('@/hooks/useProfiles', () => ({
   useProfiles: () => ({
     data: {

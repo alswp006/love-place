@@ -355,3 +355,66 @@ test('공휴일 — 색만으로 구분하지 않는다(§8): 셀 이름표에 �
   // 스크린리더는 빨간 숫자를 읽지 못한다. 이름표에 들어가야 '쉬는 날'이 전달된다.
   await expect(page.getByRole('button', { name: /2026-10-05 · 대체공휴일/ })).toBeVisible()
 })
+
+// ── 주를 가로지르는 막대 (2026-09) ─────────────────────────────────────────
+//
+// 여행과 여러 날 일정은 칸마다 조각이 아니라 **막대 하나**로 그린다.
+// 조각으로 그리면 '부산여행'이 칸 너비에서 '부산여'로 잘리고, 이어진 칸은 이름 없는 막대가 된다.
+
+const TRIP = [
+  {
+    id: 'tr1', title: '부산여행', start_date: '2026-10-07', end_date: '2026-10-09',
+    region_code: null, version: 1,
+  },
+]
+
+test('여행 — 그 자체가 달력에 막대로 뜬다(이벤트를 만들지 않고)', async ({ page }) => {
+  await seedAuthedMap(page, { events: [], trips: TRIP })
+  await page.goto('/calendar?date=2026-10-07')
+
+  // 사흘이지만 이름은 **한 번**만 나온다. 칸마다 조각이면 세 번 나온다.
+  const bar = page.locator('[class*="barTrip"]')
+  await expect(bar).toHaveCount(1)
+  await expect(bar).toContainText('부산여행')
+
+  // 그리고 세 칸을 가로지른다 — 한 칸 너비에 갇히면 제목이 잘린다.
+  const barBox = await bar.boundingBox()
+  const cellBox = await page.getByRole('button', { name: /^2026-10-07/ }).boundingBox()
+  expect(barBox!.width).toBeGreaterThan(cellBox!.width * 2)
+})
+
+test('여러 날 일정 — 막대로 나오고 칸 안에 또 그리지 않는다', async ({ page }) => {
+  await seedAuthedMap(page, {
+    events: [
+      {
+        id: 'ev-span', title: '워크숍', start: '2026-10-07T00:00:00+09:00', end: '2026-10-09T23:59:59+09:00',
+        is_all_day: true, time_zone: 'Asia/Seoul', visibility: 'SHARED', participants: 'BOTH',
+        owner_id: USER_A, place_id: null, memo: null, recurrence_rule: null, reminders: [], version: 1,
+      },
+    ],
+  })
+  await page.goto('/calendar?date=2026-10-07')
+  // 격자 **안에서만** 센다 — 아래 아젠다에도 같은 일정이 나오는 건 정상이다.
+  const grid = page.locator('[class*="monthGrid"]')
+  // 같은 일정이 막대로도, 칸 칩으로도 나오면 격자 안에 두 번 보인다.
+  await expect(grid.getByText('워크숍', { exact: false })).toHaveCount(1)
+})
+
+test('하루짜리 반복은 이어지지 않는다 — 매일 반복이 통째로 막대가 되면 안 된다', async ({ page }) => {
+  await seedAuthedMap(page, {
+    events: [
+      {
+        id: 'ev-daily', title: '아침운동', start: '2026-10-05T07:00:00+09:00', end: '2026-10-05T08:00:00+09:00',
+        is_all_day: false, time_zone: 'Asia/Seoul', visibility: 'SHARED', participants: 'BOTH',
+        owner_id: USER_A, place_id: null, memo: null,
+        recurrence_rule: 'FREQ=DAILY;INTERVAL=1;COUNT=5', reminders: [], version: 1,
+      },
+    ],
+  })
+  await page.goto('/calendar?date=2026-10-05')
+  const grid = page.locator('[class*="monthGrid"]')
+  // 막대가 하나도 없어야 한다. 회차마다 시작·끝이 같은 날이므로.
+  await expect(grid.locator('[class*="bar"]')).toHaveCount(0)
+  // 대신 칸 안의 칩으로 다섯 번 나온다(10/5~10/9).
+  await expect(grid.getByText('아침운동', { exact: false })).toHaveCount(5)
+})

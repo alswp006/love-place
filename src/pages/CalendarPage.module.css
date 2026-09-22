@@ -622,3 +622,77 @@
   flex-shrink: 0;
   opacity: 0.75;
 }
+
+/* ── 주 단위 월 격자 + 가로지르는 막대 (2026-09) ─────────────────────────── */
+
+.monthGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 막대를 칸 위에 절대배치하려면 주가 기준 박스여야 한다. */
+.week {
+  position: relative;
+}
+
+/* 칸 격자와 **같은 7열**을 쓴다 — 열이 어긋나면 막대가 날짜와 안 맞는다.
+   막대는 칸 머리(숫자 줄) 바로 아래에서 시작한다. */
+.bars {
+  position: absolute;
+  top: 22px;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  grid-auto-rows: 16px;
+  /* 탭은 아래 칸이 받는다 — 막대가 날짜 선택을 가로채면 안 된다. */
+  pointer-events: none;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 14px;
+  margin: 1px 0;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 4px;
+  background: var(--c-surface-2);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+}
+
+/* 여행 — 그 주의 얼개다. 색 단독 금지(§8)라 가방 이모지가 이름 앞에 붙는다.
+   옐로 토큰 셋은 라이트/다크 양쪽에 정의돼 있어 테마를 따라간다(ink L52% ↔ 88%). */
+.barTrip {
+  background: var(--yellow-100);
+  border-color: var(--yellow-300);
+  color: var(--yellow-ink);
+  font-weight: 600;
+}
+
+/* 주 경계를 넘어 이어지는 쪽은 모서리를 깎지 않는다 — 잘린 게 아니라 계속된다는 신호. */
+.barOpenL {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left-style: dashed;
+}
+
+.barOpenR {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right-style: dashed;
+}
+
+/* 막대가 쓰는 만큼 칸 안을 비운다(인라인 height로 줄 수를 받는다). */
+.barGap {
+  display: block;
+  flex: none;
+}
