@@ -1,6 +1,7 @@
 import { useEffect, useId } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import { WEAVE_PALETTE } from '@/lib/colorPalette'
 
 // 일정 카테고리(투두메이트식 색+이름 목록, 0020). 둘이 함께 만들어 쓰는 공유 분류다.
 // 장소의 places.category(검색 API가 준 문자열)와는 다른 축 — 섞지 말 것.
@@ -15,15 +16,20 @@ export type EventCategoryRow = {
   version: number
 }
 
-/** 고를 수 있는 기본 색 — 마시멜로 팔레트 계열. 사용자가 값을 고르므로 토큰이 아니라 리터럴로 저장한다. */
-export const CATEGORY_COLORS = [
-  '#e2638a', // 핑크(브랜드)
-  '#e0a33a', // 옐로
-  '#4fb58a', // 민트
-  '#6e8ac8', // 블루
-  '#8b6ec8', // 라벤더
-  '#c86b6b', // 코럴
-] as const
+/** 고를 수 있는 색 — **프로필 색과 같은 목록**(colorPalette.ts).
+ *
+ *  예전엔 여기 6색, 프로필에 4색이 따로 있었고 이름은 같은데 hex가 달랐다.
+ *  프로필을 민트로 하고 분류도 민트로 하면 서로 다른 민트 둘이 한 화면에 떴다.
+ *  사용자가 값을 고르므로 토큰이 아니라 리터럴로 저장한다(테마와 무관하게 보존). */
+export const CATEGORY_COLORS: readonly string[] = WEAVE_PALETTE.map((e) => e.hex)
+
+/** 새 분류의 기본 색. 목록 첫 값이지만 인덱싱은 `string | undefined`라 여기서 못 박는다. */
+export const DEFAULT_CATEGORY_COLOR = WEAVE_PALETTE[0]!.hex
+
+/** 색 견본에 붙일 이름 — 색만으로 구분하지 않는다(§8). */
+export const CATEGORY_COLOR_LABELS: Readonly<Record<string, string>> = Object.fromEntries(
+  WEAVE_PALETTE.map((e) => [e.hex, e.label]),
+)
 
 export function useEventCategories(coupleId: string | null) {
   const queryClient = useQueryClient()

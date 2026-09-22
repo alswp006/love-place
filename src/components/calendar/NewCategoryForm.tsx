@@ -2,6 +2,8 @@ import { useState } from 'react'
 import {
   useEventCategoryMutations,
   CATEGORY_COLORS,
+  CATEGORY_COLOR_LABELS,
+  DEFAULT_CATEGORY_COLOR,
   type EventCategoryRow,
 } from '@/hooks/useEventCategories'
 import styles from './NewCategoryForm.module.css'
@@ -19,7 +21,7 @@ type Props = {
 export function NewCategoryForm({ coupleId, myId, onCreated, onCancel, disabled = false }: Props) {
   const { create } = useEventCategoryMutations(coupleId, myId)
   const [name, setName] = useState('')
-  const [color, setColor] = useState<string>(CATEGORY_COLORS[0])
+  const [color, setColor] = useState<string>(DEFAULT_CATEGORY_COLOR)
   const [error, setError] = useState<string | null>(null)
 
   const submit = () => {
@@ -54,7 +56,7 @@ export function NewCategoryForm({ coupleId, myId, onCreated, onCancel, disabled 
             type="button"
             className={styles.swatch}
             style={{ background: c }}
-            aria-label={`색 ${c}`}
+            aria-label={CATEGORY_COLOR_LABELS[c] ?? c}
             aria-pressed={color === c}
             onClick={() => setColor(c)}
             disabled={disabled || create.isPending}

@@ -418,3 +418,79 @@ test('하루짜리 반복은 이어지지 않는다 — 매일 반복이 통째�
   // 대신 칸 안의 칩으로 다섯 번 나온다(10/5~10/9).
   await expect(grid.getByText('아침운동', { exact: false })).toHaveCount(5)
 })
+
+// ── 분류색 할 일 블록 (2026-09) ────────────────────────────────────────────
+//
+// 안 한 일은 **테두리만**, 한 일은 그 색으로 **채운다**. 예전처럼 작대기(취소선)로
+// 완료를 말하면 눈에 잘 안 들어온다. 색만으로 말하지 않는다(§8) — 형태가 1차 신호다.
+
+const CAT = [{ id: 'cat-mint', name: '운동', color: '#4fb58a', sort_order: 0, version: 1 }]
+
+const BLOCK_EVENTS = [
+  {
+    id: 'ev-todo', title: '달리기', start: '2026-10-12T07:00:00+09:00', end: '2026-10-12T08:00:00+09:00',
+    is_all_day: false, time_zone: 'Asia/Seoul', visibility: 'SHARED', participants: 'BOTH',
+    owner_id: USER_A, place_id: null, memo: null, recurrence_rule: null, reminders: [],
+    category_id: 'cat-mint', version: 1,
+  },
+  {
+    id: 'ev-done', title: '요가', start: '2026-10-13T07:00:00+09:00', end: '2026-10-13T08:00:00+09:00',
+    is_all_day: false, time_zone: 'Asia/Seoul', visibility: 'SHARED', participants: 'BOTH',
+    owner_id: USER_A, place_id: null, memo: null, recurrence_rule: null, reminders: [],
+    category_id: 'cat-mint', version: 1,
+  },
+]
+
+test('할 일 블록 — 안 한 일은 테두리, 한 일은 채움', async ({ page }) => {
+  await seedAuthedMap(page, {
+    events: BLOCK_EVENTS,
+    eventCategories: CAT,
+    eventCompletions: [
+      {
+        id: 'done1', event_id: 'ev-done', occurrence_start: '2026-10-12T22:00:00.000Z',
+        // done_at은 잔디(별자리)가 '언제 한 건지'로 쓴다 — 빼면 그 화면이 날짜를 못 만든다.
+        done_at: '2026-10-13T08:30:00+09:00', created_by: USER_A, version: 1,
+      },
+    ],
+  })
+  await page.goto('/calendar?date=2026-10-12')
+
+  // 칸 버튼 **안**의 블록만 고른다. `[class*="cellChip"]`만 쓰면 컨테이너(`cellChips`)도
+  // 함께 잡히고, 그 핸들은 리렌더 중 떨어져 빈 스타일을 돌려준다(실제로 그랬다).
+  // 스타일 단언은 재시도되는 toHaveCSS로 — evaluate는 한 번 읽고 끝이라 같은 함정에 빠진다.
+  const chip = (day: string) =>
+    page.getByRole('button', { name: new RegExp(`^${day}`) }).locator('[class*="cellChip_"]')
+
+  const todo = chip('2026-10-12')
+  const done = chip('2026-10-13')
+
+  // 안 한 일: 면이 비어 있다(테두리와 글자만 분류 색).
+  await expect(todo).toHaveCSS('background-color', 'rgb(0, 0, 0, 0)'.replace('rgb', 'rgba'))
+
+  // 한 일: 면이 채워진다. **민트 원색 그대로는 아니다** — todoBlockColors가 그 위의
+  // 글자가 AA(4.5:1)를 넘도록 면을 조금 움직인다(색의 정확한 값은 단위 테스트가 못 박는다).
+  // 여기서 볼 것은 '채워졌는가'와 '고른 분류의 색조인가'뿐이다.
+  const doneBg = await done.evaluate((el) => getComputedStyle(el).backgroundColor)
+  const rgb = doneBg.match(/\d+/g)!.map(Number) as [number, number, number]
+  expect(doneBg).not.toBe('rgba(0, 0, 0, 0)')
+  // 민트 계열: 초록이 가장 세고 빨강이 가장 약하다.
+  expect(rgb[1]).toBeGreaterThan(rgb[2])
+  expect(rgb[2]).toBeGreaterThan(rgb[0])
+
+  // 색만으로 말하지 않는다(§8) — 완료엔 체크 글리프가 함께 붙는다.
+  await expect(done).toContainText('✓')
+  await expect(todo).not.toContainText('✓')
+})
+
+test('할 일 블록 — 분류가 없어도 그려진다(브랜드 핑크가 아닌 색으로)', async ({ page }) => {
+  await seedAuthedMap(page, {
+    events: [{ ...BLOCK_EVENTS[0]!, id: 'ev-nocat', title: '산책', category_id: null }],
+  })
+  await page.goto('/calendar?date=2026-10-12')
+  const chip = page
+    .getByRole('button', { name: /^2026-10-12/ })
+    .locator('[class*="cellChip_"]')
+  await expect(chip).toContainText('산책')
+  // 분류 없음이 상대 트랙 색(브랜드 핑크)으로 읽히면 안 된다.
+  await expect(chip).not.toHaveCSS('color', 'rgb(226, 99, 138)')
+})

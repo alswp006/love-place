@@ -1,4 +1,4 @@
-import { PROFILE_PALETTE } from '@/lib/profileColor'
+import { swatchesFor } from '@/lib/profileColor'
 import styles from './ProfileEditor.module.css'
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
 export function ColorPicker({ value, onChange }: Props) {
   return (
     <div className={styles.swatches} role="radiogroup" aria-label="내 색">
-      {PROFILE_PALETTE.map((entry) => {
+      {swatchesFor(value).map((entry) => {
         const selected = entry.hex === value
         return (
           <button

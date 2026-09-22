@@ -64,6 +64,11 @@ export function dailyDoneCounts(
     if (!e) continue
     // categoryId가 주어지면 그 카테고리만(전체 보기는 undefined를 넘긴다).
     if (opts.categoryId !== undefined && e.category_id !== opts.categoryId) continue
+    // 읽을 수 없는 시각은 **건너뛴다**. 어느 날의 별인지 모르는 완료를 아무 칸에나
+    // 넣을 수는 없고, 여기서 던지면 행 하나가 캘린더 화면 전체를 '잠시 문제가 생겼어요'로
+    // 만든다(dayKey → new Date(undefined).toISOString() → "Invalid time value").
+    // done_at은 DB에서 NULL일 수 있고, 예전 행·다른 클라이언트가 넣은 값도 온다.
+    if (!Number.isFinite(Date.parse(c.done_at))) continue
     const key = dayKey(c.done_at, tz)
     const cell = map.get(key) ?? { key, total: 0, mine: 0, partner: 0, entries: [] }
     // 별의 주인은 일정 소유자가 아니라 **체크한 사람**이다(함께 일정을 내가 끝내면 내 별).

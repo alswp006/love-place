@@ -56,16 +56,17 @@ describe('ProfileEditor (이름·색 편집, 색+라벨 이중화)', () => {
     }
   })
 
-  it('현재 색 스와치는 aria-pressed/aria-checked로 선택 표시된다', () => {
+  it('★ 지금 색이 팔레트 밖(예전 색)이어도 골라져 보인다 — 빈 고르개를 주지 않는다', () => {
+    // 이 사용자의 색은 #6e5aa8(옛 라벤더)이라 새 팔레트에 없다. 덧붙인 칸이
+    // '라벤더(지금 색)'으로 읽혀 새 라벤더(#8b6ec8)와 갈린다(§8).
     render(<ProfileEditor coupleId="c1" />)
-    const lavender = PROFILE_PALETTE.find((e) => e.hex === '#6e5aa8')!
-    const swatch = screen.getByRole('radio', { name: lavender.label })
+    const swatch = screen.getByRole('radio', { name: '라벤더(지금 색)' })
     expect(swatch.getAttribute('aria-checked') === 'true' || swatch.getAttribute('aria-pressed') === 'true').toBe(true)
   })
 
   it('색 선택 + 이름 수정 + 저장 → updateProfile({ display_name, color, expectedVersion })', async () => {
     render(<ProfileEditor coupleId="c1" />)
-    const pink = PROFILE_PALETTE.find((e) => e.hex === '#b85a78')!
+    const pink = PROFILE_PALETTE.find((e) => e.hex === '#e2638a')!
     fireEvent.click(screen.getByRole('radio', { name: pink.label }))
 
     const input = screen.getByLabelText(/이름|표시/)
@@ -76,7 +77,7 @@ describe('ProfileEditor (이름·색 편집, 색+라벨 이중화)', () => {
     await waitFor(() => expect(updateProfile).toHaveBeenCalledTimes(1))
     expect(updateProfile).toHaveBeenCalledWith({
       display_name: '하늘',
-      color: '#b85a78',
+      color: '#e2638a',
       expectedVersion: 4,
     })
   })

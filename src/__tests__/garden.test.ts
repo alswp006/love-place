@@ -231,3 +231,43 @@ describe('starSlots — 밝은 별 먼저, 나머지는 선 위에', () => {
     expect(daysInMonth('2026-02')).toBe(28)
   })
 })
+
+describe('읽을 수 없는 done_at', () => {
+  // 행 하나가 화면 전체를 죽이지 않는다. done_at은 DB에서 NULL일 수 있고,
+  // 예전 행·다른 클라이언트가 넣은 값도 온다.
+  const meta = () => ({ category_id: null }) as never
+
+  it('던지지 않는다 — 캘린더가 "잠시 문제가 생겼어요"로 떨어지지 않게', () => {
+    for (const bad of [undefined, null, '', 'nope']) {
+      expect(() =>
+        dailyDoneCounts(
+          [{ event_id: 'e1', done_at: bad as unknown as string, created_by: 'u1' }],
+          meta,
+          'u1',
+        ),
+      ).not.toThrow()
+    }
+  })
+
+  it('아무 칸에나 넣지 않는다 — 어느 날의 별인지 모르면 세지 않는다', () => {
+    const m = dailyDoneCounts(
+      [{ event_id: 'e1', done_at: 'nope', created_by: 'u1' }],
+      meta,
+      'u1',
+    )
+    expect(m.size).toBe(0)
+  })
+
+  it('멀쩡한 행은 그대로 센다 — 한 행이 깨져도 나머지는 산다', () => {
+    const m = dailyDoneCounts(
+      [
+        { event_id: 'e1', done_at: 'nope', created_by: 'u1' },
+        { event_id: 'e2', done_at: '2026-10-12T10:00:00+09:00', created_by: 'u1' },
+      ],
+      meta,
+      'u1',
+    )
+    expect(m.size).toBe(1)
+    expect(m.get('2026-10-12')?.total).toBe(1)
+  })
+})

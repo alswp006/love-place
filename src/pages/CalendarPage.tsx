@@ -31,6 +31,7 @@ import { useEventCategories } from '@/hooks/useEventCategories'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
 import { holidayLabel, isRestDay, isSundayOrHoliday } from '@/lib/calendar/holidays'
 import { weekSpans, laneCount, spanOfEvent, spanOfTrip, type SpanItem } from '@/lib/calendar/weekSpans'
+import { todoBlockColors } from '@/lib/calendar/todoStyle'
 import { useTrips } from '@/hooks/useTrips'
 import { expandEvents, buildRule, parseRule, type Occurrence } from '@/lib/calendar/rrule'
 import { exdateOccurrence, splitFollowing, shiftTimesToOccurrence } from '@/lib/calendar/recurrenceScope'
@@ -477,6 +478,8 @@ export default function CalendarPage() {
                 todayKey={todayKey}
                 myId={myId}
                 profiles={profiles ?? {}}
+                categoryById={categoryById}
+                doneKeys={doneKeys}
                 onSelect={setSelected}
               />
             ) : (
@@ -627,6 +630,8 @@ function MonthGrid({
   todayKey,
   myId,
   profiles,
+  categoryById,
+  doneKeys,
   onSelect,
 }: {
   cells: DayCell[]
@@ -636,6 +641,8 @@ function MonthGrid({
   todayKey: string
   myId: string | null
   profiles: ProfileMap
+  categoryById: Record<string, { name: string; color: string }>
+  doneKeys: ReadonlySet<string>
   onSelect: (key: string) => void
 }) {
   const weeks: DayCell[][] = []
@@ -670,6 +677,8 @@ function MonthGrid({
                   todayKey={todayKey}
                   myId={myId}
                   profiles={profiles}
+                  categoryById={categoryById}
+                  doneKeys={doneKeys}
                   onSelect={onSelect}
                 />
               ))}
@@ -717,6 +726,8 @@ function DayCellButton({
   todayKey,
   myId,
   profiles,
+  categoryById,
+  doneKeys,
   onSelect,
 }: {
   cell: DayCell
@@ -727,6 +738,8 @@ function DayCellButton({
   todayKey: string
   myId: string | null
   profiles: ProfileMap
+  categoryById: Record<string, { name: string; color: string }>
+  doneKeys: ReadonlySet<string>
   onSelect: (key: string) => void
 }) {
   // 막대로 그린 것은 칸 안에 또 그리지 않는다 — 같은 일정이 두 번 보인다.
@@ -773,9 +786,25 @@ function DayCellButton({
       <span className={styles.cellChips}>
         {cellEvs.slice(0, 2).map((e) => {
           const t = deriveTrack(e, myId)
+          // 안 한 일은 **테두리만**, 한 일은 그 색으로 **채운다**. 예전처럼 작대기(취소선)로
+          // 완료를 말하면 눈에 잘 안 들어온다. 색만으로 말하지 않는다(§8) — 채움/테두리라는
+          // **형태**가 1차 신호이고, 완료엔 체크 글리프가, 소유자엔 아바타가 함께 붙는다.
+          const done = myId ? doneKeys.has(occurrenceKey(e.id, e.start, myId)) : false
+          const cat = e.category_id ? categoryById[e.category_id] : undefined
+          const block = todoBlockColors(cat?.color ?? null)
           return (
-            <span key={e.id} className={styles.cellChip} style={{ color: TRACK_META[t].cssVar }} aria-hidden>
-              <TrackBadge track={t} profiles={profiles} myId={myId} compact /> {e.title}
+            <span
+              key={e.id}
+              className={done ? `${styles.cellChip} ${styles.chipDone}` : styles.cellChip}
+              style={
+                done
+                  ? { background: block.fill, color: block.onFill, borderColor: block.fill }
+                  : { color: block.outline, borderColor: block.outline }
+              }
+              aria-hidden
+            >
+              <TrackBadge track={t} profiles={profiles} myId={myId} compact />
+              {done ? <span className={styles.chipCheck}>✓</span> : null} {e.title}
             </span>
           )
         })}
