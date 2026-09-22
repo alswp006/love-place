@@ -5,7 +5,18 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'playwright-report', 'test-results', 'supabase/functions'] },
+  // '.release'는 iOS 아카이브(.xcarchive) 산출물이다 — 그 안의 Capacitor 번들을 검사하느라
+  // 우리 코드와 무관한 에러가 게이트를 막고 있었다. .gitignore엔 이미 들어 있다.
+  {
+    ignores: [
+      'dist',
+      'coverage',
+      'playwright-report',
+      'test-results',
+      'supabase/functions',
+      '.release',
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

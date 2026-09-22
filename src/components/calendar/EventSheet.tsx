@@ -168,8 +168,23 @@ export function EventSheet({ initial, defaultDate, myId, coupleId, busy, profile
     }
     setTimeError(null)
     const { start, end } = times
+    // ★ 규칙을 다시 만들 때는 **읽은 것을 전부 물려줘야** 한다.
+    //   예전엔 exdates만 넘겨서, 앱에서 만든 시리즈를 웹에서 한 번 저장하면 UNTIL(언제까지)이
+    //   통째로 사라져 '끝 없는 반복'이 됐다. BYDAY·BYMONTHDAY도 같은 자리에서 사라진다.
+    //   여기서 못 고르는 필드일수록 더 조심해서 보존해야 한다 — 고칠 수단이 이 화면엔 없다.
     const recurrenceRule =
-      recurrence === 'none' ? null : buildRule(recurrence, 1, recurCount > 0 ? recurCount : undefined, initRule?.exdates)
+      recurrence === 'none'
+        ? null
+        : buildRule(
+            recurrence,
+            initRule?.interval ?? 1,
+            recurCount > 0 ? recurCount : undefined,
+            initRule?.exdates,
+            initRule?.until,
+            // 주기를 바꿨으면 예전 주기의 BY*는 의미가 없다(buildRule이 떨구지만 명시한다).
+            recurrence === initRule?.freq ? initRule?.byDay : undefined,
+            recurrence === initRule?.freq ? initRule?.byMonthDay : undefined,
+          )
     // 사용자별 리마인더: 상대 것은 보존, 내 것만 갱신(§4.2 사용자별).
     const others = (initial?.reminders ?? []).filter((r) => r.userId !== myId)
     const reminders = myReminder > 0 && myId ? [...others, { userId: myId, offsetMinutes: myReminder }] : others
