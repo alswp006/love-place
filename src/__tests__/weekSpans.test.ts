@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { weekSpans, spanOfEvent, spanOfTrip, spansDays, laneCount } from '@/lib/calendar/weekSpans'
+import { weekSpans, spanOfEvent, spanOfTrip, spansDays, laneCount, laneCountAt } from '@/lib/calendar/weekSpans'
 
 // ⚠️ 기대값은 Flutter판 `app/test/calendar/week_spans_test.dart`와 **같다**.
 //    같은 달력을 두 앱이 보여주므로 한쪽만 통과하는 값이 있으면 그게 곧 버그다.
@@ -111,4 +111,25 @@ describe('줄 배정', () => {
 
 it('주가 7칸이 아니면 아무것도 안 그린다 — 지어내지 않는다', () => {
   expect(weekSpans(['2026-11-08'], [ev('t', '2026-11-08', '2026-11-09')])).toEqual([])
+})
+
+describe('laneCountAt — 칸마다 제 막대만 센다 (Flutter판과 같은 값)', () => {
+  const spans = weekSpans(WEEK, [ev('sh', '2026-11-09', '2026-11-11'), ev('lh', '2026-11-09', '2026-11-11')])
+  it('막대가 안 지나는 칸은 0 — 위를 비우지 않는다', () => {
+    expect(laneCountAt(spans, 0)).toBe(0)
+    expect(laneCountAt(spans, 4)).toBe(0)
+    expect(laneCountAt(spans, 6)).toBe(0)
+  })
+  it('지나는 칸은 그 막대들의 가장 아래 줄 + 1', () => {
+    expect(laneCountAt(spans, 1)).toBe(2)
+    expect(laneCountAt(spans, 3)).toBe(2)
+  })
+  it('1번 줄만 지나는 칸도 0번 줄 자리를 비운다', () => {
+    const s2 = weekSpans(WEEK, [ev('a', '2026-11-08', '2026-11-10'), ev('b', '2026-11-10', '2026-11-13')])
+    expect(laneCountAt(s2, 5)).toBe(2)
+    expect(laneCountAt(s2, 0)).toBe(1)
+  })
+  it('막대가 없으면 어느 칸도 0', () => {
+    expect(laneCountAt([], 3)).toBe(0)
+  })
 })

@@ -30,7 +30,7 @@ import { TrackBadge } from '@/components/calendar/TrackBadge'
 import { useEventCategories } from '@/hooks/useEventCategories'
 import { dayKey, monthMatrix, addMonths, groupByDay, formatTime, type DayCell } from '@/lib/calendar/eventDays'
 import { holidayLabel, isRestDay, isSundayOrHoliday } from '@/lib/calendar/holidays'
-import { weekSpans, laneCount, spanOfEvent, spanOfTrip, type SpanItem } from '@/lib/calendar/weekSpans'
+import { weekSpans, laneCountAt, spanOfEvent, spanOfTrip, type SpanItem } from '@/lib/calendar/weekSpans'
 import { todoBlockColors } from '@/lib/calendar/todoStyle'
 import { useTrips } from '@/hooks/useTrips'
 import { expandEvents, buildRule, parseRule, type Occurrence } from '@/lib/calendar/rrule'
@@ -662,17 +662,19 @@ function MonthGrid({
           week.map((c) => c.key),
           spanItems,
         )
-        const lanes = laneCount(spans)
+        const spanIds = new Set(spans.map((s) => s.item.id))
         return (
           <div key={week[0]!.key} className={styles.week}>
             <div className={styles.grid}>
-              {week.map((c) => (
+              {week.map((c, col) => (
                 <DayCellButton
                   key={c.key}
                   cell={c}
                   evs={grouped[c.key] ?? []}
-                  spanIds={new Set(spans.map((s) => s.item.id))}
-                  lanes={lanes}
+                  spanIds={spanIds}
+                  // **이 칸을 지나는** 막대가 쓴 줄만큼만 비운다 — 주 전체 줄 수를 쓰면
+                  // 막대가 안 지나는 칸까지 위가 빈다(27일·1일·2일이 그랬다).
+                  lanes={laneCountAt(spans, col)}
                   selected={selected}
                   todayKey={todayKey}
                   myId={myId}

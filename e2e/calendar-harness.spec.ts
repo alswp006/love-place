@@ -494,3 +494,24 @@ test('할 일 블록 — 분류가 없어도 그려진다(브랜드 핑크가 �
   // 분류 없음이 상대 트랙 색(브랜드 핑크)으로 읽히면 안 된다.
   await expect(chip).not.toHaveCSS('color', 'rgb(226, 99, 138)')
 })
+
+test('막대가 안 지나는 칸은 위를 비우지 않는다 — 27일이 막대 자리를 헛되이 비우지 않게', async ({ page }) => {
+  await seedAuthedMap(page, {
+    events: [
+      {
+        id: 'ev-span', title: '워크숍', start: '2026-10-05T00:00:00+09:00', end: '2026-10-07T23:59:59+09:00',
+        is_all_day: true, time_zone: 'Asia/Seoul', visibility: 'SHARED', participants: 'BOTH',
+        owner_id: USER_A, place_id: null, memo: null, recurrence_rule: null, reminders: [], version: 1,
+      },
+      // 4일(일): 막대가 안 지난다. 5일(월): 막대 아래.
+      { ...BLOCK_EVENTS[0]!, id: 'ev-sun', title: '일요일할일', start: '2026-10-04T09:00:00+09:00', end: '2026-10-04T10:00:00+09:00', category_id: null },
+      { ...BLOCK_EVENTS[0]!, id: 'ev-mon', title: '월요일할일', start: '2026-10-05T09:00:00+09:00', end: '2026-10-05T10:00:00+09:00', category_id: null },
+    ],
+  })
+  await page.goto('/calendar?date=2026-10-04')
+  const grid = page.locator('[class*="monthGrid"]')
+  const sun = await grid.getByText('일요일할일').boundingBox()
+  const mon = await grid.getByText('월요일할일').boundingBox()
+  // 월요일 블록은 막대 한 줄 아래에 있고, 일요일 블록은 날짜 바로 아래다.
+  expect(mon!.y - sun!.y).toBeGreaterThan(8)
+})

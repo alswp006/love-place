@@ -123,3 +123,16 @@ export function weekSpans(weekKeys: string[], items: SpanItem[]): WeekSpan[] {
 export function laneCount(spans: WeekSpan[]): number {
   return spans.length === 0 ? 0 : Math.max(...spans.map((s) => s.lane)) + 1
 }
+
+/** **그 칸**을 지나는 막대가 쓰는 줄 수 — 칸이 위에 비워 둘 높이를 정한다.
+ *
+ *  laneCount는 주 전체의 줄 수라, 막대가 월~수만 지나는 주에서 일·목·금·토 칸까지 위를
+ *  비웠다("27일은 막대가 없는데 왜 위가 비지"). 칸마다 제 것만 센다. 줄 번호는 겹침으로
+ *  정해지므로 1번 줄만 지나는 칸도 0번 줄 자리는 비워야 한다 — "가장 아래 줄 번호 + 1". */
+export function laneCountAt(spans: WeekSpan[], col: number): number {
+  let lanes = 0
+  for (const s of spans) {
+    if (s.startCol <= col && col <= s.endCol && s.lane + 1 > lanes) lanes = s.lane + 1
+  }
+  return lanes
+}
